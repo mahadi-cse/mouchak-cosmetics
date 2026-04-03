@@ -1,0 +1,332 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  INITIATED
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  SSLCOMMERZ
+  CASH
+  CARD
+  BKASH
+  NAGAD
+  ROCKET
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  SALE
+  RETURN
+  ADJUSTMENT
+  POS_SALE
+}
+
+enum OrderChannel {
+  ONLINE
+  POS
+}
+
+// ─────────────────────────────────────────────────────────────
+// USERS
+// Mirrors Keycloak users. Populated on first login via /api/users/sync.
+// keycloakId is the Keycloak `sub` claim.
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id          Int       @id @default(autoincrement())
+  keycloakId  String    @unique
+  email       String    @unique
+  firstName   String
+  lastName    String
+  phone       String?
+  role        UserRole  @default(CUSTOMER)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  customer    Customer?
+  orders      Order[]   @relation("StaffOrders")
+  auditLogs   AuditLog[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CUSTOMERS
+// Extended profile for users with CUSTOMER role.
+// ─────────────────────────────────────────────────────────────
+
+model Customer {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateOfBirth     DateTime?
+  gender          String?
+  defaultAddress  String?
+  city            String?
+  postalCode      String?
+  country         String    @default("Bangladesh")
+  loyaltyPoints   Int       @default(0)
+  totalSpent      Decimal   @default(0) @db.Decimal(12,2)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  orders          Order[]
+  wishlist        Wishlist[]
+
+  @@map("customers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CATEGORIES
+// ─────────────────────────────────────────────────────────────
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+
+  @@map("categories")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRODUCTS
+// ─────────────────────────────────────────────────────────────
+
+model Product {
+  id              Int       @id @default(autoincrement())
+  name            String
+  slug            String    @unique
+  description     String?
+  shortDescription String?
+  price           Decimal   @db.Decimal(10,2)
+  compareAtPrice  Decimal?  @db.Decimal(10,2)
+  costPrice       Decimal?  @db.Decimal(10,2)
+  sku             String    @unique
+  barcode         String?
+  categoryId      Int
+  category        Category  @relation(fields: [categoryId], references: [id])
+  images          String[]
+  isFeatured      Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  tags            String[]
+  weight          Decimal?  @db.Decimal(8,2)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  inventory       Inventory?
+  orderItems      OrderItem[]
+  wishlist        Wishlist[]
+
+  @@map("products")
+}
+
+// ─────────────────────────────────────────────────────────────
+// INVENTORY
+// One record per product. Stock quantity tracked here.
+// ─────────────────────────────────────────────────────────────
+
+model Inventory {
+  id              Int       @id @default(autoincrement())
+  productId       Int       @unique
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity        Int       @default(0)
+  reservedQty     Int       @default(0)
+  lowStockThreshold Int     @default(10)
+  location        String?
+  updatedAt       DateTime  @updatedAt
+
+  transactions    InventoryTransaction[]
+
+  @@map("inventory")
+}
+
+// ─────────────────────────────────────────────────────────────
+// INVENTORY TRANSACTIONS
+// Every stock movement creates an immutable record here.
+// ─────────────────────────────────────────────────────────────
+
+model InventoryTransaction {
+  id          Int                       @id @default(autoincrement())
+  inventoryId Int
+  inventory   Inventory                 @relation(fields: [inventoryId], references: [id])
+  type        InventoryTransactionType
+  quantity    Int
+  balanceBefore Int
+  balanceAfter  Int
+  reference   String?
+  notes       String?
+  createdAt   DateTime                  @default(now())
+
+  @@map("inventory_transactions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────────────────────
+
+model Order {
+  id              Int           @id @default(autoincrement())
+  orderNumber     String        @unique
+  customerId      Int?
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  processedBy     Int?
+  staffUser       User?         @relation("StaffOrders", fields: [processedBy], references: [id])
+  channel         OrderChannel  @default(ONLINE)
+  status          OrderStatus   @default(PENDING)
+
+  // Shipping
+  shippingName    String
+  shippingPhone   String
+  shippingAddress String
+  shippingCity    String
+  shippingPostal  String?
+  shippingCountry String        @default("Bangladesh")
+
+  // Financials
+  subtotal        Decimal       @db.Decimal(12,2)
+  discountAmount  Decimal       @default(0) @db.Decimal(12,2)
+  shippingCharge  Decimal       @default(0) @db.Decimal(12,2)
+  total           Decimal       @db.Decimal(12,2)
+  currency        String        @default("BDT")
+
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           OrderItem[]
+  payment         Payment?
+  auditLogs       AuditLog[]
+
+  @@map("orders")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ORDER ITEMS
+// ─────────────────────────────────────────────────────────────
+
+model OrderItem {
+  id          Int       @id @default(autoincrement())
+  orderId     Int
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id])
+  productName String
+  productSku  String
+  quantity    Int
+  unitPrice   Decimal   @db.Decimal(10,2)
+  totalPrice  Decimal   @db.Decimal(12,2)
+
+  @@map("order_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAYMENTS
+// One payment record per order.
+// ─────────────────────────────────────────────────────────────
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  orderId           Int           @unique
+  order             Order         @relation(fields: [orderId], references: [id])
+  method            PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  amount            Decimal       @db.Decimal(12,2)
+  currency          String        @default("BDT")
+
+  // SSLCommerz fields
+  tranId            String?       @unique
+  valId             String?
+  bankTranId        String?
+  storeAmount       Decimal?      @db.Decimal(12,2)
+  cardType          String?
+  cardBrand         String?
+  ipnPayload        Json?
+
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// WISHLIST
+// ─────────────────────────────────────────────────────────────
+
+model Wishlist {
+  id          Int       @id @default(autoincrement())
+  customerId  Int
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([customerId, productId])
+  @@map("wishlist")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUDIT LOGS
+// Immutable log of all significant state changes.
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          Int       @id @default(autoincrement())
+  userId      Int?
+  user        User?     @relation(fields: [userId], references: [id])
+  action      String
+  entity      String
+  entityId    Int
+  order       Order?    @relation(fields: [entityId], references: [id])
+  before      Json?
+  after       Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+
+  @@map("audit_logs")
+}
