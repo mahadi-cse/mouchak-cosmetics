@@ -32,6 +32,50 @@ export interface Product {
   updatedAt: string;
 }
 
+export interface Order {
+  id: number;
+  orderNumber?: string;
+  customerId?: number;
+  shippingName?: string;
+  total: number;
+  status: string;
+  items?: Array<{ id?: number }>;
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface Customer {
+  id: number;
+  user?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  };
+  segment?: string;
+  totalOrders?: number;
+  totalSpent?: number;
+  loyaltyPoints?: number;
+}
+
+export interface Inventory {
+  productId: number;
+  name?: string;
+  sku?: string;
+  category?: string;
+  price?: number;
+  currentStock: number;
+  lowStockThreshold?: number;
+  unitsSold?: number;
+}
+
+export interface InventoryTransaction {
+  id: number;
+  productId: number;
+  quantity: number;
+  type: string;
+  createdAt?: string;
+}
+
 export interface PaginatedResponse<T> {
   success: boolean;
   data: T;

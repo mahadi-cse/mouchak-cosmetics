@@ -1,15 +1,22 @@
 import { RequestHandler } from 'express';
-import { UserRole } from '@prisma/client';
 import { fail } from '../shared/utils/apiResponse';
 
-export const authorize = (...roles: UserRole[]): RequestHandler => {
+export const authorize = (...roles: ('ADMIN' | 'STAFF' | 'CUSTOMER')[]): RequestHandler => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json(fail('Unauthorized'));
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        code: 'UNAUTHORIZED'
+      });
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json(fail('Forbidden', 'INSUFFICIENT_PERMISSIONS'));
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        code: 'INSUFFICIENT_PERMISSIONS'
+      });
     }
 
     next();

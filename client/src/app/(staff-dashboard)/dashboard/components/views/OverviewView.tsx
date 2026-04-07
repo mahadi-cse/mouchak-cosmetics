@@ -4,12 +4,13 @@ import React from 'react';
 import { Theme, formatCurrency } from '../../theme';
 import { useResponsive } from '../../page';
 import { Card, SecHead, Btn, Badge } from '../Primitives';
-import { Product, ORDERS, categoryData } from '../../data/mockData';
+import { Product, Order } from '../../data/mockData';
 import { statusStyles } from '../../theme';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 interface OverviewViewProps {
   products: Product[];
+  orders: Order[];
   onQuickSale?: () => void;
 }
 
@@ -22,8 +23,24 @@ const revenueData = [
   { month: 'Mar', revenue: 312000, orders: 243 },
 ];
 
-export default function OverviewView({ products, onQuickSale }: OverviewViewProps) {
+export default function OverviewView({ products, orders, onQuickSale }: OverviewViewProps) {
   const { isMobile } = useResponsive();
+  const categoryData = React.useMemo(() => {
+    const total = products.length || 1;
+    const counts = products.reduce<Record<string, number>>((acc, p) => {
+      acc[p.category] = (acc[p.category] || 0) + 1;
+      return acc;
+    }, {});
+    const palette = ['#f01172', '#c20d5e', '#f59e0b', '#8b5cf6', '#757575'];
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count], i) => ({
+        name,
+        value: Math.round((count / total) * 100),
+        color: palette[i % palette.length],
+      }));
+  }, [products]);
   const topCategoryBadges = categoryData.slice(0, 3);
   const bestMonth = revenueData.reduce((max, item) => (item.revenue > max.revenue ? item : max), revenueData[0]);
   const weakestMonth = revenueData.reduce((min, item) => (item.revenue < min.revenue ? item : min), revenueData[0]);
@@ -279,7 +296,7 @@ export default function OverviewView({ products, onQuickSale }: OverviewViewProp
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
         <Card>
           <SecHead title="Recent Orders" action="View All" />
-          {ORDERS.slice(0, 4).map((o) => {
+          {orders.slice(0, 4).map((o) => {
             const s = statusStyles[o.status];
             return (
               <div
