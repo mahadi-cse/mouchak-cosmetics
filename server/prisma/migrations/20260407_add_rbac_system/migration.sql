@@ -237,7 +237,7 @@ RETURNS TABLE (branch_id INT, branch_name VARCHAR, branch_code VARCHAR)
 LANGUAGE SQL
 STABLE
 AS $$
-SELECT DISTINCT b.id, b.name, b."branchCode"
+SELECT b.id, b.name, b."branchCode"
 FROM "users" u
 JOIN "user_branches" ub ON u.id = ub."userId" AND ub."isActive" = true
 JOIN "branches" b ON ub."branchId" = b.id

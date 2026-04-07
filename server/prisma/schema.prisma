@@ -234,6 +234,7 @@ model Inventory {
   reorderPoint    Int       @default(20)
   reorderQuantity Int       @default(50)
   warehouseId     Int?
+  branch          Branch?   @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
   location        String?
   lastCountedAt   DateTime?
   updatedAt       DateTime  @updatedAt
@@ -396,7 +397,7 @@ model Payment {
 
 model Refund {
   id              Int            @id @default(autoincrement())
-  returnId        Int?
+  returnId        Int?           @unique
   return          Return?        @relation(fields: [returnId], references: [id], onDelete: SetNull)
   paymentId       Int
   payment         Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
