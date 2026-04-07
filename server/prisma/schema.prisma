@@ -61,6 +61,49 @@ enum OrderChannel {
   POS
 }
 
+enum CustomerSegment {
+  VIP
+  REGULAR
+  NEW
+  INACTIVE
+}
+
+enum StockTransferStatus {
+  PENDING
+  IN_TRANSIT
+  RECEIVED
+  CANCELLED
+}
+
+enum BranchType {
+  WAREHOUSE
+  RETAIL
+  OFFICE
+  DISTRIBUTION
+}
+
+enum ReturnReason {
+  DEFECTIVE
+  WRONG_ITEM
+  COLOR_MISMATCH
+  NOT_AS_DESCRIBED
+  CUSTOMER_CHANGED_MIND
+  DAMAGED_IN_TRANSIT
+  EXPIRED
+  QUALITY_ISSUE
+  OTHER
+}
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RETURNED_RECEIVED
+  INSPECTED
+  REFUND_PROCESSED
+  CLOSED
+}
+
 // ─────────────────────────────────────────────────────────────
 // USERS
 // Mirrors Keycloak users. Populated on first login via /api/users/sync.
@@ -74,14 +117,19 @@ model User {
   firstName   String
   lastName    String
   phone       String?
-  role        UserRole  @default(CUSTOMER)
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  customer    Customer?
-  orders      Order[]   @relation("StaffOrders")
-  auditLogs   AuditLog[]
+  customer        Customer?
+  orders          Order[]   @relation("StaffOrders")
+  auditLogs       AuditLog[] @relation("CreatedBy")
+  stockTransfers  StockTransfer[]
+  
+  // RBAC relationships
+  userRoles       UserRole_Model[]
+  userBranches    UserBranch[]
+  assignedRoles   RoleAssignment[]
 
   @@map("users")
 }
@@ -103,6 +151,9 @@ model Customer {
   country         String    @default("Bangladesh")
   loyaltyPoints   Int       @default(0)
   totalSpent      Decimal   @default(0) @db.Decimal(12,2)
+  totalOrders     Int       @default(0)
+  lastOrderAt     DateTime?
+  segment         CustomerSegment @default(NEW)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -128,6 +179,7 @@ model Category {
   updatedAt   DateTime  @updatedAt
 
   products    Product[]
+  skuSetting  SKUSetting?
 
   @@map("categories")
 }
@@ -158,8 +210,11 @@ model Product {
   updatedAt       DateTime  @updatedAt
 
   inventory       Inventory?
+  analytics       ProductAnalytics?
   orderItems      OrderItem[]
   wishlist        Wishlist[]
+  transfers       StockTransfer[]
+  skuHistory      SKUHistory[]
 
   @@map("products")
 }
@@ -176,10 +231,15 @@ model Inventory {
   quantity        Int       @default(0)
   reservedQty     Int       @default(0)
   lowStockThreshold Int     @default(10)
+  reorderPoint    Int       @default(20)
+  reorderQuantity Int       @default(50)
+  warehouseId     Int?
   location        String?
+  lastCountedAt   DateTime?
   updatedAt       DateTime  @updatedAt
 
   transactions    InventoryTransaction[]
+  transfers       StockTransfer[]
 
   @@map("inventory")
 }
@@ -230,12 +290,15 @@ model Order {
   subtotal        Decimal       @db.Decimal(12,2)
   discountAmount  Decimal       @default(0) @db.Decimal(12,2)
   shippingCharge  Decimal       @default(0) @db.Decimal(12,2)
+  taxAmount       Decimal       @default(0) @db.Decimal(12,2)
   total           Decimal       @db.Decimal(12,2)
   currency        String        @default("BDT")
 
   notes           String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
 
   items           OrderItem[]
   payment         Payment?
@@ -259,8 +322,39 @@ model OrderItem {
   quantity    Int
   unitPrice   Decimal   @db.Decimal(10,2)
   totalPrice  Decimal   @db.Decimal(12,2)
+  
+  return      Return?
 
   @@map("order_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// RETURNS
+// Track product returns and return reasons.
+// ─────────────────────────────────────────────────────────────
+
+model Return {
+  id              Int            @id @default(autoincrement())
+  orderItemId     Int            @unique
+  orderItem       OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  
+  reason          ReturnReason
+  returnedQuantity Int
+  returnedAt      DateTime?
+  
+  status          ReturnStatus   @default(REQUESTED)
+  refundAmount    Decimal        @db.Decimal(12,2)
+  refundedAt      DateTime?
+  
+  notes           String?
+  photosUrl       String[]
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  refund          Refund?
+
+  @@map("returns")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -289,8 +383,35 @@ model Payment {
   paidAt            DateTime?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  
+  refunds           Refund[]
 
   @@map("payments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// REFUNDS
+// Track refunds issued for returns and cancellations.
+// ─────────────────────────────────────────────────────────────
+
+model Refund {
+  id              Int            @id @default(autoincrement())
+  returnId        Int?
+  return          Return?        @relation(fields: [returnId], references: [id], onDelete: SetNull)
+  paymentId       Int
+  payment         Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  
+  originalAmount  Decimal        @db.Decimal(12,2)
+  refundAmount    Decimal        @db.Decimal(12,2)
+  
+  status          String         @default("PENDING")
+  gatewayRefId    String?        @unique
+  
+  processedAt     DateTime?
+  failureReason   String?
+  createdAt       DateTime       @default(now())
+  
+  @@map("refunds")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -317,7 +438,7 @@ model Wishlist {
 model AuditLog {
   id          Int       @id @default(autoincrement())
   userId      Int?
-  user        User?     @relation(fields: [userId], references: [id])
+  user        User?     @relation("CreatedBy", fields: [userId], references: [id])
   action      String
   entity      String
   entityId    Int
@@ -329,4 +450,264 @@ model AuditLog {
   createdAt   DateTime  @default(now())
 
   @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRODUCT ANALYTICS
+// Cached product performance metrics for dashboard queries.
+// ─────────────────────────────────────────────────────────────
+
+model ProductAnalytics {
+  id              Int       @id @default(autoincrement())
+  productId       Int       @unique
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  totalSold       Int       @default(0)
+  totalRevenue    Decimal   @default(0) @db.Decimal(12,2)
+  totalViews      Int       @default(0)
+  wishlistCount   Int       @default(0)
+  avgRating       Decimal?  @db.Decimal(3,2)
+  reviewCount     Int       @default(0)
+  returnCount     Int       @default(0)
+  lastSoldAt      DateTime?
+  lastUpdated     DateTime  @default(now()) @updatedAt
+
+  @@map("product_analytics")
+}
+
+// ─────────────────────────────────────────────────────────────
+// STOCK TRANSFERS
+// Track inter-warehouse stock movements.
+// ─────────────────────────────────────────────────────────────
+
+model StockTransfer {
+  id              Int                 @id @default(autoincrement())
+  productId       Int
+  product         Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryId     Int
+  inventory       Inventory           @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  fromWarehouseId Int?
+  toWarehouseId   Int?
+  quantity        Int
+  status          StockTransferStatus @default(PENDING)
+  initiatedBy     Int
+  initiatedByUser User                @relation(fields: [initiatedBy], references: [id], onDelete: Restrict)
+  initiatedAt     DateTime            @default(now())
+  receivedAt      DateTime?
+  referenceNumber String?             @unique
+  notes           String?
+
+  @@map("stock_transfers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// BRANCHES (WAREHOUSES / STORES)
+// Multi-location management system.
+// ─────────────────────────────────────────────────────────────
+
+model Branch {
+  id            Int         @id @default(autoincrement())
+  name          String      @unique
+  branchCode    String      @unique
+  branchType    BranchType  @default(WAREHOUSE)
+  
+  address       String?
+  city          String?
+  postalCode    String?
+  country       String?
+  phone         String?
+  email         String?
+  
+  managerName   String?
+  managerPhone  String?
+  
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  userRoles     UserRole_Model[]
+  userBranches  UserBranch[]
+  inventory     Inventory[]
+
+  @@map("branches")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ROLES (DYNAMIC, CUSTOMIZABLE)
+// System admin can create new roles at runtime.
+// ─────────────────────────────────────────────────────────────
+
+model Role {
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
+  description   String?
+  
+  isSystem      Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  canBeDeleted  Boolean   @default(true)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  userRoles     UserRole_Model[]
+  permissions   RolePermission[]
+
+  @@map("roles")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PERMISSIONS (GRANULAR ACCESS CONTROL)
+// Format: RESOURCE.ACTION (e.g., products.read, orders.create)
+// ─────────────────────────────────────────────────────────────
+
+model Permission {
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
+  description   String?
+  
+  resource      String
+  action        String
+  module        String?
+  
+  isActive      Boolean   @default(true)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  roles         RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ROLE PERMISSIONS (JUNCTION TABLE)
+// Links roles to their permissions.
+// ─────────────────────────────────────────────────────────────
+
+model RolePermission {
+  id            Int       @id @default(autoincrement())
+  
+  roleId        Int
+  role          Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  permissionId  Int
+  permission    Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// USER ROLES (MANY-TO-MANY WITH SCOPE)
+// Users can have multiple roles, optionally scoped to a branch.
+// ─────────────────────────────────────────────────────────────
+
+model UserRole_Model {
+  id            Int       @id @default(autoincrement())
+  
+  userId        Int
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  roleId        Int
+  role          Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  // Optional: Restrict role to specific branch (e.g., Branch Manager for Branch 2)
+  branchId      Int?
+  branch        Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  
+  assignedAt    DateTime  @default(now())
+  assignedBy    Int?
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime?
+
+  @@unique([userId, roleId, branchId])
+  @@map("user_roles")
+}
+
+// ─────────────────────────────────────────────────────────────
+// USER BRANCHES (BRANCH ASSIGNMENTS)
+// Tracks which branches a user has access to.
+// ─────────────────────────────────────────────────────────────
+
+model UserBranch {
+  id            Int       @id @default(autoincrement())
+  
+  userId        Int
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  branchId      Int
+  branch        Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  
+  isPrimary     Boolean   @default(false)
+  assignedAt    DateTime  @default(now())
+  isActive      Boolean   @default(true)
+
+  @@unique([userId, branchId])
+  @@map("user_branches")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SKU SETTINGS (AUTO-GENERATION & VALIDATION)
+// Manage SKU format and auto-generation rules per category.
+// ─────────────────────────────────────────────────────────────
+
+model SKUSetting {
+  id                      Int       @id @default(autoincrement())
+  
+  categoryId              Int       @unique
+  category                Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  prefix                  String    @unique
+  currentCounter          Int       @default(0)
+  
+  enableAutoGeneration    Boolean   @default(true)
+  isActive                Boolean   @default(true)
+  
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@map("sku_settings")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SKU HISTORY (AUDIT TRAIL)
+// Track all SKU changes for compliance and debugging.
+// ─────────────────────────────────────────────────────────────
+
+model SKUHistory {
+  id              Int       @id @default(autoincrement())
+  
+  productId       Int
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  oldSku          String?
+  newSku          String
+  changeReason    String?
+  changedBy       Int?
+  changedAt       DateTime  @default(now())
+
+  @@map("sku_history")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ROLE ASSIGNMENT (TRACKING)
+// Log of role assignments for audit trail.
+// ─────────────────────────────────────────────────────────────
+
+model RoleAssignment {
+  id              Int       @id @default(autoincrement())
+  
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  roleId          Int
+  actionType      String    // ASSIGNED, REMOVED, UPDATED
+  
+  assignedAt      DateTime  @default(now())
+  changedBy       Int?
+  reason          String?
+
+  @@map("role_assignments")
 }
