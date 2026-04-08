@@ -20,7 +20,7 @@ export function FeaturedProducts() {
                 <h2 className="text-lg font-extrabold text-zinc-900">{featuredProductsContent.title}</h2>
               </div>
             </div>
-            <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 p-4 grid-cols-2 sm:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-64 animate-pulse rounded bg-zinc-200" />
               ))}
@@ -58,7 +58,7 @@ export function FeaturedProducts() {
             </a>
           </div>
 
-          <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 p-4 grid-cols-2 sm:grid-cols-4">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

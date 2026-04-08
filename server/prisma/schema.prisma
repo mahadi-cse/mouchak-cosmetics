@@ -712,3 +712,85 @@ model RoleAssignment {
 
   @@map("role_assignments")
 }
+
+// ─────────────────────────────────────────────────────────────
+// HOMEPAGE STATS
+// Dynamic metrics displayed on the homepage hero section.
+// ─────────────────────────────────────────────────────────────
+
+model HomepageStats {
+  id                    Int       @id @default(autoincrement())
+  
+  // Hero section metrics
+  totalHappyCustomers   Int       @default(0)
+  
+  // Free Delivery
+  minFreeDeliveryAmount Int       @default(999) // In taka
+  isFreeDeliveryActive  Boolean   @default(true)
+  
+  // Delivery timeframe
+  deliveryTimeframe     String    @default("48hr") // e.g., "48hr", "2 days"
+  
+  // Marketing & promotional - Offer
+  currentOfferText      String    @default("Spring Sale - Save up to 40%")
+  currentOfferPercentage Int      @default(40) // Max discount %
+  isOfferActive         Boolean   @default(true)
+  
+  // Metadata
+  lastUpdated           DateTime  @default(now()) @updatedAt
+  
+  @@map("homepage_stats")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SITE SETTINGS
+// Global site configuration (store name, hero heading, etc).
+// ─────────────────────────────────────────────────────────────
+
+model SiteSettings {
+  id                    Int       @id @default(autoincrement())
+  
+  // Store branding
+  storeName             String    @default("Mouchak Cosmetics")
+  tagline               String    @default("Clean · Cruelty-Free · Bangladesh")
+  
+  // Hero section
+  heroHeadline          String    @default("Spring Beauty Collection") // e.g., "Summer Collection", "Winter Edition"
+  heroYear              String    @default("2026")
+  heroDescription       String    @default("Discover luxurious skincare and makeup that celebrates your natural glow. Clean, cruelty-free formulas delivered across Bangladesh in 48 hours.")
+  
+  // Metadata
+  lastUpdated           DateTime  @default(now()) @updatedAt
+  
+  @@map("site_settings")
+}
+
+// ─────────────────────────────────────────────────────────────
+// HERO SLIDER
+// Manage carousel/slider images for the hero section.
+// ─────────────────────────────────────────────────────────────
+
+model HeroSlider {
+  id            Int       @id @default(autoincrement())
+  title         String?
+  description   String?
+  imageUrl      String    @db.Text
+  imageAlt      String    @default("Hero slider image")
+  
+  // Marketing & Navigation
+  buttonText    String?
+  buttonLink    String?
+  
+  // Display control
+  displayOrder  Int       @default(0)
+  isActive      Boolean   @default(true)
+  
+  // Metadata
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([displayOrder, isActive])
+  @@map("hero_slider")
+}
+
+

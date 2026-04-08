@@ -13,6 +13,7 @@ import inventoryRouter from './modules/inventory/inventory.router';
 import orderRouter from './modules/orders/order.router';
 import customerRouter from './modules/customers/customer.router';
 import analyticsRouter from './modules/analytics/analytics.router';
+import homepageRouter from './modules/homepage/routes';
 
 export function createApp(): Express {
   const app = express();
@@ -38,6 +39,7 @@ export function createApp(): Express {
   app.use('/api/orders', orderRouter);
   app.use('/api/customers', customerRouter);
   app.use('/api/analytics', analyticsRouter);
+  app.use('/api/homepage', homepageRouter);
 
   // 404 handler
   app.use(notFound);

@@ -1,0 +1,76 @@
+import apiClient from "@/lib/apiClient";
+import { HomepageStats } from "./queries";
+
+export type SiteSettings = {
+  id: number;
+  storeName: string;
+  tagline: string;
+  heroHeadline: string;
+  heroYear: string;
+  heroDescription: string;
+  lastUpdated: string;
+};
+
+export type HeroSlider = {
+  id: number;
+  title: string | null;
+  description: string | null;
+  imageUrl: string;
+  imageAlt: string;
+  buttonText: string | null;
+  buttonLink: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const homepageAPI = {
+  // Site Settings
+  getSettings: async (): Promise<SiteSettings> => {
+    const response = await apiClient.get<SiteSettings>("/homepage/settings");
+    return response.data;
+  },
+
+  updateSettings: async (data: Partial<SiteSettings>): Promise<SiteSettings> => {
+    const response = await apiClient.put<{ message: string; data: SiteSettings }>("/homepage/settings", data);
+    return response.data.data;
+  },
+
+  // Stats methods
+  getStats: async (): Promise<HomepageStats> => {
+    const response = await apiClient.get<HomepageStats>("/homepage/stats");
+    return response.data;
+  },
+
+  updateStats: async (data: Partial<HomepageStats>): Promise<HomepageStats> => {
+    const response = await apiClient.put<HomepageStats>("/homepage/stats", data);
+    return response.data;
+  },
+
+  // Slider methods
+  getSliders: async (): Promise<HeroSlider[]> => {
+    const response = await apiClient.get<HeroSlider[]>("/homepage/slider");
+    return response.data;
+  },
+
+  getAllSliders: async (): Promise<HeroSlider[]> => {
+    const response = await apiClient.get<HeroSlider[]>("/homepage/slider/all");
+    return response.data;
+  },
+
+  createSlider: async (data: Partial<HeroSlider>): Promise<{ message: string; data: HeroSlider }> => {
+    const response = await apiClient.post<{ message: string; data: HeroSlider }>("/homepage/slider", data);
+    return response.data;
+  },
+
+  updateSlider: async (id: number, data: Partial<HeroSlider>): Promise<{ message: string; data: HeroSlider }> => {
+    const response = await apiClient.put<{ message: string; data: HeroSlider }>(`/homepage/slider/${id}`, data);
+    return response.data;
+  },
+
+  deleteSlider: async (id: number): Promise<{ message: string }> => {
+    const response = await apiClient.delete<{ message: string }>(`/homepage/slider/${id}`);
+    return response.data;
+  },
+};
