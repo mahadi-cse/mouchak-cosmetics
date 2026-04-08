@@ -11,13 +11,14 @@ import AnalyticsView from './views/AnalyticsView';
 import BranchesView from './views/BranchesView';
 import SettingsView from './views/SettingsView';
 import ManualSaleModal from './ManualSaleModal';
-import { Product, SellLog } from '../data/mockData';
+import { Product, SellLog, Order } from '../data/mockData';
 
 interface DashboardLayoutProps {
   products: Product[];
   setProducts: (products: Product[]) => void;
   sellLog: SellLog[];
   setSellLog: (log: SellLog[]) => void;
+  orders: Order[];
   time: Date;
 }
 
@@ -326,6 +327,7 @@ export default function DashboardLayout({
   setProducts,
   sellLog,
   setSellLog,
+  orders,
   time,
 }: DashboardLayoutProps) {
   const { isMobile } = useResponsive();
@@ -344,8 +346,8 @@ export default function DashboardLayout({
       : NAV.find((n) => n.id === activeNav)?.label;
 
   const views: Record<string, React.ReactNode> = {
-    overview: <OverviewView products={products} onQuickSale={() => setModal(true)} />,
-    ecommerce: <EcommerceView products={products} />,
+    overview: <OverviewView products={products} orders={orders} onQuickSale={() => setModal(true)} />,
+    ecommerce: <EcommerceView products={products} orders={orders} />,
     inventory: (
       <InventoryView
         products={products}

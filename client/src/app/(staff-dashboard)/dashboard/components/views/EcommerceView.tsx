@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 import { Theme, formatCurrency, statusStyles } from '../../theme';
 import { useResponsive } from '../../page';
 import { Card, KpiCard, SecHead, Btn, Badge } from '../Primitives';
-import { Product, ORDERS } from '../../data/mockData';
+import { Product, Order } from '../../data/mockData';
 
 interface EcommerceViewProps {
   products: Product[];
+  orders: Order[];
 }
 
-export default function EcommerceView({ products }: EcommerceViewProps) {
+export default function EcommerceView({ products, orders }: EcommerceViewProps) {
   const { isMobile } = useResponsive();
   const [tab, setTab] = useState<'orders' | 'products' | 'customers'>('orders');
 
@@ -99,7 +100,7 @@ export default function EcommerceView({ products }: EcommerceViewProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {ORDERS.map((o, i) => {
+                  {orders.map((o, i) => {
                     const s = statusStyles[o.status];
                     return (
                       <tr key={o.id} style={{ background: i % 2 === 0 ? '#fff' : Theme.muted }}>
