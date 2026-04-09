@@ -1,4 +1,4 @@
-import apiClient from '@/lib/apiClient';
+import apiClient from '@/shared/lib/apiClient';
 import { Product, PaginatedResponse, ListProductsParams } from '@/entities/types';
 
 export const productAPI = {

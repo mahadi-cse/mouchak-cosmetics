@@ -1,18 +1,13 @@
 ﻿'use client';
 
-import { useState, useEffect, useContext, createContext } from 'react';
-import DashboardLayout from './components/DashboardLayout';
-import { useBreakpoint } from './hooks/useBreakpoint';
-import { Product, SellLog, Order as DashboardOrder } from './data/mockData';
+import { useState, useEffect } from 'react';
+import DashboardLayout from '@/modules/dashboard/components/DashboardLayout';
+import { useBreakpoint } from '@/modules/dashboard/hooks/useBreakpoint';
+import { ResponsiveContext } from '@/modules/dashboard/hooks/useResponsive';
+import { Product, SellLog, Order as DashboardOrder } from '@/modules/dashboard/data/mockData';
 import { useListOrders } from '@/features/orders/queries';
 import { useInventorySummary } from '@/features/inventory/queries';
 import { useLowStockItems } from '@/features/inventory/queries';
-
-const RCtx = createContext<{ isMobile: boolean; isTablet: boolean }>({ isMobile: false, isTablet: false });
-
-export function useResponsive() {
-  return useContext(RCtx);
-}
 
 export default function DashboardPage() {
   const bp = useBreakpoint();
@@ -94,7 +89,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <RCtx.Provider value={bp}>
+    <ResponsiveContext.Provider value={bp}>
       <DashboardLayout
         products={products}
         setProducts={setProducts}
@@ -103,6 +98,6 @@ export default function DashboardPage() {
         orders={orders}
         time={time}
       />
-    </RCtx.Provider>
+    </ResponsiveContext.Provider>
   );
 }

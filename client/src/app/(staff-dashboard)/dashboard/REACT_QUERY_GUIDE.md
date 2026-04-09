@@ -13,7 +13,7 @@ This guide shows how to use the React Query hooks for the dashboard APIs.
 
 import { useDashboardMetrics } from '@/features/analytics/queries';
 import { useListOrders } from '@/features/orders/queries';
-import { useListCustomers } from '@/features/customers/queries';
+import { useListCustomers } from '@/modules/customers/queries';
 import { useInventorySummary } from '@/features/inventory/queries';
 
 export default function DashboardPage() {
@@ -235,8 +235,8 @@ export function InventoryDashboard() {
 ```typescript
 'use client';
 
-import { useListCustomers, useCustomerDetails, useCustomerMetrics } from '@/features/customers/queries';
-import { useUpdateLoyaltyPointsMutation } from '@/features/customers/mutations';
+import { useListCustomers, useCustomerDetails, useCustomerMetrics } from '@/modules/customers/queries';
+import { useUpdateLoyaltyPointsMutation } from '@/modules/customers/mutations';
 import { useState } from 'react';
 
 export function CustomersTable() {

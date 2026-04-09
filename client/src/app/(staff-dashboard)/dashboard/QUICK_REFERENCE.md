@@ -41,7 +41,7 @@ import {
   useUpdateCustomerMutation,
   useUpdateLoyaltyPointsMutation,
   useDeleteCustomerMutation,
-} from '@/features/customers';
+} from '@/modules/customers';
 
 // Analytics
 import {

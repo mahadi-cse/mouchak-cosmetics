@@ -48,7 +48,7 @@ export function InfiniteOrdersList() {
 ### 2. Dependent Queries (Sequential Loading)
 
 ```typescript
-import { useCustomerDetails, useCustomerOrders } from '@/features/customers/queries';
+import { useCustomerDetails, useCustomerOrders } from '@/modules/customers/queries';
 
 export function CustomerFullView({ customerId }: { customerId: number }) {
   // First query - customer details
@@ -360,7 +360,7 @@ export function OrderMetrics() {
 
 ```typescript
 import { useQueries } from '@tanstack/react-query';
-import { getCustomerDetails, getCustomerMetrics, getCustomerOrders } from '@/features/customers/api';
+import { getCustomerDetails, getCustomerMetrics, getCustomerOrders } from '@/modules/customers/api';
 
 export function CustomerBatch({ customerId }: { customerId: number }) {
   const results = useQueries({

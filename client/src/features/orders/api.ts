@@ -1,4 +1,4 @@
-import apiClient from '@/lib/apiClient';
+import apiClient from '@/shared/lib/apiClient';
 import type { Order, PaginatedResponse, ApiResponse } from '@/entities/types';
 
 export interface ListOrdersParams {
