@@ -1,8 +1,8 @@
 export const NAV = [
   { id: 'overview', label: 'Overview', icon: '◈' },
   { id: 'sales', label: 'Sales', icon: '💰' },
-  { id: 'ecommerce', label: 'E-Commerce', icon: '🌐' },
   { id: 'inventory', label: 'Inventory', icon: '📦' },
+  { id: 'ecommerce', label: 'E-Commerce', icon: '🌐' },
   { id: 'analytics', label: 'Analytics', icon: '📊' },
   { id: 'branches', label: 'Branches', icon: '🏪' },
   { id: 'pos', label: 'POS', icon: '🖥️', badge: 'Soon' },

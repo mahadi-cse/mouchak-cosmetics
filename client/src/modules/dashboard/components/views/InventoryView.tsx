@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { Card, SecHead, Btn } from '../Primitives';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
@@ -31,6 +31,8 @@ export default function InventoryView({
   const [batchName, setBatchName] = useState('');
   const [mfgDate, setMfgDate] = useState('');
   const [expDate, setExpDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'ok' | 'low' | 'out'>('all');
   const adjustStockMutation = useAdjustStockMutation();
   const branchInventoryQuery = useInventorySummary({ page: 1, limit: 500, warehouseId: Number(selectedBranch) });
 
@@ -42,8 +44,60 @@ export default function InventoryView({
     stock: item.availableQty ?? item.quantity ?? 0,
     warehouse: item.warehouse || 'N/A',
     status: 'active',
+    batchName: item.batchName || 'N/A',
+    manufactureDate: item.manufactureDate ? new Date(item.manufactureDate).toLocaleDateString() : 'N/A',
+    expiryDate: item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A',
+    rawMfgDate: item.manufactureDate || '',
+    rawExpDate: item.expiryDate || '',
   }));
   const viewProducts = branchProducts;
+
+  // Helper functions
+  const getStatus = (stock: number) => {
+    if (stock === 0) return 'out';
+    if (stock <= 10) return 'low';
+    return 'ok';
+  };
+
+  const getStatusLabel = (stock: number) => {
+    if (stock === 0) return 'Out of stock';
+    if (stock <= 10) return 'Low';
+    return 'Healthy';
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status === 'out') return '#A32D2D';
+    if (status === 'low') return '#854F0B';
+    return '#3B6D11';
+  };
+
+  const getStatusBg = (status: string) => {
+    if (status === 'out') return '#FCEBEB';
+    if (status === 'low') return '#FAEEDA';
+    return '#EAF3DE';
+  };
+
+  // Filter products based on search and filter
+  const filteredProducts = useMemo(() => {
+    return branchProducts.filter((p: any) => {
+      const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         p.sku.toLowerCase().includes(searchQuery.toLowerCase());
+      const status = getStatus(p.stock);
+      const matchFilter = activeFilter === 'all' || status === activeFilter;
+      return matchSearch && matchFilter;
+    });
+  }, [branchProducts, searchQuery, activeFilter]);
+
+  // Calculate summary stats
+  const summaryStats = useMemo(() => {
+    return {
+      totalSkus: branchProducts.length,
+      totalUnits: branchProducts.reduce((sum: number, p: any) => sum + p.stock, 0),
+      lowStockCount: branchProducts.filter((p: any) => getStatus(p.stock) === 'low').length,
+      outOfStockCount: branchProducts.filter((p: any) => getStatus(p.stock) === 'out').length,
+    };
+  }, [branchProducts]);
+
   const selectedProduct = viewProducts.find((p: any) => p.id === parseInt(formProductId));
 
   React.useEffect(() => {
@@ -109,8 +163,6 @@ export default function InventoryView({
     setModalOpen(true);
   };
 
-  const filteredProducts = viewProducts;
-
   React.useEffect(() => {
     if (viewProducts.length === 0) {
       setFormProductId('1');
@@ -122,23 +174,70 @@ export default function InventoryView({
     }
   }, [formProductId, viewProducts]);
 
-  React.useEffect(() => {
-    setFormBranchId(selectedBranch);
-  }, [selectedBranch]);
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* Header with Title and Summary Stats Side by Side */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <div className="text-[22px] font-extrabold" style={{ color: Theme.fg }}>
+          <div className="text-[18px] font-semibold" style={{ color: Theme.fg }}>
             Inventory Management
           </div>
-          <div className="mt-0.5 text-[13px]" style={{ color: Theme.mutedFg }}>
-            Track stock levels by branch, add & edit stock
+          <div className="mt-1 text-[13px]" style={{ color: Theme.mutedFg }}>
+            {branches.find((b) => b.id === Number(selectedBranch))?.name || 'N/A'} · Live stock synced from inventory API
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 w-full lg:w-auto">
+          {[
+            { label: 'Total SKUs', val: summaryStats.totalSkus, color: '' },
+            { label: 'Total units', val: summaryStats.totalUnits, color: '' },
+            { label: 'Low stock', val: summaryStats.lowStockCount, color: '#854F0B' },
+            { label: 'Out of stock', val: summaryStats.outOfStockCount, color: '#A32D2D' },
+          ].map((stat, i) => (
+            <div
+              key={i}
+              className="rounded-lg px-3 py-2"
+              style={{ background: Theme.muted }}
+            >
+              <div className="text-xs" style={{ color: Theme.mutedFg }}>
+                {stat.label}
+              </div>
+              <div className="mt-1 text-lg font-semibold" style={{ color: stat.color || Theme.fg }}>
+                {stat.val}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Card>
+        {/* Toolbar */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search products or SKU…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 min-w-[180px] rounded-lg border px-3 py-2 text-sm outline-none"
+            style={{ borderColor: Theme.border, color: Theme.fg }}
+          />
+
+          {(['all', 'ok', 'low', 'out'] as const).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-all"
+              style={{
+                borderColor: Theme.border,
+                background: activeFilter === filter ? Theme.primary : 'transparent',
+                color: activeFilter === filter ? '#fff' : Theme.mutedFg,
+              }}
+            >
+              {filter === 'all' ? 'All' : filter === 'ok' ? 'Healthy' : filter === 'low' ? 'Low' : 'Out'}
+            </button>
+          ))}
+
           <select
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
@@ -146,13 +245,226 @@ export default function InventoryView({
             style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
           >
             {activeBranches.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
             ))}
           </select>
-          <Btn onClick={openAddModal} disabled={viewProducts.length === 0}>➕ Add Stock</Btn>
-        </div>
-      </div>
 
+          <Btn onClick={openAddModal} disabled={viewProducts.length === 0}>
+            + Add Stock
+          </Btn>
+        </div>
+
+        {/* Table */}
+        {filteredProducts.length === 0 ? (
+          <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
+            No products match your filter.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: Theme.muted }}>
+                  <th
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: Theme.mutedFg,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      borderBottom: `1px solid ${Theme.border}`,
+                      width: '40%',
+                    }}
+                  >
+                    Product
+                  </th>
+                  <th
+                    className='hidden md:table-cell'
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: Theme.mutedFg,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      borderBottom: `1px solid ${Theme.border}`,
+                      width: '12%',
+                    }}
+                  >
+                    Stock
+                  </th>
+                  <th
+                    className='hidden md:table-cell'
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: Theme.mutedFg,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      borderBottom: `1px solid ${Theme.border}`,
+                      width: '14%',
+                    }}
+                  >
+                    Status
+                  </th>
+                  <th
+                    className='hidden lg:table-cell'
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: Theme.mutedFg,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      padding: '8px 12px',
+                      textAlign: 'right',
+                      borderBottom: `1px solid ${Theme.border}`,
+                      width: '14%',
+                    }}
+                  >
+                    Batch / Exp
+                  </th>
+                  <th
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: Theme.mutedFg,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      padding: '8px 12px',
+                      textAlign: 'right',
+                      borderBottom: `1px solid ${Theme.border}`,
+                      width: '6%',
+                    }}
+                  />
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((p: any) => {
+                  const status = getStatus(p.stock);
+                  return (
+                    <tr
+                      key={p.id}
+                      style={{
+                        borderBottom: `1px solid ${Theme.border}`,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = Theme.muted)}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td
+                        style={{
+                          padding: '10px 12px',
+                          borderBottom: `1px solid ${Theme.border}`,
+                          verticalAlign: 'middle',
+                          fontSize: '13px',
+                          color: Theme.fg,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{p.name}</div>
+                          <div style={{ fontSize: '11px', color: Theme.mutedFg, marginTop: '2px', fontFamily: 'monospace' }}>
+                            {p.sku}
+                          </div>
+                        </div>
+                      </td>
+                      <td
+                        className='hidden md:table-cell'
+                        style={{
+                          padding: '10px 12px',
+                          borderBottom: `1px solid ${Theme.border}`,
+                          verticalAlign: 'middle',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          color: getStatusColor(status),
+                        }}
+                      >
+                        {p.stock}
+                      </td>
+                      <td
+                        className='hidden md:table-cell'
+                        style={{
+                          padding: '10px 12px',
+                          borderBottom: `1px solid ${Theme.border}`,
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            background: getStatusBg(status),
+                            color: getStatusColor(status),
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {getStatusLabel(p.stock)}
+                        </span>
+                      </td>
+                      <td
+                        className='hidden lg:table-cell'
+                        style={{
+                          padding: '10px 12px',
+                          borderBottom: `1px solid ${Theme.border}`,
+                          verticalAlign: 'middle',
+                          fontSize: '12px',
+                          color: Theme.mutedFg,
+                          fontFamily: 'monospace',
+                          textAlign: 'right',
+                        }}
+                      >
+                        {p.batchName} / {p.expiryDate}
+                      </td>
+                      <td
+                        style={{
+                          padding: '10px 12px',
+                          borderBottom: `1px solid ${Theme.border}`,
+                          verticalAlign: 'middle',
+                          textAlign: 'right',
+                        }}
+                      >
+                        <button
+                          onClick={() => {
+                            setFormProductId(p.id.toString());
+                            setFormMode('set');
+                            setFormStockValue(String(p.stock ?? 0));
+                            setBatchName(p.batchName !== 'N/A' ? p.batchName : '');
+                            setMfgDate(p.rawMfgDate ? p.rawMfgDate.split('T')[0] : '');
+                            setExpDate(p.rawExpDate ? p.rawExpDate.split('T')[0] : '');
+                            setModalOpen(true);
+                          }}
+                          className="cursor-pointer rounded border px-2 py-1 text-xs font-medium transition-all"
+                          style={{
+                            border: `1px solid ${Theme.border}`,
+                            background: '#fff',
+                            color: Theme.fg,
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Count */}
+        <div style={{ fontSize: '11px', color: Theme.mutedFg, marginTop: '10px' }}>
+          {filteredProducts.length} of {branchProducts.length} products
+        </div>
+      </Card>
+
+      {/* Modal */}
       {modalOpen && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
@@ -337,102 +649,7 @@ export default function InventoryView({
         </div>
       )}
 
-      <Card>
-        <SecHead
-          title="📦 Stock Levels"
-          sub={`Live stock synced from inventory API · Branch: ${branches.find((b) => b.id === Number(selectedBranch))?.name || 'N/A'}`}
-        />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] border-collapse">
-            <thead>
-              <tr style={{ background: Theme.muted }}>
-                <th
-                  className="px-3 py-3 text-left font-semibold"
-                  style={{ borderBottom: `1px solid ${Theme.border}` }}
-                >
-                  Product
-                </th>
-                <th
-                  className="px-3 py-3 text-center font-semibold"
-                  style={{ borderBottom: `1px solid ${Theme.border}` }}
-                >
-                  Stock
-                </th>
-                <th
-                  className="px-3 py-3 text-center font-semibold"
-                  style={{ borderBottom: `1px solid ${Theme.border}` }}
-                >
-                  Status
-                </th>
-                <th
-                  className="px-3 py-3 text-center font-semibold"
-                  style={{ borderBottom: `1px solid ${Theme.border}` }}
-                >
-                  Branch
-                </th>
-                <th
-                  className="px-3 py-3 text-center font-semibold"
-                  style={{ borderBottom: `1px solid ${Theme.border}` }}
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((p: any) => (
-                <tr key={p.id} style={{ borderBottom: `1px solid ${Theme.border}` }}>
-                  <td className="max-w-[150px] px-3 py-3 font-medium">
-                    <div>{p.name}</div>
-                    <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
-                      {p.sku}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-center font-bold" style={{ color: Theme.primary }}>
-                    {p.stock}
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <span
-                      className="rounded border px-2 py-1 text-xs font-semibold"
-                      style={{
-                        borderColor: Theme.border,
-                        background: p.stock > 20 ? '#dcfce7' : p.stock > 0 ? '#fef3c7' : '#fee2e2',
-                        color: p.stock > 20 ? '#166534' : p.stock > 0 ? '#92400e' : '#991b1b',
-                      }}
-                    >
-                      {p.stock > 20 ? 'Healthy' : p.stock > 0 ? 'Low' : 'Out'}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>
-                    {p.warehouse || 'N/A'}
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <button
-                      onClick={() => {
-                        setFormProductId(p.id.toString());
-                        setFormMode('set');
-                        setFormStockValue(String(p.stock ?? 0));
-                        setModalOpen(true);
-                      }}
-                      className="cursor-pointer rounded border-none px-2.5 py-1.5 text-sm text-white transition-opacity hover:opacity-90"
-                      style={{ background: Theme.primary }}
-                    >
-                      ✎ Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredProducts.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                    No inventory found for this branch.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
+      {/* Recent Manual Sales */}
       <Card>
         <SecHead title="📋 Recent Manual Sales" sub="Latest walk-in transactions" />
         {sellLog.slice(0, 5).map((log: any) => (

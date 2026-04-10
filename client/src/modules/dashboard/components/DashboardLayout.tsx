@@ -487,9 +487,9 @@ export default function DashboardLayout({
         >
           {[
             { id: 'overview', label: 'Home', icon: '◈' },
-            { id: 'ecommerce', label: 'Orders', icon: '🌐' },
             { id: 'inventory', label: 'Inventory', icon: '📦' },
             { id: 'sales', label: 'Sales', icon: '💰' },
+            { id: 'ecommerce', label: 'Orders', icon: '🌐' },
             { id: 'settings', label: 'Settings', icon: '⚙️' },
           ].map((n) => {
             const active = activeNav === n.id;
