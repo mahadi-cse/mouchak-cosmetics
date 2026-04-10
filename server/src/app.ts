@@ -14,6 +14,8 @@ import orderRouter from './modules/orders/order.router';
 import customerRouter from './modules/customers/customer.router';
 import analyticsRouter from './modules/analytics/analytics.router';
 import homepageRouter from './modules/homepage/routes';
+import manualSaleRouter from './modules/manual-sales/manualSale.router';
+import branchRouter from './modules/branches/branch.router';
 
 export function createApp(): Express {
   const app = express();
@@ -40,6 +42,8 @@ export function createApp(): Express {
   app.use('/api/customers', customerRouter);
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/homepage', homepageRouter);
+  app.use('/api/manual-sales', manualSaleRouter);
+  app.use('/api/branches', branchRouter);
 
   // 404 handler
   app.use(notFound);

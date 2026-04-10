@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { Card, SecHead, Btn } from '../Primitives';
-import { INITIAL_BRANCHES } from '@/modules/dashboard/data/mockData';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
+import { useAdjustStockMutation, useInventorySummary } from '@/modules/inventory';
+import { useListBranches } from '@/modules/branches';
+import toast from 'react-hot-toast';
 
 interface InventoryViewProps {
   products: any[];
@@ -13,87 +15,116 @@ interface InventoryViewProps {
   setSellLog: (log: any[]) => void;
 }
 
-interface BranchStock {
-  [branchId: number]: number;
-}
-
 export default function InventoryView({
   products,
-  setProducts,
   sellLog,
-  setSellLog,
 }: InventoryViewProps) {
   const { isMobile } = useResponsive();
-  const [selectedBranch, setSelectedBranch] = useState('all');
-  const [editingProduct, setEditingProduct] = useState<{ id: number; branchId: string } | null>(null);
-  const [editValue, setEditValue] = useState('');
-
+  const { data: branches = [] } = useListBranches();
+  const activeBranches = branches.filter((b) => b.active);
+  const [selectedBranch, setSelectedBranch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [formProductId, setFormProductId] = useState(products[0]?.id.toString() || '1');
-  const [formBranchId, setFormBranchId] = useState('1');
+  const [formBranchId, setFormBranchId] = useState('');
   const [formStockValue, setFormStockValue] = useState('');
   const [formMode, setFormMode] = useState<'set' | 'add'>('set');
+  const [batchName, setBatchName] = useState('');
+  const [mfgDate, setMfgDate] = useState('');
+  const [expDate, setExpDate] = useState('');
+  const adjustStockMutation = useAdjustStockMutation();
+  const branchInventoryQuery = useInventorySummary({ page: 1, limit: 500, warehouseId: Number(selectedBranch) });
 
-  const branchStockMap: Record<number, BranchStock> = {
-    1: { 1: 48, 2: 12, 3: 30, 4: 0, 5: 67, 6: 24, 7: 45, 8: 19 },
-    2: { 1: 20, 2: 8, 3: 25, 4: 0, 5: 40, 6: 15, 7: 22, 8: 12 },
-    3: { 1: 10, 2: 5, 3: 12, 4: 0, 5: 27, 6: 8, 7: 15, 8: 8 },
-  };
+  const branchInventoryData = ((branchInventoryQuery as any).data?.data || []) as any[];
+  const branchProducts = branchInventoryData.map((item: any) => ({
+    id: item.productId || item.product?.id,
+    name: item.product?.name || 'Unknown Product',
+    sku: item.product?.sku || 'N/A',
+    stock: item.availableQty ?? item.quantity ?? 0,
+    warehouse: item.warehouse || 'N/A',
+    status: 'active',
+  }));
+  const viewProducts = branchProducts;
+  const selectedProduct = viewProducts.find((p: any) => p.id === parseInt(formProductId));
 
-  const getProductBranchStock = (productId: number, branchId: number) => {
-    return branchStockMap[productId]?.[branchId] || 0;
-  };
-
-  const getTotalProductStock = (productId: number) => {
-    return Object.values(branchStockMap[productId] || {}).reduce((sum, stock) => sum + stock, 0);
-  };
-
-  const handleEditStock = (productId: number, branchId: string) => {
-    const branchNumId = parseInt(branchId);
-    const currentStock = getProductBranchStock(productId, branchNumId);
-    setEditingProduct({ id: productId, branchId: branchId as any });
-    setEditValue(currentStock.toString());
-  };
-
-  const handleSaveStock = () => {
-    if (editingProduct) {
-      const branchNumId = parseInt(editingProduct.branchId);
-      branchStockMap[editingProduct.id][branchNumId] = parseInt(editValue) || 0;
-      setEditingProduct(null);
-      setEditValue('');
+  React.useEffect(() => {
+    if (!selectedBranch && activeBranches.length > 0) {
+      setSelectedBranch(String(activeBranches[0].id));
     }
-  };
+  }, [selectedBranch, activeBranches]);
 
-  const handleFormSubmit = () => {
+  const handleFormSubmit = async () => {
     const productId = parseInt(formProductId);
-    const branchId = parseInt(formBranchId);
-    const newStock = parseInt(formStockValue);
+    const enteredValue = parseInt(formStockValue);
 
-    if (!isNaN(newStock) && newStock >= 0) {
-      if (formMode === 'set') {
-        branchStockMap[productId][branchId] = newStock;
-      } else {
-        branchStockMap[productId][branchId] = (branchStockMap[productId][branchId] || 0) + newStock;
-      }
-      setFormStockValue('');
+    if (isNaN(enteredValue) || enteredValue < 0 || !selectedProduct) {
+      return;
+    }
+
+    const currentStock = selectedProduct.stock || 0;
+    const quantityChange = formMode === 'set' ? enteredValue - currentStock : enteredValue;
+    if (quantityChange === 0) {
       setModalOpen(false);
+      setFormStockValue('');
+      return;
+    }
+
+    try {
+      await adjustStockMutation.mutateAsync({
+        productId,
+        quantity: quantityChange,
+        type: 'ADJUSTMENT',
+        warehouseId: Number(selectedBranch),
+        notes: formMode === 'set' ? 'Manual set stock from inventory dashboard' : 'Manual add stock from inventory dashboard',
+        ...(formMode === 'add' && quantityChange > 0
+          ? {
+              batchName: batchName || undefined,
+              manufactureDate: mfgDate ? new Date(mfgDate).toISOString() : undefined,
+              expiryDate: expDate ? new Date(expDate).toISOString() : undefined,
+            }
+          : {}),
+      });
+      toast.success('Stock updated successfully');
+      setFormStockValue('');
+      setBatchName('');
+      setMfgDate('');
+      setExpDate('');
+      setModalOpen(false);
+    } catch {
+      toast.error('Failed to update stock');
     }
   };
 
   const openAddModal = () => {
-    setFormProductId(products[0]?.id.toString() || '1');
-    setFormBranchId('1');
+    if (viewProducts.length === 0) {
+      toast.error('No products available in the selected branch');
+      return;
+    }
+    setFormProductId(viewProducts[0]?.id.toString() || '1');
+    setFormBranchId(selectedBranch);
     setFormStockValue('');
     setFormMode('set');
+    setBatchName('');
+    setMfgDate('');
+    setExpDate('');
     setModalOpen(true);
   };
 
-  const filteredProducts = products;
-  const activeBranches = INITIAL_BRANCHES.filter((b) => b.active);
-  const displayBranches =
-    selectedBranch === 'all'
-      ? activeBranches
-      : activeBranches.filter((b) => b.id === parseInt(selectedBranch));
+  const filteredProducts = viewProducts;
+
+  React.useEffect(() => {
+    if (viewProducts.length === 0) {
+      setFormProductId('1');
+      return;
+    }
+    const exists = viewProducts.some((p: any) => String(p.id) === formProductId);
+    if (!exists) {
+      setFormProductId(String(viewProducts[0].id));
+    }
+  }, [formProductId, viewProducts]);
+
+  React.useEffect(() => {
+    setFormBranchId(selectedBranch);
+  }, [selectedBranch]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -111,17 +142,14 @@ export default function InventoryView({
           <select
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
-            className="cursor-pointer rounded-[9px] bg-white px-3 py-2 text-[13px] outline-none"
-            style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+            className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
+            style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
           >
-            <option value="all">All Branches</option>
-            {INITIAL_BRANCHES.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name} {!b.active ? '(Inactive)' : ''}
-              </option>
+            {activeBranches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </select>
-          <Btn onClick={openAddModal}>➕ Add Stock</Btn>
+          <Btn onClick={openAddModal} disabled={viewProducts.length === 0}>➕ Add Stock</Btn>
         </div>
       </div>
 
@@ -167,14 +195,13 @@ export default function InventoryView({
                     className="w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
                     style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
                   >
-                    {products.map((p: any) => (
+                    {viewProducts.map((p: any) => (
                       <option key={p.id} value={p.id}>
                         {p.name} ({p.sku})
                       </option>
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
@@ -184,11 +211,12 @@ export default function InventoryView({
                   </label>
                   <select
                     value={formBranchId}
-                    onChange={(e) => setFormBranchId(e.target.value)}
+                    onChange={() => undefined}
+                    disabled
                     className="w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
                     style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
                   >
-                    {INITIAL_BRANCHES.filter((b) => b.active).map((b) => (
+                    {activeBranches.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.name}
                       </option>
@@ -255,12 +283,53 @@ export default function InventoryView({
                       background: Theme.muted,
                     }}
                   >
-                    {getProductBranchStock(parseInt(formProductId), parseInt(formBranchId))}
+                    {selectedProduct?.stock ?? 0}
                   </div>
                 </div>
               </div>
 
-              <Btn onClick={handleFormSubmit} className="mt-3.5 w-full">
+              {formMode === 'add' && (
+                <div className={`mt-3 grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                  <div className={isMobile ? '' : 'col-span-3'}>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]" style={{ color: Theme.mutedFg }}>
+                      Batch Name
+                    </label>
+                    <input
+                      value={batchName}
+                      onChange={(e) => setBatchName(e.target.value)}
+                      placeholder="e.g., BATCH-APR-01"
+                      className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none"
+                      style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]" style={{ color: Theme.mutedFg }}>
+                      Manufacture Date
+                    </label>
+                    <input
+                      type="date"
+                      value={mfgDate}
+                      onChange={(e) => setMfgDate(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none"
+                      style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]" style={{ color: Theme.mutedFg }}>
+                      Expire Date
+                    </label>
+                    <input
+                      type="date"
+                      value={expDate}
+                      onChange={(e) => setExpDate(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none"
+                      style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <Btn onClick={handleFormSubmit} className="mt-3.5 w-full" disabled={adjustStockMutation.isPending}>
                 ✓ {formMode === 'set' ? 'Set Stock' : 'Add to Stock'}
               </Btn>
             </Card>
@@ -270,12 +339,8 @@ export default function InventoryView({
 
       <Card>
         <SecHead
-          title="📦 Stock Levels by Branch"
-          sub={
-            selectedBranch === 'all'
-              ? 'All active branches'
-              : `${INITIAL_BRANCHES.find((b) => b.id === parseInt(selectedBranch))?.name}`
-          }
+          title="📦 Stock Levels"
+          sub={`Live stock synced from inventory API · Branch: ${branches.find((b) => b.id === Number(selectedBranch))?.name || 'N/A'}`}
         />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] border-collapse">
@@ -287,20 +352,23 @@ export default function InventoryView({
                 >
                   Product
                 </th>
-                {displayBranches.map((b) => (
-                  <th
-                    key={b.id}
-                    className="px-3 py-3 text-center text-xs font-semibold"
-                    style={{ borderBottom: `1px solid ${Theme.border}` }}
-                  >
-                    {b.name.split(' ')[0]}
-                  </th>
-                ))}
                 <th
                   className="px-3 py-3 text-center font-semibold"
                   style={{ borderBottom: `1px solid ${Theme.border}` }}
                 >
-                  Total
+                  Stock
+                </th>
+                <th
+                  className="px-3 py-3 text-center font-semibold"
+                  style={{ borderBottom: `1px solid ${Theme.border}` }}
+                >
+                  Status
+                </th>
+                <th
+                  className="px-3 py-3 text-center font-semibold"
+                  style={{ borderBottom: `1px solid ${Theme.border}` }}
+                >
+                  Branch
                 </th>
                 <th
                   className="px-3 py-3 text-center font-semibold"
@@ -319,68 +387,30 @@ export default function InventoryView({
                       {p.sku}
                     </div>
                   </td>
-
-                  {displayBranches.map((b) => {
-                    const stock = getProductBranchStock(p.id, b.id);
-                    const isEditing =
-                      editingProduct?.id === p.id && editingProduct?.branchId === b.id.toString();
-
-                    return (
-                      <td
-                        key={b.id}
-                        className="px-3 py-3 text-center"
-                        style={{ borderRight: `1px solid ${Theme.border}` }}
-                      >
-                        {isEditing ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="w-[50px] rounded text-xs"
-                              style={{
-                                padding: '4px',
-                                border: `1px solid ${Theme.primary}`,
-                              }}
-                              autoFocus
-                            />
-                            <button
-                              onClick={handleSaveStock}
-                              className="cursor-pointer rounded px-2 py-1 text-[11px] text-white"
-                              style={{ background: Theme.success }}
-                            >
-                              ✓
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => handleEditStock(p.id, b.id.toString())}
-                            className="cursor-pointer rounded border px-2 py-1 text-xs font-semibold transition-all"
-                            style={{
-                              borderColor: Theme.border,
-                              background: stock > 20 ? '#dcfce7' : stock > 0 ? '#fef3c7' : '#fee2e2',
-                              color: stock > 20 ? '#166534' : stock > 0 ? '#92400e' : '#991b1b',
-                            }}
-                          >
-                            {stock}
-                          </button>
-                        )}
-                      </td>
-                    );
-                  })}
-
                   <td className="px-3 py-3 text-center font-bold" style={{ color: Theme.primary }}>
-                    {selectedBranch === 'all'
-                      ? getTotalProductStock(p.id)
-                      : getProductBranchStock(p.id, parseInt(selectedBranch))}
+                    {p.stock}
+                  </td>
+                  <td className="px-3 py-3 text-center">
+                    <span
+                      className="rounded border px-2 py-1 text-xs font-semibold"
+                      style={{
+                        borderColor: Theme.border,
+                        background: p.stock > 20 ? '#dcfce7' : p.stock > 0 ? '#fef3c7' : '#fee2e2',
+                        color: p.stock > 20 ? '#166534' : p.stock > 0 ? '#92400e' : '#991b1b',
+                      }}
+                    >
+                      {p.stock > 20 ? 'Healthy' : p.stock > 0 ? 'Low' : 'Out'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>
+                    {p.warehouse || 'N/A'}
                   </td>
                   <td className="px-3 py-3 text-center">
                     <button
                       onClick={() => {
                         setFormProductId(p.id.toString());
-                        setFormBranchId(selectedBranch === 'all' ? '1' : selectedBranch);
                         setFormMode('set');
-                        setFormStockValue('');
+                        setFormStockValue(String(p.stock ?? 0));
                         setModalOpen(true);
                       }}
                       className="cursor-pointer rounded border-none px-2.5 py-1.5 text-sm text-white transition-opacity hover:opacity-90"
@@ -391,6 +421,13 @@ export default function InventoryView({
                   </td>
                 </tr>
               ))}
+              {filteredProducts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-3 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
+                    No inventory found for this branch.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

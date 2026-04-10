@@ -14,7 +14,7 @@ export class OrderService {
     // Validate products exist and have stock
     const products = await prisma.product.findMany({
       where: { id: { in: data.items.map(item => item.productId) } },
-      include: { inventory: true },
+      include: { inventories: { orderBy: { warehouseId: 'asc' }, take: 1 } },
     });
 
     if (products.length !== data.items.length) {
@@ -24,7 +24,8 @@ export class OrderService {
     // Check stock availability
     for (const item of data.items) {
       const product = products.find(p => p.id === item.productId);
-      if (!product?.inventory || (product.inventory.quantity - product.inventory.reservedQty) < item.quantity) {
+      const inventory = product?.inventories?.[0];
+      if (!inventory || (inventory.quantity - inventory.reservedQty) < item.quantity) {
         throw new ConflictError(`Insufficient stock for product ${product?.name}`);
       }
     }
@@ -86,8 +87,13 @@ export class OrderService {
 
     // Reserve inventory
     for (const item of data.items) {
-      await prisma.inventory.update({
+      const inventory = await prisma.inventory.findFirst({
         where: { productId: item.productId },
+        orderBy: { warehouseId: 'asc' },
+      });
+      if (!inventory) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
+      await prisma.inventory.update({
+        where: { id: inventory.id },
         data: {
           reservedQty: { increment: item.quantity },
         },
@@ -204,8 +210,13 @@ export class OrderService {
       // Release reserved inventory
       const items = await prisma.orderItem.findMany({ where: { orderId } });
       for (const item of items) {
-        await prisma.inventory.update({
+        const inventory = await prisma.inventory.findFirst({
           where: { productId: item.productId },
+          orderBy: { warehouseId: 'asc' },
+        });
+        if (!inventory) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
+        await prisma.inventory.update({
+          where: { id: inventory.id },
           data: {
             reservedQty: { decrement: item.quantity },
             quantity: { decrement: item.quantity },
@@ -216,8 +227,13 @@ export class OrderService {
       // Release reserved inventory
       const items = await prisma.orderItem.findMany({ where: { orderId } });
       for (const item of items) {
-        await prisma.inventory.update({
+        const inventory = await prisma.inventory.findFirst({
           where: { productId: item.productId },
+          orderBy: { warehouseId: 'asc' },
+        });
+        if (!inventory) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
+        await prisma.inventory.update({
+          where: { id: inventory.id },
           data: {
             reservedQty: { decrement: item.quantity },
           },
@@ -336,8 +352,13 @@ export class OrderService {
 
     // Release reserved inventory
     for (const item of order.items) {
-      await prisma.inventory.update({
+      const inventory = await prisma.inventory.findFirst({
         where: { productId: item.productId },
+        orderBy: { warehouseId: 'asc' },
+      });
+      if (!inventory) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
+      await prisma.inventory.update({
+        where: { id: inventory.id },
         data: {
           reservedQty: { decrement: item.quantity },
         },

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
+import { usePathname, useSearchParams } from 'next/navigation';
 import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
@@ -27,8 +28,7 @@ const SidebarContent: React.FC<{
   activeNav: string;
   settingsOpen: boolean;
   settingsTab: string;
-  navigate: (id: string) => void;
-  setActiveNav: (id: string) => void;
+  navigate: (id: string, settingsTabId?: string) => void;
   setSettingsTab: (id: string) => void;
   setSettingsOpen: (open: boolean) => void;
   lowCount: number;
@@ -40,7 +40,6 @@ const SidebarContent: React.FC<{
   settingsOpen,
   settingsTab,
   navigate,
-  setActiveNav,
   setSettingsTab,
   setSettingsOpen,
   lowCount,
@@ -124,7 +123,7 @@ const SidebarContent: React.FC<{
             <div key="settings">
               <button
                 onClick={() => {
-                  setActiveNav('settings');
+                  navigate('settings');
                   setSettingsOpen(!settingsOpen);
                 }}
                 className="flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] border-0 px-3 py-[11px] text-left text-[13px] transition-all duration-150"
@@ -160,8 +159,8 @@ const SidebarContent: React.FC<{
                       <button
                         key={item.id}
                         onClick={() => {
-                          setActiveNav('settings');
                           setSettingsTab(item.id);
+                          navigate('settings', item.id);
                           if (isMobile) setSidebarOpen(false);
                         }}
                         className="flex w-full cursor-pointer items-center gap-[9px] rounded-lg border-0 px-[10px] py-[9px] text-left text-[13px] transition-colors duration-100"
@@ -249,9 +248,13 @@ export default function DashboardLayout({
   time,
 }: DashboardLayoutProps) {
   const { isMobile } = useResponsive();
-  const [activeNav, setActiveNav] = useState('overview');
-  const [settingsTab, setSettingsTab] = useState('general');
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const pathSection = pathname.split('/')[2] || 'overview';
+  const allowedNavIds = useMemo(() => new Set(NAV.map((n) => n.id)), []);
+  const [activeNav, setActiveNav] = useState(allowedNavIds.has(pathSection) ? pathSection : 'overview');
+  const [settingsTab, setSettingsTab] = useState(searchParams.get('tab') || 'general');
+  const [settingsOpen, setSettingsOpen] = useState(activeNav === 'settings');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modal, setModal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -291,11 +294,39 @@ export default function DashboardLayout({
     ),
   };
 
-  const navigate = (id: string) => {
+  const navigate = (id: string, settingsTabId?: string) => {
+    const tab = settingsTabId || (id === 'settings' ? settingsTab : undefined);
+    const path = id === 'overview' ? '/dashboard' : `/dashboard/${id}`;
+    const target = id === 'settings' && tab ? `${path}?tab=${encodeURIComponent(tab)}` : path;
     setActiveNav(id);
+    if (id === 'settings' && tab) setSettingsTab(tab);
+    window.history.pushState({}, '', target);
     setSidebarOpen(false);
     if (id !== 'settings') setSettingsOpen(false);
+    if (id === 'settings') setSettingsOpen(true);
   };
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const section = window.location.pathname.split('/')[2] || 'overview';
+      const nextNav = allowedNavIds.has(section) ? section : 'overview';
+      setActiveNav(nextNav);
+      setSettingsOpen(nextNav === 'settings');
+      if (nextNav === 'settings') {
+        const tabFromUrl = new URLSearchParams(window.location.search).get('tab');
+        if (tabFromUrl && SETTINGS_ITEMS.some((item) => item.id === tabFromUrl)) {
+          setSettingsTab(tabFromUrl);
+        }
+      }
+    };
+    syncFromUrl();
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, [allowedNavIds]);
+
+  useEffect(() => {
+    setSettingsOpen(activeNav === 'settings');
+  }, [activeNav]);
 
   return (
     <div
@@ -330,7 +361,6 @@ export default function DashboardLayout({
             settingsOpen={settingsOpen}
             settingsTab={settingsTab}
             navigate={navigate}
-            setActiveNav={setActiveNav}
             setSettingsTab={setSettingsTab}
             setSettingsOpen={setSettingsOpen}
             lowCount={lowCount}
@@ -360,7 +390,6 @@ export default function DashboardLayout({
               settingsOpen={settingsOpen}
               settingsTab={settingsTab}
               navigate={navigate}
-              setActiveNav={setActiveNav}
               setSettingsTab={setSettingsTab}
               setSettingsOpen={setSettingsOpen}
               lowCount={lowCount}

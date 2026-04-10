@@ -5,6 +5,16 @@ import { CreateProductInput, UpdateProductInput } from './product.schema';
 import { parsePagination } from '../../shared/utils/pagination';
 
 export class ProductService {
+  private async getDefaultBranchId() {
+    const branch = await prisma.branch.findFirst({
+      where: { isActive: true },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+    if (!branch) throw new NotFoundError('No active branch found');
+    return branch.id;
+  }
+
   async createProduct(data: CreateProductInput) {
     const existing = await prisma.product.findUnique({
       where: { sku: data.sku },
@@ -35,9 +45,11 @@ export class ProductService {
       },
     });
 
+    const defaultBranchId = await this.getDefaultBranchId();
     await prisma.inventory.create({
       data: {
         productId: product.id,
+        warehouseId: defaultBranchId,
         quantity: 0,
         reservedQty: 0,
         lowStockThreshold: 10,
@@ -50,7 +62,7 @@ export class ProductService {
   async getProductBySlug(slug: string) {
     const product = await prisma.product.findUnique({
       where: { slug },
-      include: { category: true, inventory: true },
+      include: { category: true, inventories: true },
     });
 
     if (!product) {
@@ -99,7 +111,7 @@ export class ProductService {
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        include: { category: true, inventory: true },
+        include: { category: true, inventories: true },
         skip,
         take,
         orderBy: { createdAt: 'desc' },
@@ -147,7 +159,7 @@ export class ProductService {
     return await prisma.product.update({
       where: { id },
       data: updateData,
-      include: { category: true, inventory: true },
+      include: { category: true, inventories: true },
     });
   }
 
@@ -193,9 +205,11 @@ export class ProductService {
             },
           });
 
+          const defaultBranchId = await this.getDefaultBranchId();
           await prisma.inventory.create({
             data: {
               productId: productData.id,
+              warehouseId: defaultBranchId,
               quantity: 0,
               reservedQty: 0,
               lowStockThreshold: 10,
@@ -230,7 +244,7 @@ export class ProductService {
     return await prisma.product.update({
       where: { id },
       data: updateData,
-      include: { category: true, inventory: true },
+      include: { category: true, inventories: true },
     });
   }
 }

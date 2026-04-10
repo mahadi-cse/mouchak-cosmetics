@@ -4,14 +4,113 @@ import React, { useState } from 'react';
 import { Theme, formatCurrency } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, KpiCard, Btn } from '../Primitives';
-import { INITIAL_BRANCHES } from '@/modules/dashboard/data/mockData';
+import {
+  useCreateBranchMutation,
+  useListBranches,
+  useSetBranchStatusMutation,
+  useUpdateBranchMutation,
+  type BranchDTO,
+} from '@/modules/branches';
+import toast from 'react-hot-toast';
+
+type BranchFormState = {
+  name: string;
+  branchCode: string;
+  branchType: 'WAREHOUSE' | 'RETAIL' | 'OFFICE' | 'DISTRIBUTION';
+  city: string;
+  address: string;
+  phone: string;
+  email: string;
+  managerName: string;
+  managerPhone: string;
+};
+
+const EMPTY_FORM: BranchFormState = {
+  name: '',
+  branchCode: '',
+  branchType: 'WAREHOUSE',
+  city: '',
+  address: '',
+  phone: '',
+  email: '',
+  managerName: '',
+  managerPhone: '',
+};
 
 export default function BranchesView() {
   const { isMobile } = useResponsive();
-  const [branches, setBranches] = useState(INITIAL_BRANCHES);
+  const { data: dbBranches = [], isLoading } = useListBranches();
+  const createBranchMutation = useCreateBranchMutation();
+  const updateBranchMutation = useUpdateBranchMutation();
+  const statusMutation = useSetBranchStatusMutation();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingBranch, setEditingBranch] = useState<BranchDTO | null>(null);
+  const [form, setForm] = useState<BranchFormState>(EMPTY_FORM);
 
-  const toggleActive = (id: number) => {
-    setBranches((prev) => prev.map((b) => (b.id === id ? { ...b, active: !b.active } : b)));
+  const branches = dbBranches.map((b) => ({
+    ...b,
+    hq: b.branchType === 'OFFICE',
+    manager: b.managerName || 'N/A',
+  }));
+
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setEditingBranch(null);
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setModalOpen(true);
+  };
+
+  const openEditModal = (branch: BranchDTO) => {
+    setEditingBranch(branch);
+    setForm({
+      name: branch.name,
+      branchCode: branch.branchCode || '',
+      branchType: (branch.branchType as BranchFormState['branchType']) || 'WAREHOUSE',
+      city: branch.city || '',
+      address: branch.address || '',
+      phone: branch.phone || '',
+      email: branch.email || '',
+      managerName: branch.managerName || '',
+      managerPhone: branch.managerPhone || '',
+    });
+    setModalOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.name.trim() || !form.branchCode.trim()) {
+      toast.error('Branch name and code are required');
+      return;
+    }
+    try {
+      const payload = {
+        ...form,
+        name: form.name.trim(),
+        branchCode: form.branchCode.trim(),
+      };
+      if (editingBranch) {
+        await updateBranchMutation.mutateAsync({ id: editingBranch.id, payload });
+        toast.success('Branch updated successfully');
+      } else {
+        await createBranchMutation.mutateAsync(payload);
+        toast.success('Branch created successfully');
+      }
+      setModalOpen(false);
+      resetForm();
+    } catch {
+      toast.error('Failed to save branch');
+    }
+  };
+
+  const toggleActive = async (branch: BranchDTO) => {
+    try {
+      await statusMutation.mutateAsync({ id: branch.id, isActive: !branch.active });
+      toast.success(branch.active ? 'Branch deactivated' : 'Branch activated');
+    } catch {
+      toast.error('Failed to update branch status');
+    }
   };
 
   return (
@@ -28,12 +127,12 @@ export default function BranchesView() {
             {branches.filter((b) => b.active).length} active · {branches.length} total
           </div>
         </div>
-        <Btn variant="primary" size="sm">
+        <Btn variant="primary" size="sm" onClick={openCreateModal}>
           ＋ Add Branch
         </Btn>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
         <KpiCard label="Total Branches" value={branches.length} icon="🏪" accent="#fff0f6" />
         <KpiCard
           label="Active"
@@ -54,6 +153,12 @@ export default function BranchesView() {
           accent="#fef9c3"
         />
       </div>
+
+      {isLoading && (
+        <Card>
+          <div className="text-sm" style={{ color: Theme.mutedFg }}>Loading branches...</div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
         {branches.map((b) => {
@@ -84,7 +189,7 @@ export default function BranchesView() {
                 {b.name}
               </div>
               <div className="mb-3 text-xs" style={{ color: Theme.mutedFg }}>
-                📍 {b.city} · 👤 {b.manager}
+                📍 {b.city || 'N/A'} · 👤 {b.manager}
               </div>
 
               <div className="mb-3.5 grid grid-cols-3 gap-2">
@@ -131,11 +236,11 @@ export default function BranchesView() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Btn variant="secondary" size="sm">
+                <Btn variant="secondary" size="sm" onClick={() => openEditModal(b as BranchDTO)}>
                   Edit
                 </Btn>
                 <button
-                  onClick={() => toggleActive(b.id)}
+                  onClick={() => toggleActive(b as BranchDTO)}
                   className={`cursor-pointer rounded-lg border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     b.active
                       ? 'border-red-600 text-red-600 hover:bg-red-50'
@@ -149,6 +254,47 @@ export default function BranchesView() {
           );
         })}
       </div>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/45" onClick={() => setModalOpen(false)}>
+          <div className="w-[92%] max-w-[680px]" onClick={(e) => e.stopPropagation()}>
+            <Card>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-lg font-extrabold" style={{ color: Theme.fg }}>
+                  {editingBranch ? 'Edit Branch' : 'Add Branch'}
+                </div>
+                <button className="border-0 bg-transparent text-xl" onClick={() => setModalOpen(false)} style={{ color: Theme.mutedFg }}>
+                  ✕
+                </button>
+              </div>
+
+              <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Branch name" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.branchCode} onChange={(e) => setForm((p) => ({ ...p, branchCode: e.target.value }))} placeholder="Branch code" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <select value={form.branchType} onChange={(e) => setForm((p) => ({ ...p, branchType: e.target.value as BranchFormState['branchType'] }))} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }}>
+                  <option value="WAREHOUSE">Warehouse</option>
+                  <option value="RETAIL">Retail</option>
+                  <option value="OFFICE">Office</option>
+                  <option value="DISTRIBUTION">Distribution</option>
+                </select>
+                <input value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} placeholder="City" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.managerName} onChange={(e) => setForm((p) => ({ ...p, managerName: e.target.value }))} placeholder="Manager name" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.managerPhone} onChange={(e) => setForm((p) => ({ ...p, managerPhone: e.target.value }))} placeholder="Manager phone" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Branch phone" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="Branch email" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder="Address" className="col-span-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2">
+                <Btn variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Btn>
+                <Btn onClick={handleSubmit} disabled={createBranchMutation.isPending || updateBranchMutation.isPending}>
+                  {editingBranch ? 'Update Branch' : 'Create Branch'}
+                </Btn>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

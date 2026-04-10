@@ -8,6 +8,9 @@ export const adjustStockSchema = z.object({
   reference: z.string().optional(),
   notes: z.string().optional(),
   warehouseId: z.coerce.number().int().positive().optional(),
+  batchName: z.string().optional(),
+  manufactureDate: z.string().datetime().optional(),
+  expiryDate: z.string().datetime().optional(),
 });
 
 export const transferStockSchema = z.object({

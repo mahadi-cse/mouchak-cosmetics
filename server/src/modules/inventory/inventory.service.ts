@@ -5,6 +5,17 @@ import { AdjustStockInput, TransferStockInput, ReconcileStockInput } from './inv
 import { InventoryTransactionType } from '@prisma/client';
 
 export class InventoryService {
+  private async ensureBranchId(warehouseId?: number) {
+    if (warehouseId) return warehouseId;
+    const branch = await prisma.branch.findFirst({
+      where: { isActive: true },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+    if (!branch) throw new NotFoundError('No active branch found');
+    return branch.id;
+  }
+
   async getInventorySummary(filters: {
     page?: number;
     limit?: number;
@@ -32,7 +43,8 @@ export class InventoryService {
     return {
       data: data.map(inv => ({
         id: inv.id,
-        product: { id: inv.product.id, name: inv.product.name, sku: inv.product.sku },
+        productId: inv.productId,
+        product: { id: inv.product.id, name: inv.product.name, sku: inv.product.sku, price: inv.product.price },
         quantity: inv.quantity,
         reservedQty: inv.reservedQty,
         availableQty: inv.quantity - inv.reservedQty,
@@ -51,36 +63,61 @@ export class InventoryService {
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new NotFoundError('Product not found');
 
-    const inventory = await prisma.inventory.findUnique({
+    const inventoryRows = await prisma.inventory.findMany({
       where: { productId },
       include: {
         branch: true,
-        product: true,
       },
+      orderBy: { warehouseId: 'asc' },
     });
 
-    if (!inventory) throw new NotFoundError('Inventory record not found');
+    if (inventoryRows.length === 0) throw new NotFoundError('Inventory record not found');
+
+    const totalQuantity = inventoryRows.reduce((sum, row) => sum + row.quantity, 0);
+    const totalReserved = inventoryRows.reduce((sum, row) => sum + row.reservedQty, 0);
+    const primaryRow = inventoryRows[0];
 
     return {
       productId,
-      product: { name: product.name, sku: product.sku },
-      totalQuantity: inventory.quantity,
-      totalReserved: inventory.reservedQty,
-      availableQty: inventory.quantity - inventory.reservedQty,
-      warehouse: inventory.branch?.name || 'Main Warehouse',
-      lowStockThreshold: inventory.lowStockThreshold,
-      reorderPoint: inventory.reorderPoint,
-      reorderQuantity: inventory.reorderQuantity,
-      lastCountedAt: inventory.lastCountedAt,
+      product: { name: product.name, sku: product.sku, price: product.price },
+      totalQuantity,
+      totalReserved,
+      availableQty: totalQuantity - totalReserved,
+      warehouse: primaryRow.branch?.name || 'Main Warehouse',
+      lowStockThreshold: primaryRow.lowStockThreshold,
+      reorderPoint: primaryRow.reorderPoint,
+      reorderQuantity: primaryRow.reorderQuantity,
+      lastCountedAt: primaryRow.lastCountedAt,
+      branches: inventoryRows.map((row) => ({
+        warehouseId: row.warehouseId,
+        warehouse: row.branch?.name || 'Main',
+        quantity: row.quantity,
+        reservedQty: row.reservedQty,
+        availableQty: row.quantity - row.reservedQty,
+      })),
     };
   }
 
   async adjustStock(data: AdjustStockInput) {
-    const inventory = await prisma.inventory.findUnique({
-      where: { productId: data.productId },
+    const warehouseId = await this.ensureBranchId(data.warehouseId);
+    const existing = await prisma.inventory.findUnique({
+      where: {
+        productId_warehouseId: {
+          productId: data.productId,
+          warehouseId,
+        },
+      },
+      include: { branch: true },
     });
-
-    if (!inventory) throw new NotFoundError('Inventory not found');
+    const inventory = existing || await prisma.inventory.create({
+      data: {
+        productId: data.productId,
+        warehouseId,
+        quantity: 0,
+        reservedQty: 0,
+      },
+      include: { branch: true },
+    });
 
     const newBalance = inventory.quantity + data.quantity;
 
@@ -92,21 +129,35 @@ export class InventoryService {
         balanceBefore: inventory.quantity,
         balanceAfter: newBalance,
         reference: data.reference,
-        notes: data.notes,
+        notes: `${data.notes || ''} [Branch:${warehouseId}]`.trim(),
+        batchName: data.batchName,
+        manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : undefined,
+        expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
       },
     });
 
     await prisma.inventory.update({
       where: { id: inventory.id },
-      data: { quantity: newBalance },
+      data: {
+        quantity: newBalance,
+        warehouseId,
+      },
     });
 
     return transaction;
   }
 
   async transferStock(data: TransferStockInput) {
+    if (!data.fromWarehouseId) {
+      throw new ConflictError('Source branch is required for transfer');
+    }
     const fromInventory = await prisma.inventory.findUnique({
-      where: { productId: data.productId },
+      where: {
+        productId_warehouseId: {
+          productId: data.productId,
+          warehouseId: data.fromWarehouseId,
+        },
+      },
     });
 
     if (!fromInventory) throw new NotFoundError('Inventory not found');
@@ -202,13 +253,12 @@ export class InventoryService {
     const { page = 1, limit = 10, startDate, endDate, type } = filters;
     const { skip, take } = parsePagination({ page, limit });
 
-    const inventory = await prisma.inventory.findUnique({
+    const inventoryRows = await prisma.inventory.findMany({
       where: { productId },
+      select: { id: true },
     });
-
-    if (!inventory) throw new NotFoundError('Inventory not found');
-
-    const where: any = { inventoryId: inventory.id };
+    if (inventoryRows.length === 0) throw new NotFoundError('Inventory not found');
+    const where: any = { inventoryId: { in: inventoryRows.map((row) => row.id) } };
 
     if (type) where.type = type;
     if (startDate || endDate) {
@@ -236,7 +286,12 @@ export class InventoryService {
     for (const item of data.items) {
       try {
         const inventory = await prisma.inventory.findUnique({
-          where: { productId: item.productId },
+          where: {
+            productId_warehouseId: {
+              productId: item.productId,
+              warehouseId: data.warehouseId,
+            },
+          },
         });
 
         if (!inventory) {
@@ -315,7 +370,7 @@ export class InventoryService {
     // Detailed report
     return inventory.map(inv => ({
       id: inv.id,
-      product: { id: inv.productId, name: inv.product.name, sku: inv.product.sku },
+      product: { id: inv.productId, name: inv.product.name, sku: inv.product.sku, price: inv.product.price },
       quantity: inv.quantity,
       reservedQty: inv.reservedQty,
       availableQty: inv.quantity - inv.reservedQty,
