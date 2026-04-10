@@ -1,13 +1,17 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/modules/dashboard/components/DashboardLayout';
-import { useBreakpoint } from '@/modules/dashboard/hooks/useBreakpoint';
-import { ResponsiveContext } from '@/modules/dashboard/hooks/useResponsive';
-import { Product, SellLog, Order as DashboardOrder } from '@/modules/dashboard/data/mockData';
-import { useListOrders } from '@/features/orders/queries';
-import { useInventorySummary } from '@/features/inventory/queries';
-import { useLowStockItems } from '@/features/inventory/queries';
+import {
+  DashboardLayout,
+  useBreakpoint,
+  ResponsiveContext,
+  type Product,
+  type SellLog,
+  type Order as DashboardOrder,
+} from '@/modules/dashboard';
+import { useListOrders } from '@/modules/orders';
+import { useInventorySummary } from '@/modules/inventory';
+import { useLowStockItems } from '@/modules/inventory';
 
 export default function DashboardPage() {
   const bp = useBreakpoint();

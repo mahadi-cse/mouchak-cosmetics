@@ -4,6 +4,8 @@
 export { 
   useHomepageStats, 
   useSiteSettings, 
+  useHomepageCategories,
+  useHomepageFeaturedProducts,
   useSliders,
   useAllSliders,
   useCreateSlider,

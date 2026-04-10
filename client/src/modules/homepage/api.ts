@@ -1,5 +1,6 @@
 import apiClient from "@/shared/lib/apiClient";
 import { HomepageStats } from "./queries";
+import type { Category, Product } from "@/shared/types";
 
 export type SiteSettings = {
   id: number;
@@ -52,6 +53,21 @@ export const homepageAPI = {
   getSliders: async (): Promise<HeroSlider[]> => {
     const response = await apiClient.get<HeroSlider[]>("/homepage/slider");
     return response.data;
+  },
+
+  getCategories: async (): Promise<Category[]> => {
+    const response = await apiClient.get<any>("/categories");
+    return response.data.data as Category[];
+  },
+
+  getFeaturedProducts: async (limit: number = 8): Promise<Product[]> => {
+    const response = await apiClient.get<any>("/products", {
+      params: {
+        featured: "true",
+        limit,
+      },
+    });
+    return response.data.data as Product[];
   },
 
   getAllSliders: async (): Promise<HeroSlider[]> => {

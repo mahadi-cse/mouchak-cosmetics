@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { ShoppingCart, Star } from "lucide-react";
-import type { Product } from "@/entities/types";
+import type { Product } from "@/shared/types";
 
 export function ProductCard({ product }: { product: Product }) {
   const discount = product.compareAtPrice

@@ -3,11 +3,10 @@
 import { Heart, Search, ShoppingCart, User, MapPin, Mail, Phone } from "lucide-react";
 
 import { productCategories } from "./data";
-import { useListCategories } from "@/features/categories/queries";
-import { useHomepageStats, useSiteSettings } from "@/modules/homepage";
+import { useHomepageCategories, useHomepageStats, useSiteSettings } from "@/modules/homepage";
 
 export function Header() {
-  const { data: categories = [] } = useListCategories();
+  const { data: categories = [] } = useHomepageCategories();
   const { data: settings } = useSiteSettings();
   const { data: stats } = useHomepageStats();
 

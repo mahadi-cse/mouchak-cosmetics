@@ -1,13 +1,12 @@
 'use client';
 
-import { useFeaturedProducts } from "@/features/products/queries";
-import { useListCategories } from "@/features/categories/queries";
-import { rangeCategories, featuredProductsContent } from "./data";
+import { useHomepageCategories, useHomepageFeaturedProducts } from "@/modules/homepage";
+import { featuredProductsContent } from "./data";
 import { ProductCard } from "./ProductCard";
 
 export function FeaturedProducts() {
-  const { data: products = [], isLoading, error } = useFeaturedProducts(8);
-  const { data: categories = [] } = useListCategories();
+  const { data: products = [], isLoading, error } = useHomepageFeaturedProducts(8);
+  const { data: categories = [] } = useHomepageCategories();
 
   if (isLoading) {
     return (

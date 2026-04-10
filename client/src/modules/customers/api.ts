@@ -1,5 +1,5 @@
 import apiClient from '@/shared/lib/apiClient';
-import type { Customer, PaginatedResponse, ApiResponse } from '@/entities/types';
+import type { Customer, PaginatedResponse, ApiResponse } from '@/shared/types';
 
 export interface ListCustomersParams {
   page?: number;

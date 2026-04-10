@@ -1,6 +1,6 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { customersAPI, type ListCustomersParams } from './api';
-import type { Customer } from '@/entities/types';
+import type { Customer } from '@/shared/types';
 
 export const CUSTOMERS_QUERY_KEYS = {
   all: ['customers'] as const,
