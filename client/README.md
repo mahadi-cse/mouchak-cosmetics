@@ -1,4 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mouchak Cosmetics - Client Application
+
+> A modern, scalable e-commerce frontend built with **Next.js 16**, **React 19**, and **TypeScript**. 
+
+## 📖 Documentation
+
+**For comprehensive architecture, project details, and development guides, see [PROJECT_README.md](./PROJECT_README.md)**
+
+---
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+npm install --legacy-peer-deps
+```
+
+### Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3001](http://localhost:3001) to view the application.
+
+### Commands
+
+```bash
+npm run dev       # Start dev server (Turbopack)
+npm run build     # Production build
+npm start         # Run production server
+npm test          # Run tests
+npm run lint      # Code linting
+npm run typecheck # Type checking
+```
+
+---
+
+## 📁 Project Structure
+
+```
+src/
+├── app/              # Next.js App Router with route groups
+├── features/         # Feature modules (products, orders, etc.)
+├── entities/         # Domain types
+├── shared/           # Types, constants, utilities, components
+└── components/       # Reusable components
+```
+
+---
+
+## 🏗️ Architecture
+
+**Module-Based Architecture** with feature isolation:
+
+- Each feature has its own API client, queries, and mutations
+- Centralized type system in `src/shared/types/`
+- Global constants and utilities in `src/shared/`
+- React Query for server state management
+- Axios interceptors for API error handling
+
+📘 **See [PROJECT_README.md](./PROJECT_README.md) for detailed architecture documentation**
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16.2.2
+- **Runtime**: React 19.2.4
+- **Language**: TypeScript 5
+- **State**: React Query 5.96.2
+- **HTTP**: Axios 1.14.0
+- **Styling**: Tailwind CSS 4
+- **Testing**: Jest + Vitest + React Testing Library
+- **Build**: Turbopack
+
+---
+
+## ✨ Features
+
+✅ Module-based architecture
+✅ Type-safe development
+✅ React Query with automatic caching
+✅ Comprehensive error handling
+✅ Skeleton loaders & loading states
+✅ Responsive design (Tailwind CSS)
+✅ Testing infrastructure configured
+✅ Production-ready
+
+---
+
+## 📚 Additional Resources
+
+- [Complete Documentation](./PROJECT_README.md) - Full architecture guide
+- [Next.js Docs](https://nextjs.org/docs)
+- [React Docs](https://react.dev)
+- [React Query](https://tanstack.com/query/latest)
+- [TypeScript](https://www.typescriptlang.org/)
+
+---
+
+**Last Updated**: April 10, 2026
+**Node Version**: 18+ or 20+
+**Package Manager**: npm 9+
 
 ## Getting Started
 

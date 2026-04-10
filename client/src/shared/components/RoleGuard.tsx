@@ -1,1 +1,0 @@
-﻿export default function RoleGuard() { return <></> }

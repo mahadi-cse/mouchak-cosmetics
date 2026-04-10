@@ -1,0 +1,4 @@
+ALTER TABLE "inventory_transactions"
+ADD COLUMN IF NOT EXISTS "batchName" TEXT,
+ADD COLUMN IF NOT EXISTS "manufactureDate" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "expiryDate" TIMESTAMP(3);

@@ -5,7 +5,7 @@ import {
   Header,
   Hero,
   Newsletter,
-} from "@/components/homepage";
+} from "@/modules/homepage";
 
 export default function HomePage() {
   return (

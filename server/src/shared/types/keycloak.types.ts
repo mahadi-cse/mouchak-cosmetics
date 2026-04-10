@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client';
+export type UserRole = 'ADMIN' | 'STAFF' | 'CUSTOMER';
 
 export interface KeycloakTokenPayload {
   sub: string;

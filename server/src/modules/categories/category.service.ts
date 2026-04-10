@@ -45,14 +45,14 @@ export class CategoryService {
   }
 
   async updateCategory(id: string, data: UpdateCategoryInput) {
-    const category = await prisma.category.findUnique({ where: { id } });
+    const category = await prisma.category.findUnique({ where: { id: Number(id) } });
 
     if (!category) {
       throw new NotFoundError('Category not found');
     }
 
     return await prisma.category.update({
-      where: { id },
+      where: { id: Number(id) },
       data: {
         name: data.name,
         slug: data.name ? generateSlug(data.name) : undefined,
@@ -64,14 +64,14 @@ export class CategoryService {
   }
 
   async deleteCategory(id: string) {
-    const category = await prisma.category.findUnique({ where: { id } });
+    const category = await prisma.category.findUnique({ where: { id: Number(id) } });
 
     if (!category) {
       throw new NotFoundError('Category not found');
     }
 
     return await prisma.category.update({
-      where: { id },
+      where: { id: Number(id) },
       data: { isActive: false },
     });
   }
