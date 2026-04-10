@@ -7,6 +7,7 @@ import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
 import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
+import SalesView from './views/SalesView';
 import AnalyticsView from './views/AnalyticsView';
 import BranchesView from './views/BranchesView';
 import SettingsView from './views/SettingsView';
@@ -50,18 +51,11 @@ const SidebarContent: React.FC<{
   <>
     {/* Logo */}
     <div
-      style={{
-        padding: '20px 20px 16px',
-        borderBottom: `1px solid ${Theme.border}`,
-        flexShrink: 0,
-      }}
+      className="shrink-0 px-5 pb-4 pt-5"
+      style={{ borderBottom: `1px solid ${Theme.border}` }}
     >
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
+        className="flex items-center justify-between"
       >
         <div>
           <div
@@ -81,8 +75,8 @@ const SidebarContent: React.FC<{
               fontWeight: 600,
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
-              marginTop: 2,
             }}
+            className="mt-0.5"
           >
             Cosmetics · Control Centre
           </div>
@@ -90,14 +84,8 @@ const SidebarContent: React.FC<{
         {isMobile && (
           <button
             onClick={() => setSidebarOpen(false)}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: 20,
-              cursor: 'pointer',
-              color: Theme.mutedFg,
-              lineHeight: 1,
-            }}
+            className="cursor-pointer border-0 bg-transparent p-0 text-[20px] leading-none"
+            style={{ color: Theme.mutedFg }}
           >
             ✕
           </button>
@@ -107,14 +95,8 @@ const SidebarContent: React.FC<{
 
     {/* Role */}
     <div
-      style={{
-        margin: '14px 12px 8px',
-        background: Theme.secondary,
-        borderRadius: 10,
-        padding: '10px 14px',
-        border: '1px solid #fecdd3',
-        flexShrink: 0,
-      }}
+      className="mx-3 mb-2 mt-[14px] shrink-0 rounded-[10px] border border-[#fecdd3] px-[14px] py-[10px]"
+      style={{ background: Theme.secondary }}
     >
       <div
         style={{
@@ -125,31 +107,13 @@ const SidebarContent: React.FC<{
           textTransform: 'uppercase',
         }}
       >
-        Signed in as
+        Signed in as OWNER
       </div>
-      <div
-        style={{
-          fontSize: 15,
-          fontWeight: 800,
-          color: Theme.primary,
-          marginTop: 2,
-        }}
-      >
-        OWNER
-      </div>
-      <div style={{ fontSize: 11, color: Theme.mutedFg }}>Full access · all modules</div>
     </div>
 
     {/* Nav */}
     <nav
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1,
-        padding: '4px 8px',
-        overflowY: 'auto',
-      }}
+      className="flex flex-1 flex-col gap-px px-2 py-1 overflow-y-auto"
     >
       {NAV.map((n) => {
         const isSettings = n.id === 'settings';
@@ -163,46 +127,32 @@ const SidebarContent: React.FC<{
                   setActiveNav('settings');
                   setSettingsOpen(!settingsOpen);
                 }}
+                className="flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] border-0 px-3 py-[11px] text-left text-[13px] transition-all duration-150"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '11px 12px',
-                  borderRadius: 10,
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  width: '100%',
                   background: active ? Theme.secondary : 'transparent',
                   color: active ? Theme.primary : Theme.mutedFg,
                   fontWeight: active ? 700 : 500,
-                  fontSize: 13,
-                  transition: 'all 0.15s',
                 }}
               >
                 <span style={{ fontSize: 15 }}>⚙️</span>
-                <span style={{ flex: 1 }}>Settings</span>
+                <span className="flex-1">Settings</span>
                 <span
                   style={{
                     fontSize: 14,
                     fontWeight: 800,
                     transition: 'transform 0.2s',
-                    display: 'inline-block',
                     transform: settingsOpen ? 'rotate(90deg)' : 'rotate(0deg)',
                     color: active ? Theme.primary : Theme.mutedFg,
                   }}
+                  className="inline-block"
                 >
                   ›
                 </span>
               </button>
               {settingsOpen && (
                 <div
-                  style={{
-                    marginLeft: 8,
-                    marginBottom: 4,
-                    borderLeft: `2px solid ${Theme.border}`,
-                    paddingLeft: 8,
-                  }}
+                  className="mb-1 ml-2 border-l-2 pl-2"
+                  style={{ borderLeftColor: Theme.border }}
                 >
                   {SETTINGS_ITEMS.map((item) => {
                     const subActive = active && settingsTab === item.id;
@@ -214,24 +164,14 @@ const SidebarContent: React.FC<{
                           setSettingsTab(item.id);
                           if (isMobile) setSidebarOpen(false);
                         }}
+                        className="flex w-full cursor-pointer items-center gap-[9px] rounded-lg border-0 px-[10px] py-[9px] text-left text-[13px] transition-colors duration-100"
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 9,
-                          padding: '9px 10px',
-                          width: '100%',
-                          border: 'none',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          textAlign: 'left',
                           background: subActive ? `${Theme.primary}12` : 'transparent',
                           color: subActive ? Theme.primary : Theme.fg,
                           fontWeight: subActive ? 700 : 400,
-                          fontSize: 13,
-                          transition: 'background 0.12s',
                         }}
                       >
-                        <span style={{ fontSize: 14, flexShrink: 0 }}>
+                        <span className="shrink-0 text-sm">
                           {item.icon}
                         </span>
                         <span>{item.label}</span>
@@ -248,49 +188,27 @@ const SidebarContent: React.FC<{
           <button
             key={n.id}
             onClick={() => navigate(n.id)}
+            className="flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] border-0 px-3 py-[11px] text-left text-[13px] transition-all duration-150"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '11px 12px',
-              borderRadius: 10,
-              border: 'none',
-              cursor: 'pointer',
-              textAlign: 'left',
-              width: '100%',
               background: active ? Theme.secondary : 'transparent',
               color: active ? Theme.primary : Theme.mutedFg,
               fontWeight: active ? 700 : 500,
-              fontSize: 13,
-              transition: 'all 0.15s',
             }}
           >
             <span style={{ fontSize: 15 }}>{n.icon}</span>
-            <span style={{ flex: 1 }}>{n.label}</span>
+            <span className="flex-1">{n.label}</span>
             {n.id === 'inventory' && lowCount > 0 && (
               <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  background: Theme.warning,
-                  color: '#fff',
-                  borderRadius: 20,
-                  padding: '1px 7px',
-                }}
+                className="rounded-[20px] px-[7px] py-px text-[10px] font-bold text-white"
+                style={{ background: Theme.warning }}
               >
                 {lowCount}
               </span>
             )}
             {n.badge && (
               <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  background: Theme.muted,
-                  color: Theme.mutedFg,
-                  borderRadius: 20,
-                  padding: '1px 7px',
-                }}
+                className="rounded-[20px] px-[7px] py-px text-[10px] font-semibold"
+                style={{ background: Theme.muted, color: Theme.mutedFg }}
               >
                 {n.badge}
               </span>
@@ -302,7 +220,7 @@ const SidebarContent: React.FC<{
 
     {/* Clock */}
     {(
-      <div style={{ padding: '14px 20px', borderTop: `1px solid ${Theme.border}`, flexShrink: 0 }}>
+      <div className="shrink-0 px-5 py-[14px]" style={{ borderTop: `1px solid ${Theme.border}` }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: Theme.fg }}>
           {time.toLocaleTimeString('en-BD', {
             hour: '2-digit',
@@ -310,7 +228,7 @@ const SidebarContent: React.FC<{
             second: '2-digit',
           })}
         </div>
-        <div style={{ fontSize: 11, color: Theme.mutedFg, marginTop: 2 }}>
+        <div className="mt-0.5" style={{ fontSize: 11, color: Theme.mutedFg }}>
           {time.toLocaleDateString('en-BD', {
             weekday: 'short',
             day: 'numeric',
@@ -347,6 +265,14 @@ export default function DashboardLayout({
 
   const views: Record<string, React.ReactNode> = {
     overview: <OverviewView products={products} orders={orders} onQuickSale={() => setModal(true)} />,
+    sales: (
+      <SalesView
+        products={products}
+        setProducts={setProducts}
+        sellLog={sellLog}
+        setSellLog={setSellLog}
+      />
+    ),
     ecommerce: <EcommerceView products={products} orders={orders} />,
     inventory: (
       <InventoryView
@@ -356,6 +282,7 @@ export default function DashboardLayout({
         setSellLog={setSellLog}
       />
     ),
+
     analytics: <AnalyticsView />,
     branches: <BranchesView />,
     pos: <POSView />,
@@ -372,31 +299,18 @@ export default function DashboardLayout({
 
   return (
     <div
+      className="flex h-screen overflow-hidden"
       style={{
-        display: 'flex',
-        height: '100vh',
         background: Theme.bg,
         fontFamily: "'DM Sans','Segoe UI',system-ui,sans-serif",
         color: Theme.fg,
-        overflow: 'hidden',
       }}
     >
       {/* Toast */}
       {toast && (
         <div
-          style={{
-            position: 'fixed',
-            top: 20,
-            right: 20,
-            zIndex: 9998,
-            background: Theme.success,
-            color: '#fff',
-            borderRadius: 10,
-            padding: '14px 20px',
-            fontSize: 13,
-            fontWeight: 600,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-          }}
+          className="fixed right-5 top-5 z-[9998] rounded-[10px] px-5 py-[14px] text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
+          style={{ background: Theme.success }}
         >
           {toast}
         </div>
@@ -405,14 +319,10 @@ export default function DashboardLayout({
       {/* Desktop Sidebar */}
       {!isMobile && (
         <aside
+          className="flex w-56 shrink-0 flex-col overflow-y-auto"
           style={{
-            width: 224,
             background: Theme.card,
             borderRight: `1px solid ${Theme.border}`,
-            display: 'flex',
-            flexDirection: 'column',
-            flexShrink: 0,
-            overflowY: 'auto',
           }}
         >
           <SidebarContent
@@ -436,27 +346,13 @@ export default function DashboardLayout({
         <>
           <div
             onClick={() => setSidebarOpen(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.4)',
-              zIndex: 1000,
-            }}
+            className="fixed inset-0 z-[1000] bg-black/40"
           />
           <div
+            className="fixed bottom-0 left-0 top-0 z-[1001] flex w-[272px] flex-col overflow-y-auto shadow-[4px_0_20px_rgba(0,0,0,0.15)]"
             style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              bottom: 0,
-              width: 272,
               background: Theme.card,
               borderRight: `1px solid ${Theme.border}`,
-              display: 'flex',
-              flexDirection: 'column',
-              zIndex: 1001,
-              overflowY: 'auto',
-              boxShadow: '4px 0 20px rgba(0,0,0,0.15)',
             }}
           >
             <SidebarContent
@@ -478,53 +374,27 @@ export default function DashboardLayout({
 
       {/* Main content area */}
       <main
-        style={{
-          flex: 1,
-          overflow: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          paddingBottom: isMobile ? 60 : 0,
-        }}
+        className={`flex flex-1 flex-col overflow-auto ${isMobile ? 'pb-[60px]' : 'pb-0'}`}
       >
         {/* Topbar */}
         <header
+          className={`sticky top-0 z-10 flex shrink-0 items-center justify-between ${isMobile ? 'h-[52px] px-4' : 'h-[58px] px-[26px]'}`}
           style={{
-            height: isMobile ? 52 : 58,
             background: Theme.card,
             borderBottom: `1px solid ${Theme.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: isMobile ? '0 16px' : '0 26px',
-            flexShrink: 0,
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="flex items-center gap-[10px]">
             {isMobile && (
               <button
                 onClick={() => setSidebarOpen(true)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                  padding: 4,
-                }}
+                className="flex cursor-pointer flex-col gap-1 border-0 bg-transparent p-1"
               >
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
-                    style={{
-                      width: 20,
-                      height: 2,
-                      borderRadius: 2,
-                      background: Theme.fg,
-                    }}
+                    className="h-0.5 w-5 rounded-sm"
+                    style={{ background: Theme.fg }}
                   />
                 ))}
               </button>
@@ -540,41 +410,28 @@ export default function DashboardLayout({
                 fontSize: isMobile ? 14 : 14,
                 fontWeight: 700,
                 color: Theme.fg,
-                maxWidth: isMobile ? 160 : undefined,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
               }}
+              className={isMobile ? 'max-w-40' : undefined}
             >
               {topbarLabel}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: Theme.mutedFg }}>
+          <div className={`flex items-center ${isMobile ? 'gap-[10px]' : 'gap-4'}`}>
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
               <div
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  background: Theme.success,
-                }}
+                className="h-[7px] w-[7px] rounded-full"
+                style={{ background: Theme.success }}
               />
               {!isMobile && 'SSLCommerz · '}Live
             </div>
             <div
+              className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-full text-[13px] font-extrabold"
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: '50%',
                 background: Theme.secondary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 13,
-                fontWeight: 800,
                 color: Theme.primary,
-                cursor: 'pointer',
-                flexShrink: 0,
               }}
             >
               O
@@ -584,11 +441,7 @@ export default function DashboardLayout({
 
         {/* Content */}
         <div
-          style={{
-            flex: 1,
-            padding: isMobile ? '16px 14px' : '22px 26px',
-            overflowY: 'auto',
-          }}
+          className={`flex-1 overflow-y-auto ${isMobile ? 'px-[14px] py-4' : 'px-[26px] py-[22px]'}`}
         >
           {views[activeNav]}
         </div>
@@ -597,25 +450,17 @@ export default function DashboardLayout({
       {/* Mobile Bottom Navigation */}
       {isMobile && (
         <nav
+          className="fixed bottom-0 left-0 right-0 z-[100] flex h-[60px] items-stretch shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
           style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
             background: Theme.card,
             borderTop: `1px solid ${Theme.border}`,
-            display: 'flex',
-            alignItems: 'stretch',
-            height: 60,
-            zIndex: 100,
-            boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
           }}
         >
           {[
             { id: 'overview', label: 'Home', icon: '◈' },
             { id: 'ecommerce', label: 'Orders', icon: '🌐' },
             { id: 'inventory', label: 'Inventory', icon: '📦' },
-            { id: 'analytics', label: 'Analytics', icon: '📊' },
+            { id: 'sales', label: 'Sales', icon: '💰' },
             { id: 'settings', label: 'Settings', icon: '⚙️' },
           ].map((n) => {
             const active = activeNav === n.id;
@@ -623,49 +468,24 @@ export default function DashboardLayout({
               <button
                 key={n.id}
                 onClick={() => navigate(n.id)}
+                className="relative flex flex-1 cursor-pointer flex-col items-center justify-center gap-[3px] border-0 transition-all duration-150"
                 style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 3,
-                  border: 'none',
-                  cursor: 'pointer',
                   background: active ? Theme.secondary : 'transparent',
                   color: active ? Theme.primary : Theme.mutedFg,
-                  transition: 'all 0.15s',
-                  position: 'relative',
                 }}
               >
                 {n.id === 'inventory' && lowCount > 0 && (
                   <div
-                    style={{
-                      position: 'absolute',
-                      top: 6,
-                      right: 'calc(50% - 14px)',
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      background: Theme.warning,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 9,
-                      fontWeight: 800,
-                      color: '#fff',
-                    }}
+                    className="absolute right-[calc(50%-14px)] top-1.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
+                    style={{ background: Theme.warning }}
                   >
                     {lowCount}
                   </div>
                 )}
                 <span style={{ fontSize: 18 }}>{n.icon}</span>
                 <span
-                  style={{
-                    fontSize: 9,
-                    fontWeight: active ? 700 : 500,
-                    letterSpacing: '0.02em',
-                  }}
+                  className="text-[9px] tracking-[0.02em]"
+                  style={{ fontWeight: active ? 700 : 500 }}
                 >
                   {n.label}
                 </span>
@@ -716,28 +536,11 @@ export default function DashboardLayout({
 
 const POSView: React.FC = () => (
   <div
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 400,
-      gap: 18,
-      textAlign: 'center',
-      padding: '32px 20px',
-    }}
+    className="flex min-h-[400px] flex-col items-center justify-center gap-[18px] px-5 py-8 text-center"
   >
     <div
-      style={{
-        width: 80,
-        height: 80,
-        borderRadius: 22,
-        background: Theme.secondary,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 40,
-      }}
+      className="flex h-20 w-20 items-center justify-center rounded-[22px] text-[40px]"
+      style={{ background: Theme.secondary }}
     >
       🖥️
     </div>
@@ -745,12 +548,8 @@ const POSView: React.FC = () => (
       Point of Sale
     </div>
     <div
-      style={{
-        fontSize: 14,
-        color: Theme.mutedFg,
-        maxWidth: 380,
-        lineHeight: 1.8,
-      }}
+      className="max-w-[380px] text-sm leading-[1.8]"
+      style={{ color: Theme.mutedFg }}
     >
       Full POS terminal planned for next release. Until then, use{' '}
       <strong style={{ color: Theme.primary }}>Manual Sell</strong> in Inventory for

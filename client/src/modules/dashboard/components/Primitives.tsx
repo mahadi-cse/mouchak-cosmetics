@@ -1,9 +1,8 @@
-import React, { CSSProperties } from 'react';
+import React from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 
 interface ComponentProps {
   children: React.ReactNode;
-  style?: CSSProperties;
   className?: string;
 }
 
@@ -11,16 +10,8 @@ interface CardProps extends ComponentProps {
   pad?: number;
 }
 
-export const Card: React.FC<CardProps> = ({ children, pad = 24, style }) => (
-  <div
-    style={{
-      background: Theme.card,
-      border: `1px solid ${Theme.border}`,
-      borderRadius: 14,
-      padding: pad,
-      ...style,
-    }}
-  >
+export const Card: React.FC<CardProps> = ({ children, pad = 6, className = '' }) => (
+  <div className={`bg-card border border-border rounded-[14px] p-${pad} ${className}`}>
     {children}
   </div>
 );
@@ -38,40 +29,27 @@ export const Btn: React.FC<ButtonProps> = ({
   size = 'md',
   onClick,
   disabled = false,
-  style,
+  className = '',
 }) => {
-  const baseStyle: CSSProperties = {
-    border: 'none',
-    borderRadius: 8,
-    fontWeight: 600,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.45 : 1,
-    transition: 'background 0.15s',
-    fontSize: size === 'sm' ? 12 : 13,
-    padding: size === 'sm' ? '6px 14px' : '10px 20px',
-    ...style,
-  };
+  const baseClasses = `
+    border-none rounded-lg font-semibold cursor-pointer transition-all duration-150
+    ${size === 'sm' ? 'text-xs px-3.5 py-1.5' : 'text-sm px-5 py-2.5'}
+    ${disabled ? 'opacity-45 cursor-not-allowed' : 'opacity-100'}
+    ${className}
+  `;
 
-  const variantStyles: Record<string, CSSProperties> = {
-    primary: { background: Theme.primary, color: '#fff' },
-    secondary: {
-      background: '#fff',
-      color: Theme.primary,
-      border: `1px solid ${Theme.primary}`,
-    },
-    ghost: {
-      background: 'transparent',
-      color: Theme.mutedFg,
-      border: `1px solid ${Theme.border}`,
-    },
-    danger: { background: Theme.danger, color: '#fff' },
+  const variantClasses = {
+    primary: 'bg-primary text-white hover:bg-opacity-90',
+    secondary: 'bg-white border border-primary text-primary hover:bg-opacity-95',
+    ghost: 'bg-transparent text-muted-foreground border border-border hover:bg-muted',
+    danger: 'bg-red-600 text-white hover:bg-red-700',
   };
 
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      style={{ ...baseStyle, ...variantStyles[variant] }}
+      className={`${baseClasses} ${variantClasses[variant]}`}
     >
       {children}
     </button>
@@ -85,17 +63,7 @@ interface BadgeProps {
 }
 
 export const Badge: React.FC<BadgeProps> = ({ label, bg, color }) => (
-  <span
-    style={{
-      fontSize: 11,
-      fontWeight: 600,
-      padding: '3px 10px',
-      borderRadius: 20,
-      background: bg,
-      color,
-      whiteSpace: 'nowrap',
-    }}
-  >
+  <span className={`text-xs font-semibold px-2.5 py-0.75 rounded-full whitespace-nowrap`} style={{ backgroundColor: bg, color }}>
     {label}
   </span>
 );
@@ -108,19 +76,12 @@ interface SecHeadProps {
 }
 
 export const SecHead: React.FC<SecHeadProps> = ({ title, sub, action, onAction }) => (
-  <div
-    style={{
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      marginBottom: 18,
-    }}
-  >
+  <div className="flex items-start justify-between mb-5">
     <div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: Theme.fg }}>
+      <div className="text-base font-bold text-foreground">
         {title}
       </div>
-      {sub && <div style={{ fontSize: 12, color: Theme.mutedFg, marginTop: 2 }}>{sub}</div>}
+      {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
     </div>
     {action && <Btn variant="ghost" size="sm" onClick={onAction}>{action}</Btn>}
   </div>
@@ -143,62 +104,27 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   icon,
   accent,
 }) => (
-  <Card
-    style={{
-      position: 'relative',
-      overflow: 'hidden',
-    }}
-  >
+  <Card className="relative overflow-hidden">
     <div
-      style={{
-        position: 'absolute',
-        top: -12,
-        right: -12,
-        width: 70,
-        height: 70,
-        background: accent || Theme.secondary,
-        borderRadius: '50%',
-        opacity: 0.7,
-      }}
+      className="absolute -top-3 -right-3 w-[70px] h-[70px] rounded-full opacity-70"
+      style={{ backgroundColor: accent || Theme.secondary }}
     />
-    <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
-    <div
-      style={{
-        fontSize: 24,
-        fontWeight: 800,
-        color: Theme.fg,
-        letterSpacing: '-0.02em',
-        lineHeight: 1,
-      }}
-    >
+    <div className="text-2xl mb-1.5">{icon}</div>
+    <div className="text-2xl font-black text-foreground tracking-tighter leading-none">
       {value}
     </div>
-    <div
-      style={{
-        fontSize: 11,
-        color: Theme.mutedFg,
-        fontWeight: 600,
-        letterSpacing: '0.05em',
-        textTransform: 'uppercase',
-        marginTop: 4,
-      }}
-    >
+    <div className="text-xs text-muted-foreground font-semibold tracking-widest uppercase mt-1">
       {label}
     </div>
     {delta !== undefined && (
       <div
-        style={{
-          fontSize: 12,
-          color: delta >= 0 ? Theme.success : Theme.danger,
-          fontWeight: 600,
-          marginTop: 4,
-        }}
+        className={`text-sm font-semibold mt-1 ${delta >= 0 ? 'text-green-600' : 'text-red-600'}`}
       >
         {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% vs last month
       </div>
     )}
     {sub && (
-      <div style={{ fontSize: 12, color: Theme.mutedFg, marginTop: 4 }}>
+      <div className="text-xs text-muted-foreground mt-1">
         {sub}
       </div>
     )}

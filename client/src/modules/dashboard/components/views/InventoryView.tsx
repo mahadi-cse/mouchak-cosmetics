@@ -27,15 +27,13 @@ export default function InventoryView({
   const [selectedBranch, setSelectedBranch] = useState('all');
   const [editingProduct, setEditingProduct] = useState<{ id: number; branchId: string } | null>(null);
   const [editValue, setEditValue] = useState('');
-  
-  // Modal state for add/edit stock
+
   const [modalOpen, setModalOpen] = useState(false);
   const [formProductId, setFormProductId] = useState(products[0]?.id.toString() || '1');
   const [formBranchId, setFormBranchId] = useState('1');
   const [formStockValue, setFormStockValue] = useState('');
   const [formMode, setFormMode] = useState<'set' | 'add'>('set');
 
-  // Mock branch stock data (in production, this would come from backend)
   const branchStockMap: Record<number, BranchStock> = {
     1: { 1: 48, 2: 12, 3: 30, 4: 0, 5: 67, 6: 24, 7: 45, 8: 19 },
     2: { 1: 20, 2: 8, 3: 25, 4: 0, 5: 40, 6: 15, 7: 22, 8: 12 },
@@ -92,32 +90,29 @@ export default function InventoryView({
 
   const filteredProducts = products;
   const activeBranches = INITIAL_BRANCHES.filter((b) => b.active);
-  const displayBranches = selectedBranch === 'all' ? activeBranches : activeBranches.filter((b) => b.id === parseInt(selectedBranch));
+  const displayBranches =
+    selectedBranch === 'all'
+      ? activeBranches
+      : activeBranches.filter((b) => b.id === parseInt(selectedBranch));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: Theme.fg }}>Inventory Management</div>
-          <div style={{ fontSize: 13, color: Theme.mutedFg, marginTop: 2 }}>
+          <div className="text-[22px] font-extrabold" style={{ color: Theme.fg }}>
+            Inventory Management
+          </div>
+          <div className="mt-0.5 text-[13px]" style={{ color: Theme.mutedFg }}>
             Track stock levels by branch, add & edit stock
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              border: `1px solid ${Theme.border}`,
-              borderRadius: 9,
-              fontSize: 13,
-              color: Theme.fg,
-              background: '#fff',
-              cursor: 'pointer',
-              outline: 'none',
-            }}
+            className="cursor-pointer rounded-[9px] bg-white px-3 py-2 text-[13px] outline-none"
+            style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
           >
             <option value="all">All Branches</option>
             {INITIAL_BRANCHES.map((b) => (
@@ -130,249 +125,229 @@ export default function InventoryView({
         </div>
       </div>
 
-      {/* Add/Edit Stock Modal */}
       {modalOpen && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
           onClick={() => setModalOpen(false)}
         >
-          <div onClick={(e: any) => e.stopPropagation()}>
-            <Card
-              style={{
-                maxWidth: 500,
-                width: '90%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-              }}
-            >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: Theme.fg }}>Add or Edit Stock</div>
-                <div style={{ fontSize: 12, color: Theme.mutedFg, marginTop: 2 }}>Update inventory for a product & branch</div>
-              </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: 24,
-                  cursor: 'pointer',
-                  color: Theme.mutedFg,
-                  lineHeight: 1,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 14, marginBottom: 16 }}>
-              {/* Product Select */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-                  Select Product
-                </label>
-                <select
-                  value={formProductId}
-                  onChange={(e) => setFormProductId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: `1px solid ${Theme.border}`,
-                    borderRadius: 8,
-                    fontSize: 13,
-                    color: Theme.fg,
-                    background: '#fff',
-                    cursor: 'pointer',
-                    outline: 'none',
-                  }}
+          <div
+            className="max-h-[90vh] w-[90%] max-w-[500px] overflow-y-auto"
+            onClick={(e: any) => e.stopPropagation()}
+          >
+            <Card>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-extrabold" style={{ color: Theme.fg }}>
+                    Add or Edit Stock
+                  </div>
+                  <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>
+                    Update inventory for a product & branch
+                  </div>
+                </div>
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="cursor-pointer border-none bg-transparent text-2xl leading-none"
+                  style={{ color: Theme.mutedFg }}
                 >
-                  {products.map((p: any) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku})
-                    </option>
-                  ))}
-                </select>
+                  ✕
+                </button>
               </div>
 
-              {/* Branch Select */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-                  Select Branch
-                </label>
-                <select
-                  value={formBranchId}
-                  onChange={(e) => setFormBranchId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: `1px solid ${Theme.border}`,
-                    borderRadius: 8,
-                    fontSize: 13,
-                    color: Theme.fg,
-                    background: '#fff',
-                    cursor: 'pointer',
-                    outline: 'none',
-                  }}
-                >
-                  {INITIAL_BRANCHES.filter((b) => b.active).map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              <div className={`mb-4 grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                <div>
+                  <label
+                    className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
+                    style={{ color: Theme.mutedFg }}
+                  >
+                    Select Product
+                  </label>
+                  <select
+                    value={formProductId}
+                    onChange={(e) => setFormProductId(e.target.value)}
+                    className="w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
+                    style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                  >
+                    {products.map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.sku})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 12 }}>
-              {/* Mode Toggle */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-                  Mode
-                </label>
-                <div style={{ display: 'flex', gap: 4, background: Theme.muted, borderRadius: 8, padding: 3 }}>
-                  {(['set', 'add'] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setFormMode(mode)}
-                      style={{
-                        flex: 1,
-                        padding: '8px',
-                        borderRadius: 6,
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: formMode === mode ? '#fff' : 'transparent',
-                        color: formMode === mode ? Theme.primary : Theme.mutedFg,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        textTransform: 'capitalize',
-                        boxShadow: formMode === mode ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                      }}
-                    >
-                      {mode === 'set' ? '🔢 Set Stock' : '➕ Add to Stock'}
-                    </button>
-                  ))}
+                <div>
+                  <label
+                    className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
+                    style={{ color: Theme.mutedFg }}
+                  >
+                    Select Branch
+                  </label>
+                  <select
+                    value={formBranchId}
+                    onChange={(e) => setFormBranchId(e.target.value)}
+                    className="w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
+                    style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                  >
+                    {INITIAL_BRANCHES.filter((b) => b.active).map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Stock Input */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-                  {formMode === 'set' ? 'New Stock' : 'Add Quantity'}
-                </label>
-                <input
-                  type="number"
-                  value={formStockValue}
-                  onChange={(e) => setFormStockValue(e.target.value)}
-                  placeholder={formMode === 'set' ? 'e.g., 50' : 'e.g., 10'}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: `1px solid ${Theme.border}`,
-                    borderRadius: 8,
-                    fontSize: 13,
-                    color: Theme.fg,
-                    outline: 'none',
-                  }}
-                />
-              </div>
+              <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                <div>
+                  <label
+                    className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
+                    style={{ color: Theme.mutedFg }}
+                  >
+                    Mode
+                  </label>
+                  <div className="flex gap-1 rounded-lg p-[3px]" style={{ background: Theme.muted }}>
+                    {(['set', 'add'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setFormMode(mode)}
+                        className="flex-1 cursor-pointer rounded-md border-none px-2 py-2 text-xs font-semibold capitalize"
+                        style={{
+                          background: formMode === mode ? '#fff' : 'transparent',
+                          color: formMode === mode ? Theme.primary : Theme.mutedFg,
+                          boxShadow: formMode === mode ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                        }}
+                      >
+                        {mode === 'set' ? '🔢 Set Stock' : '➕ Add to Stock'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {/* Current Stock Display */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-                  Current Stock
-                </label>
-                <div
-                  style={{
-                    padding: '10px 12px',
-                    border: `1px solid ${Theme.border}`,
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: Theme.primary,
-                    background: Theme.muted,
-                  }}
-                >
-                  {getProductBranchStock(parseInt(formProductId), parseInt(formBranchId))}
+                <div>
+                  <label
+                    className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
+                    style={{ color: Theme.mutedFg }}
+                  >
+                    {formMode === 'set' ? 'New Stock' : 'Add Quantity'}
+                  </label>
+                  <input
+                    type="number"
+                    value={formStockValue}
+                    onChange={(e) => setFormStockValue(e.target.value)}
+                    placeholder={formMode === 'set' ? 'e.g., 50' : 'e.g., 10'}
+                    className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none"
+                    style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
+                    style={{ color: Theme.mutedFg }}
+                  >
+                    Current Stock
+                  </label>
+                  <div
+                    className="rounded-lg px-3 py-2.5 text-[13px] font-bold"
+                    style={{
+                      border: `1px solid ${Theme.border}`,
+                      color: Theme.primary,
+                      background: Theme.muted,
+                    }}
+                  >
+                    {getProductBranchStock(parseInt(formProductId), parseInt(formBranchId))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <Btn
-              onClick={handleFormSubmit}
-              style={{ marginTop: 14, width: '100%' }}
-            >
-              ✓ {formMode === 'set' ? 'Set Stock' : 'Add to Stock'}
-            </Btn>
-          </Card>
+              <Btn onClick={handleFormSubmit} className="mt-3.5 w-full">
+                ✓ {formMode === 'set' ? 'Set Stock' : 'Add to Stock'}
+              </Btn>
+            </Card>
+          </div>
         </div>
-      </div>
       )}
 
-      {/* Branch-wise Stock Table */}
       <Card>
-        <SecHead title="📦 Stock Levels by Branch" sub={selectedBranch === 'all' ? 'All active branches' : `${INITIAL_BRANCHES.find((b) => b.id === parseInt(selectedBranch))?.name}`} />
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+        <SecHead
+          title="📦 Stock Levels by Branch"
+          sub={
+            selectedBranch === 'all'
+              ? 'All active branches'
+              : `${INITIAL_BRANCHES.find((b) => b.id === parseInt(selectedBranch))?.name}`
+          }
+        />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] border-collapse">
             <thead>
               <tr style={{ background: Theme.muted }}>
-                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, borderBottom: `1px solid ${Theme.border}` }}>Product</th>
+                <th
+                  className="px-3 py-3 text-left font-semibold"
+                  style={{ borderBottom: `1px solid ${Theme.border}` }}
+                >
+                  Product
+                </th>
                 {displayBranches.map((b) => (
-                  <th key={b.id} style={{ padding: '12px', textAlign: 'center', fontWeight: 600, borderBottom: `1px solid ${Theme.border}`, fontSize: 12 }}>
+                  <th
+                    key={b.id}
+                    className="px-3 py-3 text-center text-xs font-semibold"
+                    style={{ borderBottom: `1px solid ${Theme.border}` }}
+                  >
                     {b.name.split(' ')[0]}
                   </th>
                 ))}
-                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, borderBottom: `1px solid ${Theme.border}` }}>Total</th>
-                <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, borderBottom: `1px solid ${Theme.border}` }}>Actions</th>
+                <th
+                  className="px-3 py-3 text-center font-semibold"
+                  style={{ borderBottom: `1px solid ${Theme.border}` }}
+                >
+                  Total
+                </th>
+                <th
+                  className="px-3 py-3 text-center font-semibold"
+                  style={{ borderBottom: `1px solid ${Theme.border}` }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredProducts.map((p: any) => (
                 <tr key={p.id} style={{ borderBottom: `1px solid ${Theme.border}` }}>
-                  <td style={{ padding: '12px', fontWeight: 500, maxWidth: 150 }}>
+                  <td className="max-w-[150px] px-3 py-3 font-medium">
                     <div>{p.name}</div>
-                    <div style={{ fontSize: 11, color: Theme.mutedFg, marginTop: 2 }}>{p.sku}</div>
+                    <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
+                      {p.sku}
+                    </div>
                   </td>
+
                   {displayBranches.map((b) => {
                     const stock = getProductBranchStock(p.id, b.id);
-                    const isEditing = editingProduct?.id === p.id && editingProduct?.branchId === b.id.toString();
+                    const isEditing =
+                      editingProduct?.id === p.id && editingProduct?.branchId === b.id.toString();
+
                     return (
-                      <td key={b.id} style={{ padding: '12px', textAlign: 'center', borderRight: `1px solid ${Theme.border}` }}>
+                      <td
+                        key={b.id}
+                        className="px-3 py-3 text-center"
+                        style={{ borderRight: `1px solid ${Theme.border}` }}
+                      >
                         {isEditing ? (
-                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <div className="flex items-center gap-1">
                             <input
                               type="number"
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
+                              className="w-[50px] rounded text-xs"
                               style={{
-                                width: 50,
                                 padding: '4px',
                                 border: `1px solid ${Theme.primary}`,
-                                borderRadius: 4,
-                                fontSize: 12,
                               }}
                               autoFocus
                             />
                             <button
                               onClick={handleSaveStock}
-                              style={{
-                                padding: '4px 8px',
-                                fontSize: 11,
-                                background: Theme.success,
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 4,
-                                cursor: 'pointer',
-                              }}
+                              className="cursor-pointer rounded px-2 py-1 text-[11px] text-white"
+                              style={{ background: Theme.success }}
                             >
                               ✓
                             </button>
@@ -380,16 +355,11 @@ export default function InventoryView({
                         ) : (
                           <button
                             onClick={() => handleEditStock(p.id, b.id.toString())}
+                            className="cursor-pointer rounded border px-2 py-1 text-xs font-semibold transition-all"
                             style={{
-                              padding: '4px 8px',
-                              borderRadius: 4,
-                              border: `1px solid ${Theme.border}`,
+                              borderColor: Theme.border,
                               background: stock > 20 ? '#dcfce7' : stock > 0 ? '#fef3c7' : '#fee2e2',
                               color: stock > 20 ? '#166534' : stock > 0 ? '#92400e' : '#991b1b',
-                              fontSize: 12,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
                             }}
                           >
                             {stock}
@@ -398,10 +368,13 @@ export default function InventoryView({
                       </td>
                     );
                   })}
-                  <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: Theme.primary }}>
-                    {selectedBranch === 'all' ? getTotalProductStock(p.id) : getProductBranchStock(p.id, parseInt(selectedBranch))}
+
+                  <td className="px-3 py-3 text-center font-bold" style={{ color: Theme.primary }}>
+                    {selectedBranch === 'all'
+                      ? getTotalProductStock(p.id)
+                      : getProductBranchStock(p.id, parseInt(selectedBranch))}
                   </td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                  <td className="px-3 py-3 text-center">
                     <button
                       onClick={() => {
                         setFormProductId(p.id.toString());
@@ -410,22 +383,8 @@ export default function InventoryView({
                         setFormStockValue('');
                         setModalOpen(true);
                       }}
-                      style={{
-                        padding: '6px 10px',
-                        fontSize: 14,
-                        background: Theme.primary,
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.opacity = '0.85';
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.opacity = '1';
-                      }}
+                      className="cursor-pointer rounded border-none px-2.5 py-1.5 text-sm text-white transition-opacity hover:opacity-90"
+                      style={{ background: Theme.primary }}
                     >
                       ✎ Edit
                     </button>
@@ -437,27 +396,27 @@ export default function InventoryView({
         </div>
       </Card>
 
-      {/* Recent Manual Sales */}
       <Card>
         <SecHead title="📋 Recent Manual Sales" sub="Latest walk-in transactions" />
         {sellLog.slice(0, 5).map((log: any) => (
           <div
             key={log.id}
-            style={{
-              padding: '12px',
-              borderBottom: `1px solid ${Theme.border}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
+            className="flex items-center justify-between border-b px-3 py-3"
+            style={{ borderBottomColor: Theme.border }}
           >
             <div>
-              <div style={{ fontWeight: 600, color: Theme.fg }}>{log.product}</div>
-              <div style={{ fontSize: 12, color: Theme.mutedFg }}>{log.date}</div>
+              <div className="font-semibold" style={{ color: Theme.fg }}>
+                {log.product}
+              </div>
+              <div className="text-xs" style={{ color: Theme.mutedFg }}>
+                {log.date}
+              </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 600 }}>{log.qty} unit(s)</div>
-              <div style={{ fontSize: 12, color: Theme.mutedFg }}>৳{log.amount}</div>
+            <div className="text-right">
+              <div className="font-semibold">{log.qty} unit(s)</div>
+              <div className="text-xs" style={{ color: Theme.mutedFg }}>
+                ৳{log.amount}
+              </div>
             </div>
           </div>
         ))}

@@ -30,24 +30,18 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
     p.stock > 0 && (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const inp = {
-    width: '100%',
-    padding: '8px 12px',
+  const inp: React.CSSProperties = {
     border: `1px solid ${Theme.border}`,
-    borderRadius: 6,
     fontSize: 13,
     color: Theme.fg,
-    background: '#fff',
     outline: 'none',
-    boxSizing: 'border-box' as const,
+    boxSizing: 'border-box',
   };
 
-  const lbl = {
+  const lbl: React.CSSProperties = {
     fontSize: 11,
-    fontWeight: 600 as const,
+    fontWeight: 600,
     color: Theme.fg,
-    marginBottom: 4,
-    display: 'block' as const,
   };
 
   const handleSelectProduct = (product: Product) => {
@@ -72,53 +66,24 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: isMobile ? 'flex-end' : 'center',
-        justifyContent: 'center',
-        padding: isMobile ? 0 : '16px',
-      }}
+      className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${isMobile ? 'items-end p-0' : 'items-center p-4'}`}
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: '#fff',
-          borderRadius: isMobile ? '20px 20px 0 0' : '12px',
-          width: isMobile ? '100%' : '680px',
-          maxWidth: '100%',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
+        className={`flex max-w-full flex-col overflow-hidden bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] ${isMobile ? 'w-full rounded-t-[20px] rounded-b-none' : 'w-[680px] rounded-xl'}`}
       >
         {isMobile && (
           <div
-            style={{
-              width: 40,
-              height: 4,
-              borderRadius: 2,
-              background: Theme.border,
-              margin: '8px auto 0',
-            }}
+            className="mx-auto mt-2 h-1 w-10 rounded-sm"
+            style={{ background: Theme.border }}
           />
         )}
 
         {/* Header */}
         <div
-          style={{
-            padding: '12px 16px',
-            borderBottom: `1px solid ${Theme.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexShrink: 0,
-          }}
+          className="flex shrink-0 items-center justify-between px-4 py-3"
+          style={{ borderBottom: `1px solid ${Theme.border}` }}
         >
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: Theme.fg }}>
@@ -127,14 +92,8 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: 20,
-              cursor: 'pointer',
-              color: Theme.mutedFg,
-              lineHeight: 1,
-            }}
+            className="cursor-pointer border-0 bg-transparent p-0 text-[20px] leading-none"
+            style={{ color: Theme.mutedFg }}
           >
             ✕
           </button>
@@ -143,25 +102,18 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
         {/* Last Sale Notification */}
         {lastSale && (
           <div
-            style={{
-              padding: '8px 16px',
-              background: '#f0fdf4',
-              borderBottom: `1px solid #bbf7d0`,
-              color: '#166534',
-              fontSize: 11,
-              fontWeight: 600,
-            }}
+            className="border-b border-[#bbf7d0] bg-[#f0fdf4] px-4 py-2 text-[11px] font-semibold text-[#166534]"
           >
             {lastSale}
           </div>
         )}
 
         {/* Form */}
-        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-[10px] px-4 py-3">
           {/* Product Selection with Search */}
-          <div style={{ position: 'relative' }}>
-            <label style={lbl}>Product *</label>
-            <div style={{ position: 'relative' }}>
+          <div className="relative">
+            <label className="mb-1 block" style={lbl}>Product *</label>
+            <div className="relative">
               <input
                 type="text"
                 placeholder="Search product name or SKU..."
@@ -171,9 +123,9 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
                   setShowDropdown(true);
                 }}
                 onFocus={() => setShowDropdown(true)}
+                className={`box-border w-full rounded-md py-2 ${selectedProductId ? 'pr-9 pl-3' : 'px-3'}`}
                 style={{
                   ...inp,
-                  paddingRight: selectedProductId ? '36px' : '12px',
                   background: selectedProductId ? '#f9fafb' : '#fff',
                 }}
               />
@@ -184,70 +136,40 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
                     setSearchQuery('');
                     setShowDropdown(false);
                   }}
-                  style={{
-                    position: 'absolute',
-                    right: 8,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    fontSize: 16,
-                    cursor: 'pointer',
-                    color: Theme.mutedFg,
-                    padding: '4px 8px',
-                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer border-0 bg-transparent px-2 py-1 text-base"
+                  style={{ color: Theme.mutedFg }}
                 >
                   ✕
                 </button>
               )}
               {showDropdown && (
                 <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    background: '#fff',
-                    border: `1px solid ${Theme.border}`,
-                    borderTop: 'none',
-                    borderRadius: '0 0 6px 6px',
-                    maxHeight: 240,
-                    overflowY: 'auto',
-                    zIndex: 10,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  }}
+                  className="absolute left-0 right-0 top-full z-10 max-h-60 overflow-y-auto rounded-b-md border border-t-0 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+                  style={{ borderColor: Theme.border }}
                 >
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => handleSelectProduct(p)}
+                        className="flex w-full cursor-pointer items-center justify-between border-0 border-b px-3 py-2 text-left text-xs"
                         style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
                           background: selectedProductId === String(p.id) ? Theme.muted : 'transparent',
                           color: Theme.fg,
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          fontSize: 12,
                           borderBottom: `1px solid ${Theme.border}`,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
                         }}
                       >
                         <div>
                           <div style={{ fontWeight: 600 }}>{p.name}</div>
                           <div style={{ fontSize: 10, color: Theme.mutedFg }}>SKU: {p.sku}</div>
                         </div>
-                        <div style={{ fontSize: 11, color: Theme.mutedFg, marginLeft: 8 }}>
+                        <div className="ml-2 text-[11px]" style={{ color: Theme.mutedFg }}>
                           {p.stock} in stock
                         </div>
                       </button>
                     ))
                   ) : (
-                    <div style={{ padding: '12px', color: Theme.mutedFg, fontSize: 12, textAlign: 'center' }}>
+                    <div className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>
                       No products found
                     </div>
                   )}
@@ -257,23 +179,18 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
           </div>
 
           {/* Quantity & Price - Stacked Layout */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="flex flex-col gap-[10px]">
             {/* Quantity */}
             <div>
-              <label style={lbl}>Quantity *</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="mb-1 block" style={lbl}>Quantity *</label>
+              <div className="flex items-center gap-1.5">
                 <button
                   disabled={!selectedProduct}
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className={`h-8 w-8 shrink-0 rounded-md border text-base ${selectedProduct ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 6,
-                    border: `1px solid ${Theme.border}`,
-                    fontSize: 16,
-                    cursor: selectedProduct ? 'pointer' : 'not-allowed',
+                    borderColor: Theme.border,
                     background: selectedProduct ? Theme.muted : '#e5e7eb',
-                    flexShrink: 0,
                     opacity: selectedProduct ? 1 : 0.5,
                   }}
                 >
@@ -286,51 +203,48 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
                   value={qty}
                   disabled={!selectedProduct}
                   onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
-                  style={{ 
-                    ...inp, 
-                    width: 60, 
+                  className="box-border w-[60px] rounded-md px-3 py-2 text-center"
+                  style={{
+                    ...inp,
                     textAlign: 'center',
                     WebkitAppearance: 'none',
                     MozAppearance: 'textfield',
-                  } as React.CSSProperties}
+                    background: '#fff',
+                  }}
                 />
                 <button
                   disabled={!selectedProduct}
                   onClick={() =>
                     selectedProduct && setQty((q) => Math.min(selectedProduct.stock, q + 1))
                   }
+                  className={`h-8 w-8 shrink-0 rounded-md border text-base ${selectedProduct ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 6,
-                    border: `1px solid ${Theme.border}`,
-                    fontSize: 16,
-                    cursor: selectedProduct ? 'pointer' : 'not-allowed',
+                    borderColor: Theme.border,
                     background: selectedProduct ? Theme.muted : '#e5e7eb',
-                    flexShrink: 0,
                     opacity: selectedProduct ? 1 : 0.5,
                   }}
                 >
                   +
                 </button>
-                <span style={{ fontSize: 11, color: Theme.mutedFg }}>
-                {selectedProduct ? `Max: ${selectedProduct.stock}` : ''}
+                <span className="text-[11px]" style={{ color: Theme.mutedFg }}>
+                  {selectedProduct ? `Max: ${selectedProduct.stock}` : ''}
                 </span>
               </div>
             </div>
 
             {/* Sale Price */}
             <div>
-              <label style={lbl}>Sale Price (৳)</label>
+              <label className="mb-1 block" style={lbl}>Sale Price (৳)</label>
               <input
                 type="number"
                 disabled={!selectedProduct}
                 value={salePrice > 0 ? salePrice : ''}
                 onChange={(e) => setSalePrice(Number(e.target.value) || 0)}
                 placeholder={selectedProduct ? String(selectedProduct.price) : '0'}
-                style={{ ...inp, opacity: selectedProduct ? 1 : 0.5 }}
+                className="box-border w-full rounded-md px-3 py-2"
+                style={{ ...inp, background: '#fff', opacity: selectedProduct ? 1 : 0.5 }}
               />
-              <div style={{ fontSize: 9, color: Theme.mutedFg, marginTop: 2 }}>
+              <div className="mt-0.5 text-[9px]" style={{ color: Theme.mutedFg }}>
                 {salePrice > 0 ? '✎ Custom' : selectedProduct ? 'Default' : '—'}
               </div>
             </div>
@@ -338,29 +252,27 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
 
           {/* Summary */}
           <div
+            className="mt-1 rounded-lg px-3 py-2.5"
             style={{
               background: Theme.muted,
-              borderRadius: 8,
-              padding: '10px 12px',
               borderLeft: `3px solid ${selectedProduct ? Theme.primary : Theme.border}`,
-              marginTop: 4,
               opacity: selectedProduct ? 1 : 0.5,
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, color: Theme.mutedFg }}>
+            <div className="mb-1 flex justify-between text-[11px]" style={{ color: Theme.mutedFg }}>
               <span>Unit Price</span>
               <span style={{ fontWeight: 600, color: Theme.fg }}>
                 {selectedProduct ? formatCurrency(basePrice) : '—'}
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, color: Theme.mutedFg }}>
+            <div className="mb-1 flex justify-between text-[11px]" style={{ color: Theme.mutedFg }}>
               <span>Quantity</span>
               <span style={{ fontWeight: 600, color: Theme.fg }}>
                 {selectedProduct ? qty : '—'}
               </span>
             </div>
-            <div style={{ height: 1, background: Theme.border, margin: '6px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700 }}>
+            <div className="my-1.5 h-px" style={{ background: Theme.border }} />
+            <div className="flex justify-between text-sm font-bold">
               <span>Total</span>
               <span style={{ color: Theme.primary }}>
                 {selectedProduct ? formatCurrency(total) : '—'}
@@ -369,7 +281,7 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
           </div>
 
           {selectedProduct && overStock && (
-            <div style={{ padding: '6px 10px', background: '#fee2e2', borderRadius: 6, color: '#991b1b', fontSize: 11, fontWeight: 600 }}>
+            <div className="rounded-md bg-[#fee2e2] px-[10px] py-1.5 text-[11px] font-semibold text-[#991b1b]">
               ⚠ Max: {selectedProduct.stock}
             </div>
           )}
@@ -377,15 +289,8 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
 
         {/* Footer */}
         <div
-          style={{
-            padding: '10px 16px',
-            borderTop: `1px solid ${Theme.border}`,
-            background: '#fafafa',
-            display: 'flex',
-            gap: 8,
-            justifyContent: 'flex-end',
-            flexShrink: 0,
-          }}
+          className="flex shrink-0 justify-end gap-2 bg-[#fafafa] px-4 py-2.5"
+          style={{ borderTop: `1px solid ${Theme.border}` }}
         >
           <Btn variant="ghost" onClick={onClose}>
             Close

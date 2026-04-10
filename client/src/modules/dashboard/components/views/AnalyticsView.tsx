@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Theme, formatCurrency } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
-import { Card, KpiCard, SecHead } from '../Primitives';
+import { Card, SecHead } from '../Primitives';
 import { revenueData, dailySales, INITIAL_PRODUCTS } from '@/modules/dashboard/data/mockData';
 import {
   LineChart,
@@ -23,67 +23,43 @@ export default function AnalyticsView() {
   const [period, setPeriod] = useState('monthly');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* Header + filters */}
+    <div className="flex flex-col gap-[18px]">
       <div
-        style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: isMobile ? 'flex-start' : 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-        }}
+        className={`flex justify-between gap-3 ${isMobile ? 'flex-col items-start' : 'flex-row items-center'}`}
       >
         <div>
-          <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: Theme.fg }}>
+          <div
+            className={`font-extrabold ${isMobile ? 'text-[18px]' : 'text-[22px]'}`}
+            style={{ color: Theme.fg }}
+          >
             Analytics
           </div>
-          <div style={{ fontSize: 13, color: Theme.mutedFg, marginTop: 2 }}>
+          <div className="mt-0.5 text-[13px]" style={{ color: Theme.mutedFg }}>
             Revenue, orders & trends
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={branch}
             onChange={(e) => setBranch(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              border: `1px solid ${Theme.border}`,
-              borderRadius: 9,
-              fontSize: 13,
-              color: Theme.fg,
-              background: '#fff',
-              cursor: 'pointer',
-              outline: 'none',
-            }}
+            className="cursor-pointer rounded-[9px] bg-white px-3 py-2 text-sm outline-none"
+            style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
           >
             {['All Branches', 'Dhaka Main', 'Chittagong', 'Sylhet Outlet'].map((b) => (
               <option key={b}>{b}</option>
             ))}
           </select>
-          <div
-            style={{
-              display: 'flex',
-              gap: 3,
-              background: Theme.muted,
-              borderRadius: 8,
-              padding: 3,
-            }}
-          >
+
+          <div className="flex gap-1 rounded-lg p-1" style={{ background: Theme.muted }}>
             {['weekly', 'monthly', 'yearly'].map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
+                className="cursor-pointer rounded-md border-none px-2.5 py-1.5 text-xs font-semibold uppercase"
                 style={{
-                  padding: '6px 10px',
-                  borderRadius: 6,
-                  border: 'none',
-                  cursor: 'pointer',
                   background: period === p ? '#fff' : 'transparent',
                   color: period === p ? Theme.primary : Theme.mutedFg,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  textTransform: 'capitalize',
                   boxShadow: period === p ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                 }}
               >
@@ -94,10 +70,8 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      {/* PRIMARY CHARTS - LARGE GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
-        {/* Daily Sales - Full width on mobile, half on desktop */}
-        <Card style={{ gridColumn: isMobile ? '1' : 'span 1' }}>
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+        <Card>
           <SecHead title="Daily Sales by Channel" sub="Online vs Manual · This week" />
           <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
             <BarChart data={dailySales} barSize={20}>
@@ -115,17 +89,19 @@ export default function AnalyticsView() {
               <Bar dataKey="manual" name="manual" stackId="a" fill={Theme.primary} />
             </BarChart>
           </ResponsiveContainer>
-          <div style={{ display: 'flex', gap: 16, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: Theme.mutedFg }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: '#bfdbfe' }} /> Online
+
+          <div className="mt-3 flex flex-wrap justify-center gap-4">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
+              <div className="h-3 w-3 rounded-sm" style={{ background: '#bfdbfe' }} />
+              Online
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: Theme.mutedFg }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: Theme.primary }} /> Manual
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
+              <div className="h-3 w-3 rounded-sm" style={{ background: Theme.primary }} />
+              Manual
             </div>
           </div>
         </Card>
 
-        {/* Orders vs Revenue - Dual axis */}
         <Card>
           <SecHead title="Orders vs Revenue Trend" sub="6-month performance" />
           <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
@@ -170,110 +146,90 @@ export default function AnalyticsView() {
               />
             </LineChart>
           </ResponsiveContainer>
-          <div style={{ display: 'flex', gap: 16, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: Theme.mutedFg }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: Theme.primary }} /> Revenue (৳)
+
+          <div className="mt-3 flex flex-wrap justify-center gap-4">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
+              <div className="h-3 w-3 rounded-sm" style={{ background: Theme.primary }} />
+              Revenue (৳)
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: Theme.mutedFg }}>
-              <div style={{ width: 12, height: 2, background: Theme.warning }} /> Orders (#)
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
+              <div className="h-1 w-3" style={{ background: Theme.warning }} />
+              Orders (#)
             </div>
           </div>
         </Card>
       </div>
 
-      {/* KPI Cards - Secondary Reference (smaller) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-        <Card style={{ padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+        <Card className="p-[14px]">
+          <div className="text-xs font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
             💰 Revenue (MTD)
           </div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: Theme.fg, marginTop: 6 }}>৳3,12,000</div>
-          <div style={{ fontSize: 10, color: Theme.success, fontWeight: 600, marginTop: 3 }}>▲ 33.3%</div>
+          <div className="mt-1.5 text-lg font-bold" style={{ color: Theme.fg }}>৳3,12,000</div>
+          <div className="mt-0.5 text-xs font-semibold" style={{ color: Theme.success }}>▲ 33.3%</div>
         </Card>
 
-        <Card style={{ padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <Card className="p-[14px]">
+          <div className="text-xs font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
             📈 Conversion
           </div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: Theme.fg, marginTop: 6 }}>3.8%</div>
-          <div style={{ fontSize: 10, color: Theme.success, fontWeight: 600, marginTop: 3 }}>▲ 0.4%</div>
+          <div className="mt-1.5 text-lg font-bold" style={{ color: Theme.fg }}>3.8%</div>
+          <div className="mt-0.5 text-xs font-semibold" style={{ color: Theme.success }}>▲ 0.4%</div>
         </Card>
 
-        <Card style={{ padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <Card className="p-[14px]">
+          <div className="text-xs font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
             🛒 Basket Size
           </div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: Theme.fg, marginTop: 6 }}>৳1,284</div>
-          <div style={{ fontSize: 10, color: Theme.success, fontWeight: 600, marginTop: 3 }}>▲ 4.1%</div>
+          <div className="mt-1.5 text-lg font-bold" style={{ color: Theme.fg }}>৳1,284</div>
+          <div className="mt-0.5 text-xs font-semibold" style={{ color: Theme.success }}>▲ 4.1%</div>
         </Card>
 
-        <Card style={{ padding: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: Theme.mutedFg, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <Card className="p-[14px]">
+          <div className="text-xs font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
             ↩ Return Rate
           </div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: Theme.fg, marginTop: 6 }}>2.1%</div>
-          <div style={{ fontSize: 10, color: Theme.mutedFg, fontWeight: 600, marginTop: 3 }}>Avg 4.5%</div>
+          <div className="mt-1.5 text-lg font-bold" style={{ color: Theme.fg }}>2.1%</div>
+          <div className="mt-0.5 text-xs font-semibold" style={{ color: Theme.mutedFg }}>Avg 4.5%</div>
         </Card>
       </div>
 
-      {/* Top Products - Bottom section */}
       <Card>
         <SecHead title="Top Products by Revenue" sub="March 2026" action="Export CSV" />
         {INITIAL_PRODUCTS.slice(0, 6).map((p, i) => {
           const rev = p.price * (p.sold + p.manualSold);
           const maxRev = INITIAL_PRODUCTS[0].price * (INITIAL_PRODUCTS[0].sold + INITIAL_PRODUCTS[0].manualSold);
           const pct = (rev / maxRev) * 100;
+
           return (
-            <div key={p.sku} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <div key={p.sku} className="mb-3.5 flex items-center gap-3">
               <div
+                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-xs font-bold"
                 style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: '50%',
-                  flexShrink: 0,
                   background: i === 0 ? Theme.primary : Theme.muted,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 12,
-                  fontWeight: 800,
                   color: i === 0 ? '#fff' : Theme.mutedFg,
                 }}
               >
                 {i + 1}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex justify-between">
                   <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      maxWidth: '60%',
-                    }}
+                    className="max-w-[60%] overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold"
+                    style={{ color: Theme.fg }}
                   >
                     {p.name}
                   </span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: Theme.primary,
-                      flexShrink: 0,
-                    }}
-                  >
+                  <span className="shrink-0 text-xs font-bold" style={{ color: Theme.primary }}>
                     {formatCurrency(rev)}
                   </span>
                 </div>
-                <div style={{ height: 6, background: Theme.muted, borderRadius: 99 }}>
+                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: Theme.muted }}>
                   <div
+                    className="h-full rounded-full"
                     style={{
-                      height: '100%',
                       width: `${pct}%`,
                       background: `linear-gradient(90deg,${Theme.primaryDark},${Theme.primary})`,
-                      borderRadius: 99,
                     }}
                   />
                 </div>

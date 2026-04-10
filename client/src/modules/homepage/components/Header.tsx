@@ -28,7 +28,7 @@ export function Header() {
       }));
 
   return (
-    <header className="sticky top-0 z-40 bg-white">
+    <header className="bg-white">
       {/* Top Bar - Dark background info strip */}
       <div className="hidden md:block bg-zinc-900 text-zinc-400 text-xs tracking-widest border-b border-zinc-800">
         <div className="mx-auto max-w-6xl px-4 py-2 flex gap-6">

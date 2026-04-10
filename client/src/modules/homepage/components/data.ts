@@ -32,6 +32,14 @@ export type RangeCategory = {
   color: string;
 };
 
+export type ShopCategory = {
+  id: string;
+  label: string;
+  description: string;
+  count: string;
+  image: string;
+};
+
 // ============================================================================
 // Navigation & Categories
 // ============================================================================
@@ -125,6 +133,37 @@ export const rangeCategories: RangeCategory[] = [
   { label: "Makeup", tag: "Color", bg: "bg-pink-50", color: "text-pink-700" },
   { label: "Haircare", tag: "Care", bg: "bg-blue-50", color: "text-blue-700" },
   { label: "Perfume", tag: "Scent", bg: "bg-violet-50", color: "text-violet-700" },
+];
+
+export const shopCategories: ShopCategory[] = [
+  {
+    id: "skincare",
+    label: "Skincare",
+    description: "Glow & Nourish",
+    count: "24 Products",
+    image: "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=500&q=80",
+  },
+  {
+    id: "makeup",
+    label: "Makeup",
+    description: "Color & Define",
+    count: "38 Products",
+    image: "https://images.unsplash.com/photo-1512207736890-6ffed8a84e8d?w=500&q=80",
+  },
+  {
+    id: "haircare",
+    label: "Haircare",
+    description: "Repair & Shine",
+    count: "19 Products",
+    image: "https://images.unsplash.com/photo-1527799820374-87f7caad78ef?w=500&q=80",
+  },
+  {
+    id: "fragrance",
+    label: "Fragrance",
+    description: "Scent & Mood",
+    count: "15 Products",
+    image: "https://images.unsplash.com/photo-1587017539504-67cfbddac569?w=500&q=80",
+  },
 ];
 
 // ============================================================================

@@ -14,17 +14,73 @@ interface SettingsViewProps {
 }
 
 const STAFF_LIST = [
-  { id: 1, name: 'Karim Hossain', email: 'karim@mouchak.com', role: 'Admin', branch: 'Dhaka Main', status: 'active' },
-  { id: 2, name: 'Fatima Khanam', email: 'fatima@mouchak.com', role: 'Staff', branch: 'Chittagong', status: 'active' },
-  { id: 3, name: 'Raihan Ahmed', email: 'raihan@mouchak.com', role: 'Staff', branch: 'Sylhet Outlet', status: 'inactive' },
+  {
+    id: 1,
+    name: 'Karim Hossain',
+    email: 'karim@mouchak.com',
+    role: 'Admin',
+    branch: 'Dhaka Main',
+    status: 'active',
+  },
+  {
+    id: 2,
+    name: 'Fatima Khanam',
+    email: 'fatima@mouchak.com',
+    role: 'Staff',
+    branch: 'Chittagong',
+    status: 'active',
+  },
+  {
+    id: 3,
+    name: 'Raihan Ahmed',
+    email: 'raihan@mouchak.com',
+    role: 'Staff',
+    branch: 'Sylhet Outlet',
+    status: 'inactive',
+  },
 ];
 
 const INITIAL_CATEGORIES = [
-  { id: 1, name: 'Skincare', slug: 'skincare', desc: 'Serums, moisturisers, cleansers', active: true, products: 48 },
-  { id: 2, name: 'Lipstick', slug: 'lipstick', desc: 'Matte, gloss, liquid lip colours', active: true, products: 34 },
-  { id: 3, name: 'Foundation', slug: 'foundation', desc: 'Liquid, powder, cushion bases', active: true, products: 22 },
-  { id: 4, name: 'Eyewear', slug: 'eyewear', desc: 'Palettes, liner, mascara', active: true, products: 17 },
-  { id: 5, name: 'Fragrance', slug: 'fragrance', desc: 'Perfumes and body mists', active: false, products: 9 },
+  {
+    id: 1,
+    name: 'Skincare',
+    slug: 'skincare',
+    desc: 'Serums, moisturisers, cleansers',
+    active: true,
+    products: 48,
+  },
+  {
+    id: 2,
+    name: 'Lipstick',
+    slug: 'lipstick',
+    desc: 'Matte, gloss, liquid lip colours',
+    active: true,
+    products: 34,
+  },
+  {
+    id: 3,
+    name: 'Foundation',
+    slug: 'foundation',
+    desc: 'Liquid, powder, cushion bases',
+    active: true,
+    products: 22,
+  },
+  {
+    id: 4,
+    name: 'Eyewear',
+    slug: 'eyewear',
+    desc: 'Palettes, liner, mascara',
+    active: true,
+    products: 17,
+  },
+  {
+    id: 5,
+    name: 'Fragrance',
+    slug: 'fragrance',
+    desc: 'Perfumes and body mists',
+    active: false,
+    products: 9,
+  },
 ];
 
 export default function SettingsView({ products, tab, setTab }: SettingsViewProps) {
@@ -65,29 +121,17 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
 
   const currentLabel = SETTINGS_ITEMS.find((i) => i.id === tab)?.label || '';
 
-  const inp = {
-    width: '100%',
-    padding: '10px 14px',
-    border: `1px solid ${Theme.border}`,
-    borderRadius: 8,
-    fontSize: 13,
-    color: Theme.fg,
-    background: '#fff',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-  };
-
-  const lbl = {
-    fontSize: 12,
-    fontWeight: 600 as const,
-    color: Theme.fg,
-    marginBottom: 6,
-    display: 'block' as const,
-  };
+  const inputClass =
+    'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
+  const selectClass = `${inputClass} cursor-pointer`;
+  const labelClass = 'mb-1.5 block text-xs font-semibold text-foreground';
 
   const FormSection = ({ title, children }: any) => (
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: Theme.fg, marginBottom: 12, paddingBottom: 8, borderBottom: `2px solid ${Theme.secondary}` }}>
+    <div className="mb-6">
+      <div
+        className="mb-3 border-b-2 pb-2 text-sm font-bold"
+        style={{ color: Theme.fg, borderBottomColor: Theme.secondary }}
+      >
         {title}
       </div>
       {children}
@@ -95,68 +139,86 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
   );
 
   const Toggle = ({ val, onToggle, label }: any) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${Theme.border}` }}>
-      <span style={{ fontSize: 13, color: Theme.fg }}>{label}</span>
+    <div className="flex items-center justify-between border-b border-border py-3">
+      <span className="text-[13px]" style={{ color: Theme.fg }}>
+        {label}
+      </span>
       <button
         onClick={onToggle}
-        style={{
-          width: 44,
-          height: 24,
-          borderRadius: 99,
-          border: 'none',
-          cursor: 'pointer',
-          position: 'relative',
-          background: val ? Theme.primary : Theme.border,
-          transition: 'background 0.2s',
-          flexShrink: 0,
-        }}
+        className="relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-none transition-colors"
+        style={{ background: val ? Theme.primary : Theme.border }}
       >
-        <div style={{ position: 'absolute', top: 3, left: val ? 22 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
+        <div
+          className="absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.2)] transition-all"
+          style={{ left: val ? 22 : 3 }}
+        />
       </button>
     </div>
   );
 
   const categoryEmojis: any = {
-    'Skincare': '🧴',
-    'Lipstick': '💄',
-    'Foundation': '🌿',
-    'Eyewear': '👁️',
-    'Fragrance': '🌸',
+    Skincare: '🧴',
+    Lipstick: '💄',
+    Foundation: '🌿',
+    Eyewear: '👁️',
+    Fragrance: '🌸',
   };
 
   const panels: any = {
     general: (
       <div>
         <FormSection title="Store Identity">
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div className={`mb-[14px] grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label style={lbl}>Store Name</label>
-              <input value={settings.storeName} onChange={(e) => setSettings({ ...settings, storeName: e.target.value })} style={inp} />
+              <label className={labelClass}>Store Name</label>
+              <input
+                value={settings.storeName}
+                onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
+                className={inputClass}
+              />
             </div>
             <div>
-              <label style={lbl}>Currency</label>
-              <select value={settings.currency} onChange={(e) => setSettings({ ...settings, currency: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
+              <label className={labelClass}>Currency</label>
+              <select
+                value={settings.currency}
+                onChange={(e) => setSettings({ ...settings, currency: e.target.value })}
+                className={selectClass}
+              >
                 <option value="BDT">BDT — Bangladeshi Taka (৳)</option>
                 <option value="USD">USD — US Dollar ($)</option>
               </select>
             </div>
             <div>
-              <label style={lbl}>Tax Rate (%)</label>
-              <input type="number" value={settings.taxRate} onChange={(e) => setSettings({ ...settings, taxRate: Number(e.target.value) })} style={inp} />
+              <label className={labelClass}>Tax Rate (%)</label>
+              <input
+                type="number"
+                value={settings.taxRate}
+                onChange={(e) => setSettings({ ...settings, taxRate: Number(e.target.value) })}
+                className={inputClass}
+              />
             </div>
             <div>
-              <label style={lbl}>Timezone</label>
-              <select value={settings.timezone} onChange={(e) => setSettings({ ...settings, timezone: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
+              <label className={labelClass}>Timezone</label>
+              <select
+                value={settings.timezone}
+                onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
+                className={selectClass}
+              >
                 <option value="Asia/Dhaka">Asia/Dhaka (GMT +6:00)</option>
                 <option value="UTC">UTC (GMT +0:00)</option>
               </select>
             </div>
           </div>
           <div>
-            <label style={lbl}>Store Logo</label>
-            <div style={{ border: `2px dashed ${Theme.border}`, borderRadius: 10, padding: 20, textAlign: 'center', cursor: 'pointer', background: Theme.muted }}>
-              <div style={{ fontSize: 24, marginBottom: 6 }}>🖼️</div>
-              <div style={{ fontSize: 13, color: Theme.mutedFg }}>Click to upload logo · PNG or SVG · Max 2MB</div>
+            <label className={labelClass}>Store Logo</label>
+            <div
+              className="cursor-pointer rounded-[10px] border-2 border-dashed border-border px-5 py-5 text-center"
+              style={{ background: Theme.muted }}
+            >
+              <div className="mb-1.5 text-2xl">🖼️</div>
+              <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
+                Click to upload logo · PNG or SVG · Max 2MB
+              </div>
             </div>
           </div>
         </FormSection>
@@ -166,26 +228,83 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     payment: (
       <div>
         <FormSection title="SSLCommerz Configuration">
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div className={`mb-[14px] grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label style={lbl}>Store ID</label>
-              <input value={settings.sslStoreId} onChange={(e) => setSettings({ ...settings, sslStoreId: e.target.value })} style={inp} />
+              <label className={labelClass}>Store ID</label>
+              <input
+                value={settings.sslStoreId}
+                onChange={(e) => setSettings({ ...settings, sslStoreId: e.target.value })}
+                className={inputClass}
+              />
             </div>
             <div>
-              <label style={lbl}>Refund Policy (days)</label>
-              <input type="number" value={settings.refundDays} onChange={(e) => setSettings({ ...settings, refundDays: Number(e.target.value) })} style={inp} />
+              <label className={labelClass}>Refund Policy (days)</label>
+              <input
+                type="number"
+                value={settings.refundDays}
+                onChange={(e) => setSettings({ ...settings, refundDays: Number(e.target.value) })}
+                className={inputClass}
+              />
             </div>
           </div>
           <div>
-            <label style={lbl}>Store Signature (API Secret)</label>
-            <input type="password" defaultValue="*********************" style={inp} />
+            <label className={labelClass}>Store Signature (API Secret)</label>
+            <input type="password" defaultValue="*********************" className={inputClass} />
           </div>
         </FormSection>
         <FormSection title="Accepted Payment Methods">
-          <Toggle val={settings.acceptedPayments.bkash} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, bkash: !settings.acceptedPayments.bkash } })} label="bKash 🔴" />
-          <Toggle val={settings.acceptedPayments.nagad} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, nagad: !settings.acceptedPayments.nagad } })} label="Nagad 🟠" />
-          <Toggle val={settings.acceptedPayments.card} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, card: !settings.acceptedPayments.card } })} label="Card (Visa/Mastercard) 💳" />
-          <Toggle val={settings.acceptedPayments.cash} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, cash: !settings.acceptedPayments.cash } })} label="Cash 💵" />
+          <Toggle
+            val={settings.acceptedPayments.bkash}
+            onToggle={() =>
+              setSettings({
+                ...settings,
+                acceptedPayments: {
+                  ...settings.acceptedPayments,
+                  bkash: !settings.acceptedPayments.bkash,
+                },
+              })
+            }
+            label="bKash 🔴"
+          />
+          <Toggle
+            val={settings.acceptedPayments.nagad}
+            onToggle={() =>
+              setSettings({
+                ...settings,
+                acceptedPayments: {
+                  ...settings.acceptedPayments,
+                  nagad: !settings.acceptedPayments.nagad,
+                },
+              })
+            }
+            label="Nagad 🟠"
+          />
+          <Toggle
+            val={settings.acceptedPayments.card}
+            onToggle={() =>
+              setSettings({
+                ...settings,
+                acceptedPayments: {
+                  ...settings.acceptedPayments,
+                  card: !settings.acceptedPayments.card,
+                },
+              })
+            }
+            label="Card (Visa/Mastercard) 💳"
+          />
+          <Toggle
+            val={settings.acceptedPayments.cash}
+            onToggle={() =>
+              setSettings({
+                ...settings,
+                acceptedPayments: {
+                  ...settings.acceptedPayments,
+                  cash: !settings.acceptedPayments.cash,
+                },
+              })
+            }
+            label="Cash 💵"
+          />
         </FormSection>
       </div>
     ),
@@ -193,19 +312,35 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     shipping: (
       <div>
         <FormSection title="Shipping Rates">
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div className={`mb-[14px] grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label style={lbl}>Default Shipping Cost (৳)</label>
-              <input type="number" value={settings.defaultShipping} onChange={(e) => setSettings({ ...settings, defaultShipping: Number(e.target.value) })} style={inp} />
+              <label className={labelClass}>Default Shipping Cost (৳)</label>
+              <input
+                type="number"
+                value={settings.defaultShipping}
+                onChange={(e) => setSettings({ ...settings, defaultShipping: Number(e.target.value) })}
+                className={inputClass}
+              />
             </div>
             <div>
-              <label style={lbl}>Free Shipping Over (৳)</label>
-              <input type="number" value={settings.freeShippingOver} onChange={(e) => setSettings({ ...settings, freeShippingOver: Number(e.target.value) })} style={inp} />
+              <label className={labelClass}>Free Shipping Over (৳)</label>
+              <input
+                type="number"
+                value={settings.freeShippingOver}
+                onChange={(e) =>
+                  setSettings({ ...settings, freeShippingOver: Number(e.target.value) })
+                }
+                className={inputClass}
+              />
             </div>
           </div>
           <div>
-            <label style={lbl}>Delivery Time Estimate</label>
-            <input value={settings.deliveryEstimate} onChange={(e) => setSettings({ ...settings, deliveryEstimate: e.target.value })} style={inp} />
+            <label className={labelClass}>Delivery Time Estimate</label>
+            <input
+              value={settings.deliveryEstimate}
+              onChange={(e) => setSettings({ ...settings, deliveryEstimate: e.target.value })}
+              className={inputClass}
+            />
           </div>
         </FormSection>
       </div>
@@ -214,16 +349,33 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     inventory: (
       <div>
         <FormSection title="Stock Thresholds">
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+          <div className={`grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label style={lbl}>Low Stock Alert Threshold</label>
-              <input type="number" value={settings.lowStockThreshold} onChange={(e) => setSettings({ ...settings, lowStockThreshold: Number(e.target.value) })} style={inp} />
+              <label className={labelClass}>Low Stock Alert Threshold</label>
+              <input
+                type="number"
+                value={settings.lowStockThreshold}
+                onChange={(e) =>
+                  setSettings({ ...settings, lowStockThreshold: Number(e.target.value) })
+                }
+                className={inputClass}
+              />
             </div>
           </div>
         </FormSection>
         <FormSection title="Inventory Behaviour">
-          <Toggle val={settings.autoReserve} onToggle={() => setSettings({ ...settings, autoReserve: !settings.autoReserve })} label="Auto-reserve stock on checkout" />
-          <Toggle val={settings.barcodeEnabled} onToggle={() => setSettings({ ...settings, barcodeEnabled: !settings.barcodeEnabled })} label="Enable barcode scanning" />
+          <Toggle
+            val={settings.autoReserve}
+            onToggle={() => setSettings({ ...settings, autoReserve: !settings.autoReserve })}
+            label="Auto-reserve stock on checkout"
+          />
+          <Toggle
+            val={settings.barcodeEnabled}
+            onToggle={() =>
+              setSettings({ ...settings, barcodeEnabled: !settings.barcodeEnabled })
+            }
+            label="Enable barcode scanning"
+          />
         </FormSection>
       </div>
     ),
@@ -231,13 +383,35 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     notifications: (
       <div>
         <FormSection title="Email Notifications">
-          <Toggle val={settings.emailOrders} onToggle={() => setSettings({ ...settings, emailOrders: !settings.emailOrders })} label="New order placed" />
-          <Toggle val={settings.emailStock} onToggle={() => setSettings({ ...settings, emailStock: !settings.emailStock })} label="Low stock alert" />
-          <Toggle val={settings.emailNewCustomer} onToggle={() => setSettings({ ...settings, emailNewCustomer: !settings.emailNewCustomer })} label="New customer registered" />
+          <Toggle
+            val={settings.emailOrders}
+            onToggle={() => setSettings({ ...settings, emailOrders: !settings.emailOrders })}
+            label="New order placed"
+          />
+          <Toggle
+            val={settings.emailStock}
+            onToggle={() => setSettings({ ...settings, emailStock: !settings.emailStock })}
+            label="Low stock alert"
+          />
+          <Toggle
+            val={settings.emailNewCustomer}
+            onToggle={() =>
+              setSettings({ ...settings, emailNewCustomer: !settings.emailNewCustomer })
+            }
+            label="New customer registered"
+          />
         </FormSection>
         <FormSection title="SMS Notifications">
-          <Toggle val={settings.smsOrders} onToggle={() => setSettings({ ...settings, smsOrders: !settings.smsOrders })} label="Order confirmation SMS" />
-          <Toggle val={settings.smsDelivery} onToggle={() => setSettings({ ...settings, smsDelivery: !settings.smsDelivery })} label="Delivery status SMS" />
+          <Toggle
+            val={settings.smsOrders}
+            onToggle={() => setSettings({ ...settings, smsOrders: !settings.smsOrders })}
+            label="Order confirmation SMS"
+          />
+          <Toggle
+            val={settings.smsDelivery}
+            onToggle={() => setSettings({ ...settings, smsDelivery: !settings.smsDelivery })}
+            label="Delivery status SMS"
+          />
         </FormSection>
       </div>
     ),
@@ -246,68 +420,80 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
       <div>
         {editingStaff !== null && (
           <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.5)',
-              zIndex: 9999,
-              display: 'flex',
-              alignItems: isMobile ? 'flex-end' : 'center',
-              justifyContent: 'center',
-              padding: isMobile ? 0 : '16px',
-            }}
+            className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${
+              isMobile ? 'items-end p-0' : 'items-center p-4'
+            }`}
             onClick={() => setEditingStaff(null)}
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              style={{
-                background: '#fff',
-                borderRadius: isMobile ? '20px 20px 0 0' : '16px',
-                width: isMobile ? '100%' : '500px',
-                maxWidth: '100%',
-                boxShadow: '0 24px 60px rgba(0,0,0,0.2)',
-                overflow: 'hidden',
-                maxHeight: isMobile ? '92vh' : '90vh',
-                overflowY: 'auto',
-              }}
+              className={`max-h-[92vh] w-full max-w-[500px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${
+                isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'
+              }`}
             >
-              {isMobile && <div style={{ width: 40, height: 4, borderRadius: 2, background: Theme.border, margin: '12px auto 0' }} />}
-              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${Theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+              {isMobile && (
+                <div
+                  className="mx-auto mt-3 h-1 w-10 rounded"
+                  style={{ background: Theme.border }}
+                />
+              )}
+              <div
+                className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5"
+              >
                 <div>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: Theme.fg }}>Edit Staff Member</div>
-                  <div style={{ fontSize: 12, color: Theme.mutedFg, marginTop: 2 }}>
+                  <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
+                    Edit Staff Member
+                  </div>
+                  <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>
                     {staff.find((s) => s.id === editingStaff)?.name}
                   </div>
                 </div>
-                <button onClick={() => setEditingStaff(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: Theme.mutedFg, lineHeight: 1 }}>
+                <button
+                  onClick={() => setEditingStaff(null)}
+                  className="cursor-pointer border-none bg-transparent text-xl leading-none"
+                  style={{ color: Theme.mutedFg }}
+                >
                   ✕
                 </button>
               </div>
-              <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+              <div className="flex flex-col gap-[18px] p-6">
                 <div>
-                  <label style={lbl}>Role</label>
-                  <select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
+                  <label className={labelClass}>Role</label>
+                  <select
+                    value={staffForm.role}
+                    onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
+                    className={selectClass}
+                  >
                     <option value="Admin">Admin</option>
                     <option value="Staff">Staff</option>
                     <option value="Manager">Manager</option>
                   </select>
                 </div>
                 <div>
-                  <label style={lbl}>Branch</label>
-                  <select value={staffForm.branch} onChange={(e) => setStaffForm({ ...staffForm, branch: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
+                  <label className={labelClass}>Branch</label>
+                  <select
+                    value={staffForm.branch}
+                    onChange={(e) => setStaffForm({ ...staffForm, branch: e.target.value })}
+                    className={selectClass}
+                  >
                     <option value="Dhaka Main">Dhaka Main</option>
                     <option value="Chittagong">Chittagong</option>
                     <option value="Sylhet Outlet">Sylhet Outlet</option>
                   </select>
                 </div>
                 <div>
-                  <label style={lbl}>Status</label>
-                  <select value={staffForm.status} onChange={(e) => setStaffForm({ ...staffForm, status: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
+                  <label className={labelClass}>Status</label>
+                  <select
+                    value={staffForm.status}
+                    onChange={(e) => setStaffForm({ ...staffForm, status: e.target.value })}
+                    className={selectClass}
+                  >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 8 }}>
+                <div className="flex justify-end gap-2.5 pt-2">
                   <Btn variant="ghost" onClick={() => setEditingStaff(null)}>
                     Cancel
                   </Btn>
@@ -316,7 +502,14 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                     onClick={() => {
                       setStaff((prev) =>
                         prev.map((s) =>
-                          s.id === editingStaff ? { ...s, role: staffForm.role, branch: staffForm.branch, status: staffForm.status } : s
+                          s.id === editingStaff
+                            ? {
+                                ...s,
+                                role: staffForm.role,
+                                branch: staffForm.branch,
+                                status: staffForm.status,
+                              }
+                            : s
                         )
                       );
                       setEditingStaff(null);
@@ -331,21 +524,37 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
             </div>
           </div>
         )}
+
         <FormSection title="Staff Members">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+          <div className="mb-[14px] flex flex-col gap-2.5">
             {staff.map((s) => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: `1px solid ${Theme.border}`, background: '#fff' }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: Theme.secondary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: Theme.primary, flexShrink: 0 }}>
+              <div
+                key={s.id}
+                className="flex items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3"
+              >
+                <div
+                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-sm font-extrabold"
+                  style={{ background: Theme.secondary, color: Theme.primary }}
+                >
                   {s.name[0]}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: Theme.fg }}>{s.name}</div>
-                  <div style={{ fontSize: 11, color: Theme.mutedFg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold" style={{ color: Theme.fg }}>
+                    {s.name}
+                  </div>
+                  <div
+                    className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px]"
+                    style={{ color: Theme.mutedFg }}
+                  >
                     {s.email} · {s.branch}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                  <Badge label={s.role} bg={s.role === 'Admin' ? '#fef9c3' : '#f5f5f5'} color={s.role === 'Admin' ? '#854d0e' : Theme.mutedFg} />
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Badge
+                    label={s.role}
+                    bg={s.role === 'Admin' ? '#fef9c3' : '#f5f5f5'}
+                    color={s.role === 'Admin' ? '#854d0e' : Theme.mutedFg}
+                  />
                   <Btn
                     variant="ghost"
                     size="sm"
@@ -362,7 +571,12 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                     onClick={() =>
                       setStaff((prev) =>
                         prev.map((item) =>
-                          item.id === s.id ? { ...item, status: item.status === 'active' ? 'inactive' : 'active' } : item
+                          item.id === s.id
+                            ? {
+                                ...item,
+                                status: item.status === 'active' ? 'inactive' : 'active',
+                              }
+                            : item
                         )
                       )
                     }
@@ -383,20 +597,46 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     trending: (
       <div>
         <FormSection title="Trending Products on Homepage">
-          <div style={{ fontSize: 13, color: Theme.mutedFg, marginBottom: 14 }}>
+          <div className="mb-[14px] text-[13px]" style={{ color: Theme.mutedFg }}>
             Select products to feature in the Trending section on your storefront.
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             {INITIAL_PRODUCTS.map((p: any) => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: `1px solid ${Theme.border}`, background: '#fff' }}>
-                <input type="checkbox" defaultChecked={[1, 2, 3].includes(p.id)} style={{ accentColor: Theme.primary, width: 16, height: 16, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: Theme.fg }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: Theme.mutedFg }}>
+              <div
+                key={p.id}
+                className="flex items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3"
+              >
+                <input
+                  type="checkbox"
+                  defaultChecked={[1, 2, 3].includes(p.id)}
+                  className="h-4 w-4 shrink-0"
+                  style={{ accentColor: Theme.primary }}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
+                    {p.name}
+                  </div>
+                  <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
                     {p.category} · ৳{p.price} · {p.sold} sold
                   </div>
                 </div>
-                <Badge label={p.status === 'out' ? 'Out' : p.status === 'low' ? 'Low' : 'OK'} bg={p.status === 'active' ? '#dcfce7' : p.status === 'low' ? '#fef9c3' : '#fee2e2'} color={p.status === 'active' ? '#166534' : p.status === 'low' ? '#854d0e' : '#991b1b'} />
+                <Badge
+                  label={p.status === 'out' ? 'Out' : p.status === 'low' ? 'Low' : 'OK'}
+                  bg={
+                    p.status === 'active'
+                      ? '#dcfce7'
+                      : p.status === 'low'
+                        ? '#fef9c3'
+                        : '#fee2e2'
+                  }
+                  color={
+                    p.status === 'active'
+                      ? '#166534'
+                      : p.status === 'low'
+                        ? '#854d0e'
+                        : '#991b1b'
+                  }
+                />
               </div>
             ))}
           </div>
@@ -407,23 +647,50 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     discounts: (
       <div>
         <FormSection title="Active Promotions">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="flex flex-col gap-3">
             {[
-              { id: 1, label: 'Eid Flash Sale', active: true, pct: 20, ends: 'Apr 15', banner: '🎉 Eid Special — 20% off sitewide!' },
-              { id: 2, label: 'Skincare Week', active: false, pct: 15, ends: 'Apr 20', banner: '✨ Skincare Week — 15% off all skincare' },
+              {
+                id: 1,
+                label: 'Eid Flash Sale',
+                active: true,
+                pct: 20,
+                ends: 'Apr 15',
+                banner: '🎉 Eid Special — 20% off sitewide!',
+              },
+              {
+                id: 2,
+                label: 'Skincare Week',
+                active: false,
+                pct: 15,
+                ends: 'Apr 20',
+                banner: '✨ Skincare Week — 15% off all skincare',
+              },
             ].map((d) => (
-              <div key={d.id} style={{ padding: '16px', borderRadius: 12, border: `1.5px solid ${d.active ? Theme.primary : Theme.border}`, background: d.active ? Theme.secondary : '#fff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: Theme.fg }}>{d.label}</div>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <div
+                key={d.id}
+                className="rounded-xl border-[1.5px] p-4"
+                style={{
+                  borderColor: d.active ? Theme.primary : Theme.border,
+                  background: d.active ? Theme.secondary : '#fff',
+                }}
+              >
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-bold" style={{ color: Theme.fg }}>
+                    {d.label}
+                  </div>
+                  <div className="flex items-center gap-1.5">
                     <Badge label={`${d.pct}% OFF`} bg={Theme.primary} color="#fff" />
-                    <Badge label={d.active ? 'Live' : 'Paused'} bg={d.active ? '#dcfce7' : '#f5f5f5'} color={d.active ? '#166534' : Theme.mutedFg} />
+                    <Badge
+                      label={d.active ? 'Live' : 'Paused'}
+                      bg={d.active ? '#dcfce7' : '#f5f5f5'}
+                      color={d.active ? '#166534' : Theme.mutedFg}
+                    />
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: Theme.mutedFg, marginBottom: 8 }}>
+                <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
                   {d.banner} · Ends {d.ends}
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-2">
                   <Btn variant="ghost" size="sm">
                     {d.active ? 'Pause' : 'Activate'}
                   </Btn>
@@ -444,18 +711,18 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     add_product: (
       <div>
         <FormSection title="New Product">
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div className={`mb-[14px] grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label style={lbl}>Product Name *</label>
-              <input placeholder="e.g. Rose Glow Serum 30ml" style={inp} />
+              <label className={labelClass}>Product Name *</label>
+              <input placeholder="e.g. Rose Glow Serum 30ml" className={inputClass} />
             </div>
             <div>
-              <label style={lbl}>SKU *</label>
-              <input placeholder="e.g. SKU-019" style={inp} />
+              <label className={labelClass}>SKU *</label>
+              <input placeholder="e.g. SKU-019" className={inputClass} />
             </div>
             <div>
-              <label style={lbl}>Category</label>
-              <select style={{ ...inp, cursor: 'pointer' }}>
+              <label className={labelClass}>Category</label>
+              <select className={selectClass}>
                 <option>Skincare</option>
                 <option>Lipstick</option>
                 <option>Foundation</option>
@@ -464,30 +731,41 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
               </select>
             </div>
             <div>
-              <label style={lbl}>Price (৳) *</label>
-              <input type="number" placeholder="0" style={inp} />
+              <label className={labelClass}>Price (৳) *</label>
+              <input type="number" placeholder="0" className={inputClass} />
             </div>
             <div>
-              <label style={lbl}>Cost Price (৳)</label>
-              <input type="number" placeholder="0" style={inp} />
+              <label className={labelClass}>Cost Price (৳)</label>
+              <input type="number" placeholder="0" className={inputClass} />
             </div>
             <div>
-              <label style={lbl}>Initial Stock</label>
-              <input type="number" placeholder="0" style={inp} />
+              <label className={labelClass}>Initial Stock</label>
+              <input type="number" placeholder="0" className={inputClass} />
             </div>
           </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={lbl}>Description</label>
-            <textarea placeholder="Product description for storefront..." style={{ ...inp, height: 80, resize: 'vertical' } as any} />
+
+          <div className="mb-[14px]">
+            <label className={labelClass}>Description</label>
+            <textarea
+              placeholder="Product description for storefront..."
+              className={`${inputClass} h-20 resize-y`}
+            />
           </div>
+
           <div>
-            <label style={lbl}>Product Image</label>
-            <div style={{ border: `2px dashed ${Theme.border}`, borderRadius: 10, padding: 20, textAlign: 'center', cursor: 'pointer', background: Theme.muted }}>
-              <div style={{ fontSize: 24, marginBottom: 6 }}>📷</div>
-              <div style={{ fontSize: 13, color: Theme.mutedFg }}>Click to upload · JPG or PNG · Max 5MB</div>
+            <label className={labelClass}>Product Image</label>
+            <div
+              className="cursor-pointer rounded-[10px] border-2 border-dashed border-border px-5 py-5 text-center"
+              style={{ background: Theme.muted }}
+            >
+              <div className="mb-1.5 text-2xl">📷</div>
+              <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
+                Click to upload · JPG or PNG · Max 5MB
+              </div>
             </div>
           </div>
-          <div style={{ marginTop: 16, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+
+          <div className="mt-4 flex justify-end gap-2.5">
             <Btn variant="ghost">Reset</Btn>
             <Btn variant="primary">Save Product</Btn>
           </div>
@@ -498,8 +776,8 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     categories: (
       <div>
         <FormSection title="Product Categories">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-            <div style={{ fontSize: 13, color: Theme.mutedFg }}>
+          <div className="mb-[14px] flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
               {categories.filter((c) => c.active).length} active categories
             </div>
             <Btn
@@ -513,40 +791,65 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
               ＋ New Category
             </Btn>
           </div>
+
           {(showAddCat || editCat !== null) && (
-            <div style={{ border: `1.5px solid ${Theme.primary}`, borderRadius: 12, padding: 16, marginBottom: 16, background: Theme.secondary }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: Theme.primary, marginBottom: 12 }}>
+            <div
+              className="mb-4 rounded-xl border-[1.5px] p-4"
+              style={{ borderColor: Theme.primary, background: Theme.secondary }}
+            >
+              <div className="mb-3 text-sm font-bold" style={{ color: Theme.primary }}>
                 {editCat !== null ? 'Edit Category' : 'New Category'}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div className={`mb-3 grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 <div>
-                  <label style={lbl}>Name *</label>
+                  <label className={labelClass}>Name *</label>
                   <input
                     value={catForm.name}
                     onChange={(e) => {
                       const v = e.target.value;
-                      setCatForm((f) => ({ ...f, name: v, slug: v.toLowerCase().replace(/\s+/g, '-') }));
+                      setCatForm((f) => ({
+                        ...f,
+                        name: v,
+                        slug: v.toLowerCase().replace(/\s+/g, '-'),
+                      }));
                     }}
                     placeholder="e.g. Skincare"
-                    style={inp}
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label style={lbl}>Slug</label>
-                  <input value={catForm.slug} onChange={(e) => setCatForm((f) => ({ ...f, slug: e.target.value }))} placeholder="skincare" style={inp} />
+                  <label className={labelClass}>Slug</label>
+                  <input
+                    value={catForm.slug}
+                    onChange={(e) => setCatForm((f) => ({ ...f, slug: e.target.value }))}
+                    placeholder="skincare"
+                    className={inputClass}
+                  />
                 </div>
-                <div style={{ gridColumn: isMobile ? '1' : undefined, gridColumnEnd: isMobile ? '1' : 'span 2' }}>
-                  <label style={lbl}>Description</label>
-                  <input value={catForm.desc} onChange={(e) => setCatForm((f) => ({ ...f, desc: e.target.value }))} placeholder="Short description" style={inp} />
+                <div className={`${isMobile ? '' : 'col-span-2'}`}>
+                  <label className={labelClass}>Description</label>
+                  <input
+                    value={catForm.desc}
+                    onChange={(e) => setCatForm((f) => ({ ...f, desc: e.target.value }))}
+                    placeholder="Short description"
+                    className={inputClass}
+                  />
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={catForm.active} onChange={(e) => setCatForm((f) => ({ ...f, active: e.target.checked }))} style={{ accentColor: Theme.primary }} />
+              <div className="mb-3 flex items-center gap-3.5">
+                <label className="flex cursor-pointer items-center gap-2 text-[13px]">
+                  <input
+                    type="checkbox"
+                    checked={catForm.active}
+                    onChange={(e) =>
+                      setCatForm((f) => ({ ...f, active: e.target.checked }))
+                    }
+                    style={{ accentColor: Theme.primary }}
+                  />
                   Active on storefront
                 </label>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="flex gap-2">
                 <Btn
                   variant="ghost"
                   size="sm"
@@ -562,10 +865,15 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                   size="sm"
                   onClick={() => {
                     if (editCat !== null) {
-                      setCategories((cs) => cs.map((c) => (c.id === editCat ? { ...c, ...catForm } : c)));
+                      setCategories((cs) =>
+                        cs.map((c) => (c.id === editCat ? { ...c, ...catForm } : c))
+                      );
                       setEditCat(null);
                     } else {
-                      setCategories((cs) => [...cs, { ...catForm, id: Date.now(), products: 0 }]);
+                      setCategories((cs) => [
+                        ...cs,
+                        { ...catForm, id: Date.now(), products: 0 },
+                      ]);
                       setShowAddCat(false);
                     }
                   }}
@@ -575,28 +883,48 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
               </div>
             </div>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          <div className="flex flex-col gap-2.5">
             {categories.map((c) => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: `1px solid ${Theme.border}`, background: '#fff', flexWrap: 'wrap' }}>
-                <div style={{ width: 42, height: 42, borderRadius: 10, background: c.active ? Theme.secondary : Theme.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+              <div
+                key={c.id}
+                className="flex flex-wrap items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3"
+              >
+                <div
+                  className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] text-lg"
+                  style={{ background: c.active ? Theme.secondary : Theme.muted }}
+                >
                   {categoryEmojis[c.name] || '🏷️'}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: Theme.fg }}>{c.name}</span>
-                    <span style={{ fontSize: 10, color: Theme.mutedFg, fontFamily: 'monospace' }}>/{c.slug}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-bold" style={{ color: Theme.fg }}>
+                      {c.name}
+                    </span>
+                    <span className="font-mono text-[10px]" style={{ color: Theme.mutedFg }}>
+                      /{c.slug}
+                    </span>
                   </div>
-                  <div style={{ fontSize: 12, color: Theme.mutedFg, marginTop: 1 }}>
+                  <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>
                     {c.desc} · {c.products} products
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                  <Badge label={c.active ? 'Active' : 'Hidden'} bg={c.active ? '#dcfce7' : '#f5f5f5'} color={c.active ? '#166534' : Theme.mutedFg} />
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Badge
+                    label={c.active ? 'Active' : 'Hidden'}
+                    bg={c.active ? '#dcfce7' : '#f5f5f5'}
+                    color={c.active ? '#166534' : Theme.mutedFg}
+                  />
                   <Btn
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setCatForm({ name: c.name, slug: c.slug, desc: c.desc, active: c.active });
+                      setCatForm({
+                        name: c.name,
+                        slug: c.slug,
+                        desc: c.desc,
+                        active: c.active,
+                      });
                       setEditCat(c.id);
                       setShowAddCat(false);
                     }}
@@ -613,33 +941,24 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="flex flex-col gap-4">
       <div>
-        <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: Theme.fg }}>
+        <div
+          className={`font-extrabold ${isMobile ? 'text-[18px]' : 'text-[22px]'}`}
+          style={{ color: Theme.fg }}
+        >
           System Settings
         </div>
-        <div style={{ fontSize: 13, color: Theme.mutedFg, marginTop: 2 }}>
+        <div className="mt-0.5 text-[13px]" style={{ color: Theme.mutedFg }}>
           Configure store, integrations, homepage, and catalogue
         </div>
       </div>
 
-      {/* Mobile: dropdown tab selector */}
       {isMobile && (
         <select
           value={tab}
           onChange={(e) => setTab(e.target.value)}
-          style={{
-            padding: '10px 14px',
-            border: `1px solid ${Theme.border}`,
-            borderRadius: 10,
-            fontSize: 14,
-            fontWeight: 600,
-            color: Theme.fg,
-            background: '#fff',
-            cursor: 'pointer',
-            outline: 'none',
-            width: '100%',
-          }}
+          className="w-full cursor-pointer rounded-[10px] border border-border bg-white px-[14px] py-2.5 text-sm font-semibold text-foreground outline-none"
         >
           {SETTINGS_ITEMS.map((item) => (
             <option key={item.id} value={item.id}>
@@ -649,31 +968,16 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
         </select>
       )}
 
-      <Card
-        style={{
-          background: Theme.card,
-          border: `1px solid ${Theme.border}`,
-          borderRadius: 14,
-          padding: isMobile ? 18 : 28,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 20,
-            flexWrap: 'wrap',
-            gap: 8,
-          }}
-        >
-          <div style={{ fontSize: 16, fontWeight: 700, color: Theme.fg }}>
+      <Card className={`${isMobile ? 'p-[18px]' : 'p-7'}`}>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+          <div className="text-base font-bold" style={{ color: Theme.fg }}>
             {currentLabel}
           </div>
+
           {!['add_product', 'categories', 'trending', 'discounts'].includes(tab) && (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="flex items-center gap-2">
               {saved && (
-                <span style={{ fontSize: 12, color: Theme.success, fontWeight: 600 }}>
+                <span className="text-xs font-semibold" style={{ color: Theme.success }}>
                   ✓ Saved
                 </span>
               )}
@@ -685,10 +989,11 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
               </Btn>
             </div>
           )}
+
           {['trending', 'discounts'].includes(tab) && (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="flex items-center gap-2">
               {saved && (
-                <span style={{ fontSize: 12, color: Theme.success, fontWeight: 600 }}>
+                <span className="text-xs font-semibold" style={{ color: Theme.success }}>
                   ✓ Saved
                 </span>
               )}
@@ -698,8 +1003,9 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
             </div>
           )}
         </div>
+
         {panels[tab] || (
-          <div style={{ color: Theme.mutedFg, fontSize: 13 }}>
+          <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
             Select a setting from the menu.
           </div>
         )}
