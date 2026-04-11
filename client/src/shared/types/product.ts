@@ -42,4 +42,5 @@ export interface ListProductsParams {
   limit?: number;
   sortBy?: string;
   order?: 'asc' | 'desc';
+  branchId?: number;
 }

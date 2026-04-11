@@ -45,7 +45,7 @@ export class ProductService {
       },
     });
 
-    const defaultBranchId = await this.getDefaultBranchId();
+    const defaultBranchId = data.branchId || await this.getDefaultBranchId();
     await prisma.inventory.create({
       data: {
         productId: product.id,
@@ -80,11 +80,16 @@ export class ProductService {
     maxPrice?: number;
     page?: number;
     limit?: number;
+    branchId?: number;
+    includeInactive?: boolean;
   }) {
-    const { page = 1, limit = 10, category, search, featured, minPrice, maxPrice } = filters;
+    const { page = 1, limit = 10, category, search, featured, minPrice, maxPrice, branchId, includeInactive } = filters;
     const { skip, take } = parsePagination({ page, limit });
 
-    const where: any = { isActive: true };
+    const where: any = {};
+    if (!includeInactive) {
+      where.isActive = true;
+    }
 
     if (category) {
       where.category = { slug: category };
@@ -106,6 +111,10 @@ export class ProductService {
       where.price = {};
       if (minPrice !== undefined) where.price.gte = minPrice;
       if (maxPrice !== undefined) where.price.lte = maxPrice;
+    }
+
+    if (branchId !== undefined) {
+      where.inventories = { some: { warehouseId: branchId } };
     }
 
     const [products, total] = await Promise.all([

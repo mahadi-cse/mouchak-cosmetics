@@ -50,7 +50,18 @@ const SidebarContent: React.FC<{
   isMobile,
   setSidebarOpen,
   navItems,
-}) => (
+}) => {
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (settingsOpen && settingsRef.current) {
+      setTimeout(() => {
+        settingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [settingsOpen]);
+
+  return (
   <>
     {/* Logo */}
     <div
@@ -96,24 +107,6 @@ const SidebarContent: React.FC<{
       </div>
     </div>
 
-    {/* Role */}
-    <div
-      className="mx-3 mb-2 mt-[14px] shrink-0 rounded-[10px] border border-[#fecdd3] px-[14px] py-[10px]"
-      style={{ background: Theme.secondary }}
-    >
-      <div
-        style={{
-          fontSize: 10,
-          color: '#be185d',
-          fontWeight: 700,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-        }}
-      >
-        Signed in as OWNER
-      </div>
-    </div>
-
     {/* Nav */}
     <nav
       className="flex flex-1 flex-col gap-px px-2 py-1 overflow-y-auto"
@@ -124,7 +117,7 @@ const SidebarContent: React.FC<{
 
         if (isSettings) {
           return (
-            <div key="settings">
+            <div key="settings" ref={settingsRef}>
               <button
                 onClick={() => {
                   navigate('settings');
@@ -241,7 +234,8 @@ const SidebarContent: React.FC<{
       </div>
     )}
   </>
-);
+  );
+};
 
 export default function DashboardLayout({
   products,

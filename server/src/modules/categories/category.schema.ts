@@ -5,6 +5,7 @@ export const createCategorySchema = z.object({
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
   sortOrder: z.number().int().optional(),
+  branchId: z.number().optional(),
 });
 
 export const updateCategorySchema = createCategorySchema.partial();

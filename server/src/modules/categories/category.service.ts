@@ -10,6 +10,20 @@ export class CategoryService {
     const existing = await prisma.category.findFirst({ where: { slug } });
 
     if (existing) {
+      if (!existing.isActive) {
+        // If it exists but is inactive, reactivate it and update its data
+        return await prisma.category.update({
+          where: { id: existing.id },
+          data: {
+            name: data.name,
+            description: data.description,
+            imageUrl: data.imageUrl,
+            isActive: true,
+            sortOrder: data.sortOrder || 0,
+            branchId: data.branchId,
+          },
+        });
+      }
       throw new ConflictError('Category with this name already exists');
     }
 
@@ -20,6 +34,7 @@ export class CategoryService {
         description: data.description,
         imageUrl: data.imageUrl,
         sortOrder: data.sortOrder || 0,
+        branchId: data.branchId,
       },
     });
   }
@@ -37,10 +52,25 @@ export class CategoryService {
     return category;
   }
 
-  async listCategories() {
+  async listCategories(filters?: { branchId?: number; includeInactive?: boolean }) {
+    const where: any = {};
+
+    if (!filters?.includeInactive) {
+      where.isActive = true;
+    }
+
+    if (filters?.branchId) {
+      where.branchId = filters.branchId;
+    }
+
     return await prisma.category.findMany({
-      where: { isActive: true },
+      where,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
     });
   }
 
@@ -59,6 +89,7 @@ export class CategoryService {
         description: data.description,
         imageUrl: data.imageUrl,
         sortOrder: data.sortOrder,
+        branchId: data.branchId,
       },
     });
   }
@@ -70,9 +101,22 @@ export class CategoryService {
       throw new NotFoundError('Category not found');
     }
 
-    return await prisma.category.update({
+    // Hard delete for categories as requested for products
+    return await prisma.category.delete({
       where: { id: Number(id) },
-      data: { isActive: false },
+    });
+  }
+
+  async updateCategoryStatus(id: number, data: { isActive?: boolean }) {
+    const category = await prisma.category.findUnique({ where: { id } });
+
+    if (!category) {
+      throw new NotFoundError('Category not found');
+    }
+
+    return await prisma.category.update({
+      where: { id },
+      data: { isActive: data.isActive },
     });
   }
 }

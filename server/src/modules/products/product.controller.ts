@@ -4,7 +4,7 @@ import { ok, paginate } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 
 export const listProducts: RequestHandler = asyncHandler(async (req, res) => {
-  const { category, search, featured, minPrice, maxPrice, page, limit } = req.query;
+  const { category, search, featured, minPrice, maxPrice, page, limit, branchId, includeInactive } = req.query;
 
   const products = await productService.listProducts({
     category: category as string,
@@ -14,6 +14,8 @@ export const listProducts: RequestHandler = asyncHandler(async (req, res) => {
     maxPrice: maxPrice ? Number(maxPrice) : undefined,
     page: page ? Number(page) : 1,
     limit: limit ? Number(limit) : 10,
+    branchId: branchId ? Number(branchId) : undefined,
+    includeInactive: includeInactive === 'true',
   });
 
   res.json(

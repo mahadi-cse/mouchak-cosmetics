@@ -14,6 +14,7 @@ export const createProductSchema = z.object({
   isFeatured: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
   weight: z.coerce.number().positive().optional(),
+  branchId: z.coerce.number().int().positive().optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();

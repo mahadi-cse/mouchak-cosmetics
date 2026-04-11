@@ -10,6 +10,8 @@ export const NAV = [
 ];
 
 export const SETTINGS_ITEMS = [
+  { id: 'products', label: 'Products', icon: '📦' },
+  { id: 'categories', label: 'Categories', icon: '🗂️' },
   { id: 'general', label: 'General', icon: '🏷️' },
   { id: 'payment', label: 'Payment', icon: '💳' },
   { id: 'shipping', label: 'Shipping', icon: '🚚' },
@@ -18,8 +20,6 @@ export const SETTINGS_ITEMS = [
   { id: 'staff', label: 'Staff & Roles', icon: '👤' },
   { id: 'trending', label: 'Trending Products', icon: '🔥' },
   { id: 'discounts', label: 'Discount & Sales', icon: '🏷️' },
-  { id: 'add_product', label: 'Add Product', icon: '➕' },
-  { id: 'categories', label: 'Categories', icon: '🗂️' },
 ];
 
 export const BRANCH_STOCK = {

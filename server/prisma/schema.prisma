@@ -221,6 +221,8 @@ model Category {
 
   products    Product[]
   skuSetting  SKUSetting?
+  branchId    Int?
+  branch      Branch?   @relation(fields: [branchId], references: [id])
 
   @@map("categories")
 }
@@ -615,6 +617,7 @@ model Branch {
   userRoles     UserRole_Model[]
   userBranches  UserBranch[]
   inventory     Inventory[]
+  categories    Category[]
 
   @@map("branches")
 }
