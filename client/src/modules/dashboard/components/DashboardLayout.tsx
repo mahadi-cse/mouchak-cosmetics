@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
@@ -12,6 +13,7 @@ import SalesView from './views/SalesView';
 import AnalyticsView from './views/AnalyticsView';
 import BranchesView from './views/BranchesView';
 import SettingsView from './views/SettingsView';
+import ProfileView from './views/ProfileView';
 import ManualSaleModal from './ManualSaleModal';
 import { Product, SellLog, Order } from '@/modules/dashboard/data/mockData';
 
@@ -35,6 +37,7 @@ const SidebarContent: React.FC<{
   time: Date;
   isMobile: boolean;
   setSidebarOpen: (open: boolean) => void;
+  navItems: { id: string; label: string; icon: string; badge?: string }[];
 }> = ({
   activeNav,
   settingsOpen,
@@ -46,6 +49,7 @@ const SidebarContent: React.FC<{
   time,
   isMobile,
   setSidebarOpen,
+  navItems,
 }) => (
   <>
     {/* Logo */}
@@ -114,7 +118,7 @@ const SidebarContent: React.FC<{
     <nav
       className="flex flex-1 flex-col gap-px px-2 py-1 overflow-y-auto"
     >
-      {NAV.map((n) => {
+      {navItems.map((n) => {
         const isSettings = n.id === 'settings';
         const active = activeNav === n.id;
 
@@ -248,25 +252,52 @@ export default function DashboardLayout({
   time,
 }: DashboardLayoutProps) {
   const { isMobile } = useResponsive();
+  const { data: session } = useSession();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const pathSection = pathname.split('/')[2] || 'overview';
-  const allowedNavIds = useMemo(() => new Set(NAV.map((n) => n.id)), []);
+  const allowedNavIds = useMemo(() => new Set([...NAV.map((n) => n.id), 'profile']), []);
   const [activeNav, setActiveNav] = useState(allowedNavIds.has(pathSection) ? pathSection : 'overview');
   const [settingsTab, setSettingsTab] = useState(searchParams.get('tab') || 'general');
   const [settingsOpen, setSettingsOpen] = useState(activeNav === 'settings');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modal, setModal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  const [navItems, setNavItems] = useState(NAV);
+  
+  useEffect(() => {
+    import('@/shared/lib/apiClient').then(({ apiClient }) => {
+      apiClient.get('/auth/profile').then(res => {
+        const data = res.data.data;
+        if (data && data.userModules && data.userModules.length > 0) {
+          const dynamicNav = data.userModules.map((um: any) => ({
+            id: um.module.code,
+            label: um.module.name,
+            icon: um.module.icon || '📦',
+            badge: um.module.badge
+          }));
+          setNavItems(dynamicNav);
+        }
+      }).catch(err => {
+        console.error("Failed to load nav modules", err);
+      });
+    });
+  }, []);
 
   const lowCount = products.filter((p) => p.status !== 'active').length;
   const settingsLabel = SETTINGS_ITEMS.find((i) => i.id === settingsTab)?.label || '';
   const topbarLabel =
     activeNav === 'settings'
       ? `Settings › ${settingsLabel}`
-      : NAV.find((n) => n.id === activeNav)?.label;
+      : activeNav === 'profile'
+        ? 'User Profile'
+        : navItems.find((n) => n.id === activeNav)?.label || activeNav;
 
   const views: Record<string, React.ReactNode> = {
+    profile: <ProfileView />,
     overview: <OverviewView products={products} orders={orders} onQuickSale={() => setModal(true)} />,
     sales: (
       <SalesView
@@ -328,6 +359,24 @@ export default function DashboardLayout({
     setSettingsOpen(activeNav === 'settings');
   }, [activeNav]);
 
+  // Handle clicking outside profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+
+    if (profileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [profileOpen]);
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
+
   return (
     <div
       className="flex h-screen overflow-hidden"
@@ -367,6 +416,7 @@ export default function DashboardLayout({
             time={time}
             isMobile={isMobile}
             setSidebarOpen={setSidebarOpen}
+            navItems={navItems}
           />
         </aside>
       )}
@@ -396,6 +446,7 @@ export default function DashboardLayout({
               time={time}
               isMobile={isMobile}
               setSidebarOpen={setSidebarOpen}
+              navItems={navItems}
             />
           </div>
         </>
@@ -449,21 +500,102 @@ export default function DashboardLayout({
             </span>
           </div>
           <div className={`flex items-center ${isMobile ? 'gap-[10px]' : 'gap-4'}`}>
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
-              <div
-                className="h-[7px] w-[7px] rounded-full"
-                style={{ background: Theme.success }}
-              />
-              {!isMobile && 'SSLCommerz · '}Live
-            </div>
-            <div
-              className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-full text-[13px] font-extrabold"
-              style={{
-                background: Theme.secondary,
-                color: Theme.primary,
-              }}
-            >
-              O
+            {/* Profile Dropdown - AdminLTE Style */}
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[13px] font-extrabold transition-all hover:shadow-md"
+                style={{
+                  background: Theme.secondary,
+                  color: Theme.primary,
+                  border: `2px solid ${Theme.border}`,
+                }}
+                title="User Profile"
+              >
+                {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+              </button>
+
+              {/* AdminLTE Style Dropdown Menu */}
+              {profileOpen && (
+                <div
+                  className="absolute right-0 top-full mt-3 w-64 rounded-lg shadow-2xl z-50 overflow-hidden"
+                  style={{
+                    background: Theme.card,
+                  }}
+                >
+                  {/* User Header Section */}
+                  <div
+                    className="px-4 py-4 border-b"
+                    style={{
+                      borderColor: Theme.border,
+                      background: Theme.secondary + '20',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-extrabold text-white"
+                        style={{ background: Theme.primary }}
+                      >
+                        {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className="text-[14px] font-bold truncate"
+                          style={{ color: Theme.fg }}
+                        >
+                          {session?.user?.name || 'User'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Button Section - Side by Side */}
+                  <div className="flex gap-2 px-4 py-3 border-t" style={{ borderColor: Theme.border }}>
+                    {/* Profile Button */}
+                    <button
+                      onClick={() => {
+                        navigate('profile');
+                        setProfileOpen(false);
+                      }}
+                      className="flex-1 px-3 py-2 rounded-md text-center text-[12px] font-medium transition-colors flex items-center justify-center gap-2"
+                      style={{
+                        background: Theme.secondary + '30',
+                        color: Theme.primary,
+                        border: `1px solid ${Theme.secondary}`,
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = Theme.secondary + '50';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = Theme.secondary + '30';
+                      }}
+                    >
+                      <span>👤</span>
+                      <span>Profile</span>
+                    </button>
+
+                    {/* Sign Out Button */}
+                    <button
+                      onClick={handleLogout}
+                      className="flex-1 px-3 py-2 rounded-md text-center text-[12px] font-medium transition-colors flex items-center justify-center gap-2"
+                      style={{
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = '#fecaca';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = '#fee2e2';
+                      }}
+                    >
+                      <span>🚪</span>
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>

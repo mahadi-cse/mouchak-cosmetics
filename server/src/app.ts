@@ -1,6 +1,7 @@
 import express, { Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { getEnv } from './config/env';
 import requestLogger from './middleware/requestLogger';
 import errorHandler from './middleware/errorHandler';
@@ -16,6 +17,7 @@ import analyticsRouter from './modules/analytics/analytics.router';
 import homepageRouter from './modules/homepage/routes';
 import manualSaleRouter from './modules/manual-sales/manualSale.router';
 import branchRouter from './modules/branches/branch.router';
+import authRouter from './modules/auth/auth.router';
 
 export function createApp(): Express {
   const app = express();
@@ -23,7 +25,13 @@ export function createApp(): Express {
 
   // Middleware stack
   app.use(helmet());
-  app.use(cors({ origin: env.CLIENT_URL }));
+  app.use(
+    cors({
+      origin: env.CLIENT_URL,
+      credentials: true,
+    })
+  );
+  app.use(cookieParser());
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
@@ -35,6 +43,7 @@ export function createApp(): Express {
   });
 
   // API Routes - Public & Protected
+  app.use('/api/auth', authRouter);
   app.use('/api/products', productRouter);
   app.use('/api/categories', categoryRouter);
   app.use('/api/inventory', inventoryRouter);

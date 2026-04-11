@@ -1,108 +1,99 @@
-import { Response, NextFunction } from 'express';
 import { RequestHandler } from 'express';
-import { jwtVerify, createRemoteJWKSet } from 'jose';
-import { getKeycloakConfig } from '../config/keycloak';
-import { AuthUser, KeycloakTokenPayload } from '../shared/types/keycloak.types';
-import { UnauthorizedError } from '../shared/utils/AppError';
+import { verifyAccessToken } from '../modules/auth/auth.jwt';
+import { RoleCode, USER_TYPE_CODES } from '../shared/types/auth.types';
+import { fail } from '../shared/utils/apiResponse';
 import logger from '../shared/utils/logger';
 
-let JWKS: ReturnType<typeof createRemoteJWKSet> | null = null;
+type RoleAlias =
+  | 'SYSTEM_ADMIN'
+  | 'MANAGER'
+  | 'SALES_STAFF'
+  | 'CASHIER'
+  | 'RIDER'
+  | 'ADMIN'
+  | 'STAFF';
 
-const getJWKS = () => {
-  if (!JWKS) {
-    const config = getKeycloakConfig();
-    JWKS = createRemoteJWKSet(new URL(config.jwksUrl));
-  }
-  return JWKS;
+type AllowedRole = RoleCode | RoleAlias;
+
+const ROLE_ALIAS_MAP: Record<RoleAlias, RoleCode | RoleCode[]> = {
+  SYSTEM_ADMIN: USER_TYPE_CODES.SYSTEM_ADMIN,
+  MANAGER: USER_TYPE_CODES.MANAGER,
+  SALES_STAFF: USER_TYPE_CODES.SALES_STAFF,
+  CASHIER: USER_TYPE_CODES.CASHIER,
+  RIDER: USER_TYPE_CODES.RIDER,
+  ADMIN: USER_TYPE_CODES.SYSTEM_ADMIN,
+  STAFF: [
+    USER_TYPE_CODES.MANAGER,
+    USER_TYPE_CODES.SALES_STAFF,
+    USER_TYPE_CODES.CASHIER,
+    USER_TYPE_CODES.RIDER,
+  ],
 };
 
-const VALID_ROLES = ['ADMIN', 'STAFF', 'CUSTOMER'] as const;
+const isRoleAlias = (role: AllowedRole): role is RoleAlias => role in ROLE_ALIAS_MAP;
 
-const isValidRole = (role: string): role is typeof VALID_ROLES[number] => {
-  return VALID_ROLES.includes(role as any);
+const toRoleCodeSet = (roles: AllowedRole[]): Set<RoleCode> => {
+  const normalized = roles.flatMap((role) => {
+    if (isRoleAlias(role)) {
+      const mapped = ROLE_ALIAS_MAP[role];
+      return Array.isArray(mapped) ? mapped : [mapped];
+    }
+
+    return [role];
+  });
+
+  return new Set(normalized);
 };
 
-export const authenticate: RequestHandler = async (
-  req,
-  res,
-  next
-) => {
-  // TODO: Implement NextAuth next day
-  // For now, allow all requests with a test user
+export const authMiddleware: RequestHandler = async (req, res, next) => {
   try {
-    // TEMPORARY: Bypass JWT verification for testing
-    // const authHeader = req.headers.authorization;
-    //
-    // if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    //   throw new UnauthorizedError('Missing or invalid authorization header');
-    // }
-    //
-    // const token = authHeader.substring(7);
-    // const config = getKeycloakConfig();
-    //
-    // const verified = await jwtVerify<KeycloakTokenPayload>(
-    //   token,
-    //   getJWKS(),
-    //   {
-    //     issuer: config.realmUrl,
-    //   }
-    // );
-    //
-    // const payload = verified.payload;
-    // const realmRoles = payload.realm_access?.roles ?? [];
-    // const userRole = (realmRoles.find(isValidRole) ?? 'CUSTOMER') as typeof VALID_ROLES[number];
+    const authHeader = req.headers.authorization;
 
-    // Set default test user for development
-    const authUser: AuthUser = {
-      keycloakId: 'test-user-123',
-      email: 'admin@cosmetics.test',
-      firstName: 'Admin',
-      lastName: 'User',
-      role: 'ADMIN', // Test with admin role
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 86400,
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json(fail('Missing or invalid authorization header', 'UNAUTHORIZED'));
+    }
+
+    const token = authHeader.slice('Bearer '.length).trim();
+    const payload = await verifyAccessToken(token);
+
+    req.user = {
+      id: Number(payload.sub),
+      role: payload.role,
+      typeId: payload.typeId,
+      iat: payload.iat,
+      exp: payload.exp,
     };
 
-    req.user = authUser;
-    next();
+    return next();
   } catch (error) {
-    logger.error('Authentication error', { error });
-    if (error instanceof UnauthorizedError) {
-      return res.status(401).json({
-        success: false,
-        message: error.message,
-        code: error.code,
-      });
-    }
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid token',
-      code: 'INVALID_TOKEN',
-    });
+    logger.warn('Access token verification failed', { error });
+    return res.status(401).json(fail('Invalid or expired access token', 'INVALID_ACCESS_TOKEN'));
   }
 };
 
-export const authorize = (...roles: typeof VALID_ROLES[number][]): RequestHandler => {
+export const allowRoles = (...roles: AllowedRole[]): RequestHandler => {
+  const allowedRoleCodes = toRoleCodeSet(roles);
+
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ 
-        success: false,
-        error: 'Unauthorized',
-        code: 'UNAUTHORIZED'
-      });
+      return res.status(401).json(fail('Unauthorized', 'UNAUTHORIZED'));
     }
 
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Forbidden',
-        code: 'INSUFFICIENT_PERMISSIONS'
-      });
+    // SYSTEM_ADMIN has full access regardless of route-level role filters.
+    if (req.user.role === USER_TYPE_CODES.SYSTEM_ADMIN) {
+      return next();
     }
 
-    next();
+    if (!allowedRoleCodes.has(req.user.role)) {
+      return res.status(403).json(fail('Forbidden', 'INSUFFICIENT_PERMISSIONS'));
+    }
+
+    return next();
   };
 };
 
-export default authenticate;
+// Backward-compatible exports for existing module routes.
+export const authenticate = authMiddleware;
+export const authorize = allowRoles;
 
+export default authMiddleware;

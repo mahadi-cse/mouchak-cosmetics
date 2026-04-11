@@ -105,33 +105,74 @@ enum ReturnStatus {
 }
 
 // ─────────────────────────────────────────────────────────────
+// USER TYPES
+// Role codes are business-driven and mapped to permissions in code.
+// ─────────────────────────────────────────────────────────────
+
+model UserType {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(20)
+  name        String    @db.VarChar(120)
+
+  users       User[]
+
+  @@map("user_type")
+}
+
+// ─────────────────────────────────────────────────────────────
 // USERS
-// Mirrors Keycloak users. Populated on first login via /api/users/sync.
-// keycloakId is the Keycloak `sub` claim.
+// Application users authenticated via email/password and user_type.
 // ─────────────────────────────────────────────────────────────
 
 model User {
-  id          Int       @id @default(autoincrement())
-  keycloakId  String    @unique
-  email       String    @unique
-  firstName   String
-  lastName    String
-  phone       String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             Int        @id @default(autoincrement())
+  keycloakId     String?    @unique
+  email          String     @unique
+  password       String?    @db.VarChar(255)
+  userTypeId     Int?       @map("user_type_id")
+  userType       UserType?  @relation(fields: [userTypeId], references: [id], onDelete: Restrict)
+  firstName      String
+  lastName       String
+  phone          String?
+  address        String?
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   customer        Customer?
-  orders          Order[]   @relation("StaffOrders")
-  auditLogs       AuditLog[] @relation("CreatedBy")
+  orders          Order[]        @relation("StaffOrders")
+  auditLogs       AuditLog[]     @relation("CreatedBy")
   stockTransfers  StockTransfer[]
+  refreshTokens   RefreshToken[]
   
   // RBAC relationships
   userRoles       UserRole_Model[]
   userBranches    UserBranch[]
   assignedRoles   RoleAssignment[]
+  userModules     UserModule[]
 
   @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// REFRESH TOKENS
+// Stored as SHA-256 hashes. Rotation is one-time use.
+// ─────────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String    @unique @map("token_hash") @db.Text
+  expiresAt   DateTime  @map("expires_at")
+  revoked     Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revoked])
+  @@map("refresh_tokens")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -757,6 +798,36 @@ model RoleAssignment {
   reason          String?
 
   @@map("role_assignments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// APP MODULES
+// System modules for navigation and access control
+// ─────────────────────────────────────────────────────────────
+
+model AppModule {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  name        String
+  icon        String?
+  badge       String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  
+  userModules UserModule[]
+  @@map("app_modules")
+}
+
+model UserModule {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId    Int
+  module      AppModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  isActive    Boolean   @default(true)
+  
+  @@unique([userId, moduleId])
+  @@map("user_modules")
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   DashboardLayout,
   useBreakpoint,
@@ -9,12 +10,14 @@ import {
   type SellLog,
   type Order as DashboardOrder,
 } from '@/modules/dashboard';
+import { isStaffRole } from '@/shared/constants';
 import { useListOrders } from '@/modules/orders';
 import { useInventorySummary } from '@/modules/inventory';
 import { useLowStockItems } from '@/modules/inventory';
 import { useListManualSales } from '@/modules/manual-sales';
 
 export default function DashboardPageClient() {
+  const { data: session, status } = useSession();
   const bp = useBreakpoint();
   const [products, setProducts] = useState<Product[]>([]);
   const [sellLog, setSellLog] = useState<SellLog[]>([]);
@@ -93,7 +96,13 @@ export default function DashboardPageClient() {
     }
   }, [ordersData, ordersLoading]);
 
-  if (!mounted) return null;
+  if (status === 'loading' || !mounted) {
+    return <div className="p-6 text-sm text-zinc-500">Checking your session...</div>;
+  }
+
+  if (status === 'unauthenticated' || !isStaffRole(session?.user?.role)) {
+    return null;
+  }
 
   return (
     <ResponsiveContext.Provider value={bp}>

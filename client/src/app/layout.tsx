@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import AuthProvider from "@/shared/providers/AuthProvider";
 import QueryProvider from "@/shared/providers/QueryProvider";
 import "./globals.css";
 
@@ -30,7 +31,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <QueryProvider>{children}</QueryProvider>
+        <AuthProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </AuthProvider>
       </body>
     </html>
   );

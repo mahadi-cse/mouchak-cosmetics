@@ -1,14 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { Heart, Search, ShoppingCart, User, MapPin, Mail, Phone } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 
 import { productCategories } from "./data";
+import { isStaffRole } from "@/shared/constants";
 import { useHomepageCategories, useHomepageStats, useSiteSettings } from "@/modules/homepage";
 
 export function Header() {
   const { data: categories = [] } = useHomepageCategories();
   const { data: settings } = useSiteSettings();
   const { data: stats } = useHomepageStats();
+  const { data: session, status } = useSession();
 
   const storeName = settings?.storeName || "Mouchak Cosmetics";
   const [storeNameFirst, ...storeNameRest] = storeName.split(/\s+/).filter(Boolean);
@@ -26,6 +30,13 @@ export function Header() {
         label: name,
         href: "#",
       }));
+
+  const isAuthenticated = status === "authenticated";
+  const canAccessDashboard = isStaffRole(session?.user?.role);
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/" });
+  };
 
   return (
     <header className="bg-white">
@@ -92,16 +103,51 @@ export function Header() {
               <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">2</span>
             </button>
 
-            {/* Sign In Button */}
-            <button className="hidden sm:flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-full font-medium text-sm transition hover:bg-primary/90">
-              <User size={16} />
-              Sign In
-            </button>
-
-            {/* Mobile Account Icon */}
-            <button className="sm:hidden p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" aria-label="Account">
-              <User size={18} />
-            </button>
+            {isAuthenticated ? (
+              <>
+                {canAccessDashboard && (
+                  <Link
+                    href="/dashboard"
+                    className="hidden sm:inline-flex items-center gap-2 rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:border-primary hover:text-primary"
+                  >
+                    Dashboard
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="hidden sm:flex items-center gap-2 bg-zinc-900 text-white px-5 py-2.5 rounded-full font-medium text-sm transition hover:bg-zinc-800"
+                >
+                  <User size={16} />
+                  Sign Out
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="sm:hidden p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary"
+                  aria-label="Sign out"
+                >
+                  <User size={18} />
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="hidden sm:flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-full font-medium text-sm transition hover:bg-primary/90"
+                >
+                  <User size={16} />
+                  Sign In
+                </Link>
+                <Link
+                  href="/login"
+                  className="sm:hidden p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary"
+                  aria-label="Account"
+                >
+                  <User size={18} />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

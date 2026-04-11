@@ -1,39 +1,29 @@
 import axios, { AxiosError } from 'axios';
+import { getSession, signOut } from 'next-auth/react';
 import { API_CONFIG } from '../constants/config';
-import { parseApiError, getAuthError, formatErrorLog } from '../utils/errors';
+import { parseApiError, formatErrorLog } from '../utils/errors';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || API_CONFIG.BASE_URL;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-
-  failedQueue = [];
-};
-
 // Request interceptor - Add auth token and logging
 apiClient.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
-    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    if (typeof window !== 'undefined') {
+      const session = await getSession();
+      const accessToken = session?.accessToken;
+
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
+      }
     }
 
     // Log request in development
@@ -57,18 +47,12 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as any;
-
     // Handle 401 - Unauthorized
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-
-        // Redirect to login
         if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+          // Sign out clears the session cookie and returns to login.
+          void signOut({ callbackUrl: '/login' });
         }
       }
     }
