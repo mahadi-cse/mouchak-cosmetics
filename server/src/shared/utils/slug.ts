@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 export const generateSlug = (text: string): string => {
   return text
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
+    .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, '')
     .trim()
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');

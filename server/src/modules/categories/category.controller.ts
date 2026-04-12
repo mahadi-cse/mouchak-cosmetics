@@ -4,7 +4,11 @@ import { ok } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 
 export const listCategories: RequestHandler = asyncHandler(async (req, res) => {
-  const categories = await categoryService.listCategories();
+  const { branchId, includeInactive } = req.query;
+  const categories = await categoryService.listCategories({
+    branchId: branchId ? Number(branchId) : undefined,
+    includeInactive: includeInactive === 'true',
+  });
   res.json(ok(categories));
 });
 
@@ -31,10 +35,18 @@ export const deleteCategory: RequestHandler = asyncHandler(async (req, res) => {
   res.json(ok(null, 'Category deleted successfully'));
 });
 
+export const updateCategoryStatus: RequestHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { isActive } = req.body;
+  const category = await categoryService.updateCategoryStatus(Number(id), { isActive });
+  res.json(ok(category, 'Category status updated successfully'));
+});
+
 export default {
   listCategories,
   getCategoryBySlug,
   createCategory,
   updateCategory,
   deleteCategory,
+  updateCategoryStatus,
 };

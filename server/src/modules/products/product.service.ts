@@ -5,6 +5,16 @@ import { CreateProductInput, UpdateProductInput } from './product.schema';
 import { parsePagination } from '../../shared/utils/pagination';
 
 export class ProductService {
+  private async getDefaultBranchId() {
+    const branch = await prisma.branch.findFirst({
+      where: { isActive: true },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+    if (!branch) throw new NotFoundError('No active branch found');
+    return branch.id;
+  }
+
   async createProduct(data: CreateProductInput) {
     const existing = await prisma.product.findUnique({
       where: { sku: data.sku },
@@ -35,9 +45,11 @@ export class ProductService {
       },
     });
 
+    const defaultBranchId = data.branchId || await this.getDefaultBranchId();
     await prisma.inventory.create({
       data: {
         productId: product.id,
+        warehouseId: defaultBranchId,
         quantity: 0,
         reservedQty: 0,
         lowStockThreshold: 10,
@@ -50,7 +62,7 @@ export class ProductService {
   async getProductBySlug(slug: string) {
     const product = await prisma.product.findUnique({
       where: { slug },
-      include: { category: true, inventory: true },
+      include: { category: true, inventories: true },
     });
 
     if (!product) {
@@ -68,11 +80,16 @@ export class ProductService {
     maxPrice?: number;
     page?: number;
     limit?: number;
+    branchId?: number;
+    includeInactive?: boolean;
   }) {
-    const { page = 1, limit = 10, category, search, featured, minPrice, maxPrice } = filters;
+    const { page = 1, limit = 10, category, search, featured, minPrice, maxPrice, branchId, includeInactive } = filters;
     const { skip, take } = parsePagination({ page, limit });
 
-    const where: any = { isActive: true };
+    const where: any = {};
+    if (!includeInactive) {
+      where.isActive = true;
+    }
 
     if (category) {
       where.category = { slug: category };
@@ -96,10 +113,14 @@ export class ProductService {
       if (maxPrice !== undefined) where.price.lte = maxPrice;
     }
 
+    if (branchId !== undefined) {
+      where.inventories = { some: { warehouseId: branchId } };
+    }
+
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        include: { category: true, inventory: true },
+        include: { category: true, inventories: true },
         skip,
         take,
         orderBy: { createdAt: 'desc' },
@@ -110,7 +131,7 @@ export class ProductService {
     return { products, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  async updateProduct(id: string, data: UpdateProductInput) {
+  async updateProduct(id: number, data: UpdateProductInput) {
     const product = await prisma.product.findUnique({ where: { id } });
 
     if (!product) {
@@ -126,39 +147,113 @@ export class ProductService {
       }
     }
 
+    const updateData: any = {};
+    if (data.name) {
+      updateData.name = data.name;
+      updateData.slug = generateSlug(data.name);
+    }
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.shortDescription !== undefined) updateData.shortDescription = data.shortDescription;
+    if (data.price !== undefined) updateData.price = data.price;
+    if (data.compareAtPrice !== undefined) updateData.compareAtPrice = data.compareAtPrice;
+    if (data.costPrice !== undefined) updateData.costPrice = data.costPrice;
+    if (data.sku) updateData.sku = data.sku;
+    if (data.barcode !== undefined) updateData.barcode = data.barcode;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+    if (data.images !== undefined) updateData.images = data.images;
+    if (data.isFeatured !== undefined) updateData.isFeatured = data.isFeatured;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.weight !== undefined) updateData.weight = data.weight;
+
     return await prisma.product.update({
       where: { id },
-      data: {
-        name: data.name,
-        slug: data.name ? generateSlug(data.name) : undefined,
-        description: data.description,
-        shortDescription: data.shortDescription,
-        price: data.price,
-        compareAtPrice: data.compareAtPrice,
-        costPrice: data.costPrice,
-        sku: data.sku,
-        barcode: data.barcode,
-        categoryId: data.categoryId,
-        images: data.images,
-        isFeatured: data.isFeatured,
-        isActive: data.isActive,
-        tags: data.tags,
-        weight: data.weight,
-      },
-      include: { category: true, inventory: true },
+      data: updateData,
+      include: { category: true, inventories: true },
     });
   }
 
-  async deleteProduct(id: string) {
+  async deleteProduct(id: number) {
     const product = await prisma.product.findUnique({ where: { id } });
 
     if (!product) {
       throw new NotFoundError('Product not found');
     }
 
+    return await prisma.product.delete({
+      where: { id },
+    });
+  }
+
+  async bulkImportProducts(products: any[]) {
+    const results = { imported: 0, failed: 0, errors: [] as any[] };
+
+    for (const productData of products) {
+      try {
+        const existing = await prisma.product.findUnique({
+          where: { sku: productData.sku },
+        });
+
+        if (!existing) {
+          const slug = generateSlug(productData.name);
+          await prisma.product.create({
+            data: {
+              name: productData.name,
+              slug,
+              description: productData.description,
+              shortDescription: productData.shortDescription,
+              price: productData.price,
+              compareAtPrice: productData.compareAtPrice,
+              costPrice: productData.costPrice,
+              sku: productData.sku,
+              barcode: productData.barcode,
+              categoryId: productData.categoryId,
+              images: productData.images || [],
+              isFeatured: productData.isFeatured || false,
+              tags: productData.tags || [],
+              weight: productData.weight,
+            },
+          });
+
+          const defaultBranchId = await this.getDefaultBranchId();
+          await prisma.inventory.create({
+            data: {
+              productId: productData.id,
+              warehouseId: defaultBranchId,
+              quantity: 0,
+              reservedQty: 0,
+              lowStockThreshold: 10,
+            },
+          });
+
+          results.imported++;
+        }
+      } catch (error: any) {
+        results.failed++;
+        results.errors.push({
+          sku: productData.sku,
+          error: error.message,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  async updateProductStatus(id: number, data: { isActive?: boolean; isFeatured?: boolean }) {
+    const product = await prisma.product.findUnique({ where: { id } });
+
+    if (!product) {
+      throw new NotFoundError('Product not found');
+    }
+
+    const updateData: any = {};
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.isFeatured !== undefined) updateData.isFeatured = data.isFeatured;
+
     return await prisma.product.update({
       where: { id },
-      data: { isActive: false },
+      data: updateData,
+      include: { category: true, inventories: true },
     });
   }
 }
