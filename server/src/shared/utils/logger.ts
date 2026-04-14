@@ -3,6 +3,18 @@ import { getEnv } from '../../config/env';
 
 let logger: winston.Logger | null = null;
 
+const formatConsoleMeta = (meta: Record<string, unknown>): string => {
+  if (Object.keys(meta).length === 0) {
+    return '';
+  }
+
+  try {
+    return ` ${JSON.stringify(meta)}`;
+  } catch {
+    return ' [unserializable-meta]';
+  }
+};
+
 const initializeLogger = (): winston.Logger => {
   if (logger) {
     return logger;
@@ -34,8 +46,9 @@ const initializeLogger = (): winston.Logger => {
       new winston.transports.Console({
         format: winston.format.combine(
           winston.format.colorize(),
-          winston.format.printf(({ level, message, timestamp }) => {
-            return `${timestamp} [${level}]: ${message}`;
+          winston.format.printf(({ level, message, timestamp, ...meta }) => {
+            delete (meta as { service?: unknown }).service;
+            return `${timestamp} [${level}]: ${message}${formatConsoleMeta(meta)}`;
           })
         ),
       })

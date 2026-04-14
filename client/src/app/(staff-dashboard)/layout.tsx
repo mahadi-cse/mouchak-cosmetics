@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { auth, getRoleFromAccessToken } from '@/auth';
-import { isStaffRole } from '@/shared/constants';
+import { isCustomerRole, isStaffRole } from '@/shared/constants';
 
 export default async function StaffDashboardLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth();
@@ -10,7 +10,7 @@ export default async function StaffDashboardLayout({ children }: { children: Rea
 	}
 
 	const role = getRoleFromAccessToken(session.accessToken);
-	if (!isStaffRole(role)) {
+	if (!isStaffRole(role) && !isCustomerRole(role)) {
 		redirect('/');
 	}
 

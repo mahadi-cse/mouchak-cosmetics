@@ -12,7 +12,12 @@ async function main() {
     await prisma.$connect();
     logger.info('Database connected successfully');
   } catch (error) {
-    logger.error('Database connection failed', { error });
+    const err = error as any;
+    logger.error('Database connection failed', {
+      error: err?.message,
+      code: err?.code,
+      detail: err?.meta?.message || err?.detail,
+    });
     process.exit(1);
   }
 

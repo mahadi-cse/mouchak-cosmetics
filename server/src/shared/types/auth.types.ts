@@ -4,6 +4,7 @@ export const USER_TYPE_CODES = {
   SALES_STAFF: '5x505',
   CASHIER: '6x606',
   RIDER: '7x707',
+  CUSTOMER: '9x909',
 } as const;
 
 export type RoleCode = (typeof USER_TYPE_CODES)[keyof typeof USER_TYPE_CODES];

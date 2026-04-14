@@ -1,6 +1,8 @@
 import NextAuth from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
+import type { Provider } from 'next-auth/providers';
 import Credentials from 'next-auth/providers/credentials';
+import Google from 'next-auth/providers/google';
 
 type AccessTokenClaims = {
   sub: string;
@@ -23,6 +25,16 @@ const getBackendApiBaseUrl = (): string => {
 
 const getRefreshCookieName = (): string => {
   return process.env.AUTH_REFRESH_COOKIE_NAME || 'mouchak_refresh_token';
+};
+
+const getAuthSecret = (): string | undefined => {
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error('Missing AUTH_SECRET (or NEXTAUTH_SECRET) in production');
+  }
+
+  return secret;
 };
 
 const toBase64 = (value: string): string => {
@@ -114,6 +126,41 @@ const parseBackendToken = async (response: Response): Promise<{ accessToken: str
   };
 };
 
+const getGoogleProviderConfig = (): { clientId: string; clientSecret: string } | null => {
+  const clientId =
+    process.env.AUTH_GOOGLE_CLIENT_ID ||
+    process.env.GOOGLE_CLIENT_ID ||
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.AUTH_GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return null;
+  }
+
+  return { clientId, clientSecret };
+};
+
+const authenticateWithGoogle = async ({ idToken, accessToken }: { idToken?: string; accessToken?: string }): Promise<{ accessToken: string; refreshToken: string; claims: AccessTokenClaims } | null> => {
+  if (!idToken && !accessToken) {
+    return null;
+  }
+
+  const response = await fetch(`${getBackendApiBaseUrl()}/auth/google`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ idToken, accessToken }),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return parseBackendToken(response);
+};
+
 const refreshAccessToken = async (token: JWT): Promise<JWT> => {
   try {
     if (!token.refreshToken || typeof token.refreshToken !== 'string') {
@@ -156,49 +203,115 @@ const refreshAccessToken = async (token: JWT): Promise<JWT> => {
   }
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    Credentials({
-      name: 'Email and Password',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        const email = String(credentials?.email || '').trim().toLowerCase();
-        const password = String(credentials?.password || '');
+const providers: Provider[] = [
+  Credentials({
+    name: 'Email and Password',
+    credentials: {
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Password', type: 'password' },
+    },
+    async authorize(credentials) {
+      const email = String(credentials?.email || '').trim().toLowerCase();
+      const password = String(credentials?.password || '');
 
-        if (!email || !password) {
-          return null;
-        }
+      if (!email || !password) {
+        return null;
+      }
 
-        const response = await fetch(`${getBackendApiBaseUrl()}/auth/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, password }),
-          cache: 'no-store',
-        });
+      const response = await fetch(`${getBackendApiBaseUrl()}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+        cache: 'no-store',
+      });
 
-        if (!response.ok) {
-          return null;
-        }
+      if (!response.ok) {
+        return null;
+      }
 
-        const parsed = await parseBackendToken(response);
+      const parsed = await parseBackendToken(response);
 
-        return {
-          id: parsed.claims.sub,
+      return {
+        id: parsed.claims.sub,
+        email,
+        role: parsed.claims.role,
+        typeId: parsed.claims.typeId,
+        accessToken: parsed.accessToken,
+        accessTokenExpiresAt: parsed.claims.exp * 1000,
+        refreshToken: parsed.refreshToken,
+      };
+    },
+  }),
+  Credentials({
+    id: 'register',
+    name: 'Register',
+    credentials: {
+      firstName: { label: 'First Name', type: 'text' },
+      lastName: { label: 'Last Name', type: 'text' },
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Password', type: 'password' },
+      phone: { label: 'Phone', type: 'text' },
+    },
+    async authorize(credentials) {
+      const firstName = String(credentials?.firstName || '').trim();
+      const lastName = String(credentials?.lastName || '').trim();
+      const email = String(credentials?.email || '').trim().toLowerCase();
+      const password = String(credentials?.password || '');
+      const phone = String(credentials?.phone || '').trim();
+
+      if (!firstName || !lastName || !email || !password) {
+        return null;
+      }
+
+      const response = await fetch(`${getBackendApiBaseUrl()}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
           email,
-          role: parsed.claims.role,
-          typeId: parsed.claims.typeId,
-          accessToken: parsed.accessToken,
-          accessTokenExpiresAt: parsed.claims.exp * 1000,
-          refreshToken: parsed.refreshToken,
-        };
-      },
-    }),
-  ],
+          password,
+          phone: phone || undefined,
+        }),
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const parsed = await parseBackendToken(response);
+
+      return {
+        id: parsed.claims.sub,
+        email,
+        role: parsed.claims.role,
+        typeId: parsed.claims.typeId,
+        accessToken: parsed.accessToken,
+        accessTokenExpiresAt: parsed.claims.exp * 1000,
+        refreshToken: parsed.refreshToken,
+      };
+    },
+  }),
+];
+
+const googleProviderConfig = getGoogleProviderConfig();
+if (googleProviderConfig) {
+  providers.push(
+    Google({
+      clientId: googleProviderConfig.clientId,
+      clientSecret: googleProviderConfig.clientSecret,
+    })
+  );
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: getAuthSecret(),
+  providers,
   pages: {
     signIn: '/login',
   },
@@ -206,7 +319,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      if (account?.provider === 'google') {
+        const idToken = typeof account.id_token === 'string' ? account.id_token : null;
+        const accessToken = typeof account.access_token === 'string' ? account.access_token : null;
+
+        if (!idToken && !accessToken) {
+          return {
+            ...token,
+            error: 'GoogleSignInError',
+          };
+        }
+
+        const parsed = await authenticateWithGoogle({
+          idToken: idToken || undefined,
+          accessToken: accessToken || undefined,
+        });
+        if (!parsed) {
+          return {
+            ...token,
+            error: 'GoogleSignInError',
+          };
+        }
+
+        return {
+          ...token,
+          userId: parsed.claims.sub,
+          role: parsed.claims.role,
+          typeId: parsed.claims.typeId,
+          accessToken: parsed.accessToken,
+          accessTokenExpiresAt: parsed.claims.exp * 1000,
+          refreshToken: parsed.refreshToken,
+          error: undefined,
+        };
+      }
+
       if (user) {
         const signedInUser = user as typeof user & {
           role: string;
@@ -244,6 +391,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user = {
         ...session.user,
         id: String(token.userId || token.sub || ''),
+        role: typeof token.role === 'string' ? token.role : undefined,
+        typeId: typeof token.typeId === 'number' ? token.typeId : undefined,
       };
 
       session.accessToken = typeof token.accessToken === 'string' ? token.accessToken : undefined;

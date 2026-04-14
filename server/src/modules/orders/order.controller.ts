@@ -2,6 +2,8 @@ import { RequestHandler } from 'express';
 import orderService from './order.service';
 import { ok, paginate } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
+import { ValidationError } from '../../shared/utils/AppError';
+import { createCodOrderSchema, createOrderSchema } from './order.schema';
 
 export const listOrders: RequestHandler = asyncHandler(async (req, res) => {
   const { page, limit, status, channel, customerId, startDate, endDate, search } = req.query;
@@ -27,8 +29,23 @@ export const getOrderDetails: RequestHandler = asyncHandler(async (req, res) => 
 });
 
 export const createOrder: RequestHandler = asyncHandler(async (req, res) => {
-  const order = await orderService.createOrder(req.body);
+  const parsed = createOrderSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid order payload');
+  }
+
+  const order = await orderService.createOrder(parsed.data);
   res.status(201).json(ok(order, 'Order created successfully'));
+});
+
+export const createCodOrder: RequestHandler = asyncHandler(async (req, res) => {
+  const parsed = createCodOrderSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid COD order payload');
+  }
+
+  const order = await orderService.createCodOrder(parsed.data);
+  res.status(201).json(ok(order, 'Cash on delivery order placed successfully'));
 });
 
 export const updateOrder: RequestHandler = asyncHandler(async (req, res) => {
@@ -75,6 +92,12 @@ export const generateInvoice: RequestHandler = asyncHandler(async (req, res) => 
   res.json(ok(invoice));
 });
 
+export const getOrderTracking: RequestHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const tracking = await orderService.getOrderTracking(Number(id));
+  res.json(ok(tracking));
+});
+
 export const cancelOrder: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const order = await orderService.cancelOrder(Number(id));
@@ -85,6 +108,7 @@ export default {
   listOrders,
   getOrderDetails,
   createOrder,
+  createCodOrder,
   updateOrder,
   updateOrderStatus,
   addOrderNotes,
@@ -92,5 +116,6 @@ export default {
   processRefund,
   markAsShipped,
   generateInvoice,
+  getOrderTracking,
   cancelOrder,
 };

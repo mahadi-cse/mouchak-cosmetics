@@ -40,8 +40,20 @@ export default function AnalyticsView() {
       label,
       revenue: overview?.trend.revenue?.[idx] || 0,
       cost: overview?.trend.cost?.[idx] || 0,
+      netProfit: (overview?.trend.revenue?.[idx] || 0) - (overview?.trend.cost?.[idx] || 0),
     }));
   }, [trendLabels, overview?.trend.revenue, overview?.trend.cost]);
+
+  const trendTotals = useMemo(() => {
+    return trendData.reduce(
+      (acc, point) => ({
+        revenue: acc.revenue + point.revenue,
+        cost: acc.cost + point.cost,
+        netProfit: acc.netProfit + point.netProfit,
+      }),
+      { revenue: 0, cost: 0, netProfit: 0 }
+    );
+  }, [trendData]);
 
   const topProducts = overview?.topProducts || [];
 
@@ -170,6 +182,16 @@ export default function AnalyticsView() {
                 strokeDasharray="5 5"
                 dot={{ fill: Theme.warning, r: 3 }}
               />
+              <Line
+                yAxisId="l"
+                type="monotone"
+                dataKey="netProfit"
+                name="net profit"
+                stroke={Theme.success}
+                strokeWidth={2.25}
+                strokeDasharray="2 2"
+                dot={{ fill: Theme.success, r: 3 }}
+              />
             </LineChart>
           </ResponsiveContainer>
 
@@ -181,6 +203,30 @@ export default function AnalyticsView() {
             <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
               <div className="h-1 w-3" style={{ background: Theme.warning }} />
               Cost (৳)
+            </div>
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
+              <div className="h-1 w-3" style={{ background: Theme.success }} />
+              Net Profit (৳)
+            </div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-3">
+            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
+              <span style={{ color: Theme.mutedFg }}>Revenue:</span>{' '}
+              <span className="font-bold" style={{ color: Theme.primary }}>{formatCurrency(trendTotals.revenue)}</span>
+            </div>
+            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
+              <span style={{ color: Theme.mutedFg }}>Cost:</span>{' '}
+              <span className="font-bold" style={{ color: Theme.warning }}>{formatCurrency(trendTotals.cost)}</span>
+            </div>
+            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
+              <span style={{ color: Theme.mutedFg }}>Net Profit:</span>{' '}
+              <span
+                className="font-bold"
+                style={{ color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' }}
+              >
+                {formatCurrency(trendTotals.netProfit)}
+              </span>
             </div>
           </div>
           {isLoading && (

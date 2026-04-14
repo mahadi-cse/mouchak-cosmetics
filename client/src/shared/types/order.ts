@@ -13,24 +13,38 @@ export interface OrderItem {
 export interface Order {
   id: number;
   orderNumber: string;
-  customerId: number;
+  customerId?: number;
   customer?: Customer;
   items: OrderItem[];
   shippingName?: string;
-  shippingEmail?: string;
   shippingPhone?: string;
   shippingAddress?: string;
+  shippingCity?: string;
+  shippingPostal?: string;
+  shippingCountry?: string;
   total: number;
   subtotal: number;
-  tax: number;
-  shippingCost: number;
+  tax?: number;
+  taxAmount?: number;
+  shippingCost?: number;
+  shippingCharge?: number;
   discountAmount?: number;
-  status: OrderStatus;
-  paymentStatus: PaymentStatus;
+  status: OrderStatus | string;
+  paymentStatus?: PaymentStatus | string;
   notes?: string;
   trackingNumber?: string;
+  trackingEvents?: OrderTrackingEvent[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OrderTrackingEvent {
+  id: number;
+  orderId: number;
+  status: string;
+  title: string;
+  description?: string;
+  createdAt: string;
 }
 
 export enum OrderStatus {

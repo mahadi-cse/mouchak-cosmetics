@@ -14,6 +14,7 @@ const envSchema = z.object({
   ACCESS_TOKEN_EXPIRES_HOURS: z.coerce.number().min(2).max(4).default(3),
   REFRESH_TOKEN_EXPIRES_DAYS: z.coerce.number().min(1).max(30).default(7),
   REFRESH_TOKEN_COOKIE_NAME: z.string().default('mouchak_refresh_token'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
   
   // Keycloak
   KEYCLOAK_REALM_URL: z.string().url().optional(),

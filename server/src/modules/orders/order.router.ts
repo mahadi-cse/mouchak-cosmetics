@@ -4,10 +4,14 @@ import { authenticate, authorize } from '../../middleware/authenticate';
 
 const router = Router();
 
+// Public COD checkout route from product details page
+router.post('/cod', orderController.createCodOrder);
+
 // Protected routes - All require auth
 router.get('/', authenticate, orderController.listOrders);
 router.post('/', authenticate, orderController.createOrder);
 router.get('/:id', authenticate, orderController.getOrderDetails);
+router.get('/:id/tracking', authenticate, orderController.getOrderTracking);
 router.put('/:id', authenticate, orderController.updateOrder);
 router.put('/:id/status', authenticate, authorize('ADMIN', 'STAFF'), orderController.updateOrderStatus);
 router.post('/:id/notes', authenticate, authorize('ADMIN', 'STAFF'), orderController.addOrderNotes);

@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { auth, getRoleFromAccessToken } from '@/auth';
-import { isStaffRole } from '@/shared/constants';
+import { isCustomerRole, isStaffRole } from '@/shared/constants';
 import DashboardPageClient from './DashboardPageClient';
+import CustomerDashboardClient from './CustomerDashboardClient';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -11,6 +12,10 @@ export default async function DashboardPage() {
   }
 
   const role = getRoleFromAccessToken(session.accessToken);
+  if (isCustomerRole(role)) {
+    return <CustomerDashboardClient />;
+  }
+
   if (!isStaffRole(role)) {
     redirect('/');
   }

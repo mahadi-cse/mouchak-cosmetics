@@ -5,22 +5,26 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 
-interface LoginPageClientProps {
+interface RegisterPageClientProps {
   callbackUrl?: string;
 }
 
-export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPageClientProps) {
+export default function RegisterPageClient({ callbackUrl = '/dashboard' }: RegisterPageClientProps) {
   const router = useRouter();
   const { status } = useSession();
+  const isGoogleEnabled = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
   const normalizedCallbackUrl =
     callbackUrl && callbackUrl !== '/redirect' && callbackUrl !== '/auth/redirect'
       ? callbackUrl
       : '/dashboard';
   const redirectTarget = `/redirect?callbackUrl=${encodeURIComponent(normalizedCallbackUrl)}`;
-  const isGoogleEnabled = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
@@ -34,18 +38,27 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn('register', {
+        firstName,
+        lastName,
         email,
+        phone,
         password,
         redirect: false,
         callbackUrl: redirectTarget,
       });
 
       if (!result || result.error) {
-        setError('Invalid email or password. Please try again.');
+        setError('Registration failed. Please check your details and try again.');
         return;
       }
 
@@ -55,7 +68,7 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
         router.push(redirectTarget);
       }
     } catch {
-      setError('Login failed. Please try again.');
+      setError('Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -84,41 +97,33 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
     <main className="min-h-screen bg-white px-4 py-12">
       <div className="mx-auto flex w-full max-w-5xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-lg shadow-zinc-100">
         <section className="hidden w-1/2 bg-zinc-50 p-10 text-zinc-900 lg:flex lg:flex-col lg:justify-between relative overflow-hidden border-r border-zinc-200">
-          {/* Subtle decorative elements */}
           <div className="absolute top-20 right-10 w-40 h-40 bg-zinc-100/30 rounded-full blur-3xl" />
           <div className="absolute bottom-10 left-5 w-32 h-32 bg-zinc-100/30 rounded-full blur-2xl" />
-          
+
           <div className="relative z-10">
             <p className="text-xs uppercase tracking-[0.4em] text-zinc-500">Mouchak Cosmetics</p>
             <h1 className="mt-4 text-4xl font-semibold leading-tight text-zinc-900">
-              Manage Your
-              <span className="block text-zinc-700">Store</span>
+              Create Your
+              <span className="block text-zinc-700">Customer Account</span>
             </h1>
             <p className="mt-4 max-w-sm text-sm text-zinc-600">
-              Access inventory, track sales, process orders, and grow your business—all in one place.
+              Register to track orders, manage your profile, and get a customer dashboard experience.
             </p>
           </div>
 
           <div className="relative z-10 space-y-4">
             <div className="flex items-start gap-3">
-              <div className="text-2xl flex-shrink-0">📊</div>
+              <div className="text-2xl flex-shrink-0">🛍️</div>
               <div>
-                <p className="font-semibold text-sm text-zinc-900">Real-time Insights</p>
-                <p className="text-xs text-zinc-600">See sales, stock, and customer activity instantly</p>
+                <p className="font-semibold text-sm text-zinc-900">Customer-first Access</p>
+                <p className="text-xs text-zinc-600">Your account will be created under customer role 9x909</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="text-2xl flex-shrink-0">⚡</div>
+              <div className="text-2xl flex-shrink-0">🔒</div>
               <div>
-                <p className="font-semibold text-sm text-zinc-900">Fast & Reliable</p>
-                <p className="text-xs text-zinc-600">Built to keep your business running smoothly</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="text-2xl flex-shrink-0">🔐</div>
-              <div>
-                <p className="font-semibold text-sm text-zinc-900">Your Data is Safe</p>
-                <p className="text-xs text-zinc-600">Industry-grade protection for your business</p>
+                <p className="font-semibold text-sm text-zinc-900">Secure Authentication</p>
+                <p className="text-xs text-zinc-600">Use password login or continue with Google</p>
               </div>
             </div>
           </div>
@@ -126,11 +131,11 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
 
         <section className="w-full p-6 sm:p-10 lg:w-1/2 flex flex-col justify-center">
           <div className="mb-8">
-            <h2 className="text-3xl font-semibold text-zinc-900">Welcome Back</h2>
-            <p className="mt-2 text-sm text-zinc-600">Sign in to your account to access your store dashboard.</p>
+            <h2 className="text-3xl font-semibold text-zinc-900">Create Account</h2>
+            <p className="mt-2 text-sm text-zinc-600">Register as a customer and continue to your dashboard.</p>
           </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <button
               type="button"
               onClick={handleGoogleSignIn}
@@ -150,6 +155,32 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
               <div className="h-px flex-1 bg-zinc-200" />
             </div>
 
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-zinc-800">First Name</span>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-100"
+                  placeholder="First name"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-zinc-800">Last Name</span>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-100"
+                  placeholder="Last name"
+                  required
+                />
+              </label>
+            </div>
+
             <label className="block">
               <span className="mb-2 block text-sm font-semibold text-zinc-800">Email Address</span>
               <input
@@ -164,14 +195,39 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
             </label>
 
             <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-zinc-800">Phone (optional)</span>
+              <input
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-100"
+                placeholder="01XXXXXXXXX"
+              />
+            </label>
+
+            <label className="block">
               <span className="mb-2 block text-sm font-semibold text-zinc-800">Password</span>
               <input
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-100"
-                placeholder="Enter your password"
+                placeholder="Minimum 8 characters"
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-zinc-800">Confirm Password</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-100"
+                placeholder="Re-enter password"
                 required
               />
             </label>
@@ -187,24 +243,17 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
               disabled={isSubmitting || isGoogleSubmitting}
               className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? 'Signing in...' : 'Sign In'}
+              {isSubmitting ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-zinc-600">
-            New customer?{' '}
+          <p className="mt-6 text-center text-sm text-zinc-600">
+            Already have an account?{' '}
             <Link
-              href={`/register?callbackUrl=${encodeURIComponent(normalizedCallbackUrl)}`}
+              href={`/login?callbackUrl=${encodeURIComponent(normalizedCallbackUrl)}`}
               className="font-semibold text-zinc-900 hover:text-zinc-700 transition"
             >
-              Create an account
-            </Link>
-          </p>
-
-          <p className="mt-6 text-center text-sm text-zinc-600">
-            Back to store:{' '}
-            <Link href="/" className="font-semibold text-zinc-900 hover:text-zinc-700 transition">
-              Visit storefront
+              Sign in
             </Link>
           </p>
         </section>

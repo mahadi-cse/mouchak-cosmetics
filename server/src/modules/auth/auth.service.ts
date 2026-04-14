@@ -2,9 +2,10 @@ import { randomBytes, createHash } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../../config/database';
 import { getEnv } from '../../config/env';
-import { UnauthorizedError } from '../../shared/utils/AppError';
-import { isRoleCode, RoleCode } from '../../shared/types/auth.types';
+import { ConflictError, UnauthorizedError, ValidationError } from '../../shared/utils/AppError';
+import { isRoleCode, RoleCode, USER_TYPE_CODES } from '../../shared/types/auth.types';
 import { signAccessToken } from './auth.jwt';
+import { GoogleSignInInput, RegisterInput } from './auth.schema';
 
 export interface AuthTokenBundle {
   accessToken: string;
@@ -15,6 +16,18 @@ export interface AuthTokenBundle {
     typeId: number;
   };
   accessTokenExpiresAt: number;
+}
+
+interface GoogleTokenInfo {
+  aud?: string;
+  audience?: string;
+  issued_to?: string;
+  email?: string;
+  email_verified?: string | boolean;
+  verified_email?: string | boolean;
+  given_name?: string;
+  family_name?: string;
+  name?: string;
 }
 
 const hashRefreshToken = (token: string): string =>
@@ -47,9 +60,98 @@ export const hashPassword = async (plainPassword: string): Promise<string> => {
 };
 
 export class AuthService {
+  private async getCustomerUserType() {
+    const customerType = await prisma.userType.findUnique({
+      where: { code: USER_TYPE_CODES.CUSTOMER },
+    });
+
+    if (!customerType) {
+      throw new ValidationError(
+        `Missing customer role code ${USER_TYPE_CODES.CUSTOMER}. Run auth seed first.`,
+        'CUSTOMER_ROLE_NOT_CONFIGURED'
+      );
+    }
+
+    return customerType;
+  }
+
+  private async issueTokens(userId: number, role: RoleCode, typeId: number): Promise<AuthTokenBundle> {
+    const accessToken = await signAccessToken({
+      sub: userId,
+      role,
+      typeId,
+    });
+
+    const refreshToken = generateRefreshToken();
+    await prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash: hashRefreshToken(refreshToken),
+        expiresAt: getRefreshTokenExpiryDate(),
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: userId,
+        role,
+        typeId,
+      },
+      accessTokenExpiresAt: getAccessTokenExpiryDate(),
+    };
+  }
+
+  private async verifyGoogleToken(input: GoogleSignInInput): Promise<GoogleTokenInfo> {
+    const env = getEnv();
+
+    if (!env.GOOGLE_CLIENT_ID) {
+      throw new UnauthorizedError('Google sign-in is not configured', 'GOOGLE_NOT_CONFIGURED');
+    }
+
+    const tokenInfoUrl = input.idToken
+      ? `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(input.idToken)}`
+      : `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(input.accessToken!)}`;
+
+    const response = await fetch(tokenInfoUrl);
+
+    if (!response.ok) {
+      throw new UnauthorizedError('Invalid Google token', 'INVALID_GOOGLE_TOKEN');
+    }
+
+    const tokenInfo = (await response.json()) as GoogleTokenInfo;
+    const audience = tokenInfo.aud || tokenInfo.audience || tokenInfo.issued_to;
+    if (!audience || audience !== env.GOOGLE_CLIENT_ID) {
+      throw new UnauthorizedError('Google token audience mismatch', 'INVALID_GOOGLE_AUDIENCE');
+    }
+
+    const isEmailVerified =
+      tokenInfo.email_verified === true ||
+      tokenInfo.email_verified === 'true' ||
+      tokenInfo.verified_email === true ||
+      tokenInfo.verified_email === 'true';
+
+    if (!tokenInfo.email || !isEmailVerified) {
+      throw new UnauthorizedError('Google email is not verified', 'GOOGLE_EMAIL_NOT_VERIFIED');
+    }
+
+    return tokenInfo;
+  }
+
+  private getNameFromGoogle(tokenInfo: GoogleTokenInfo): { firstName: string; lastName: string } {
+    const fallbackName = tokenInfo.name?.trim() || '';
+    const fallbackParts = fallbackName ? fallbackName.split(/\s+/) : [];
+    const firstName = tokenInfo.given_name?.trim() || fallbackParts[0] || 'Customer';
+    const lastName =
+      tokenInfo.family_name?.trim() || fallbackParts.slice(1).join(' ') || 'User';
+
+    return { firstName, lastName };
+  }
+
   async login(email: string, password: string): Promise<AuthTokenBundle> {
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: email.trim().toLowerCase() },
       include: { userType: true },
     });
 
@@ -67,31 +169,99 @@ export class AuthService {
     }
 
     const role = assertRoleCode(user.userType.code);
-    const accessToken = await signAccessToken({
-      sub: user.id,
-      role,
-      typeId: user.userTypeId,
+    return this.issueTokens(user.id, role, user.userTypeId);
+  }
+
+  async register(input: RegisterInput): Promise<AuthTokenBundle> {
+    const email = input.email.trim().toLowerCase();
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      throw new ConflictError('Email is already registered', 'EMAIL_ALREADY_EXISTS');
+    }
+
+    const customerType = await this.getCustomerUserType();
+    const hashedPassword = await hashPassword(input.password);
+
+    const createdUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          userTypeId: customerType.id,
+          firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(),
+          phone: input.phone?.trim() || null,
+          isActive: true,
+        },
+      });
+
+      await tx.customer.create({
+        data: {
+          userId: user.id,
+        },
+      });
+
+      return user;
     });
 
-    const refreshToken = generateRefreshToken();
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: hashRefreshToken(refreshToken),
-        expiresAt: getRefreshTokenExpiryDate(),
-      },
+    const customerRole = assertRoleCode(USER_TYPE_CODES.CUSTOMER);
+    return this.issueTokens(createdUser.id, customerRole, customerType.id);
+  }
+
+  async loginWithGoogle(input: GoogleSignInInput): Promise<AuthTokenBundle> {
+    const tokenInfo = await this.verifyGoogleToken(input);
+    const email = tokenInfo.email!.trim().toLowerCase();
+    const { firstName, lastName } = this.getNameFromGoogle(tokenInfo);
+    const customerType = await this.getCustomerUserType();
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      include: { userType: true },
     });
 
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        role,
-        typeId: user.userTypeId,
-      },
-      accessTokenExpiresAt: getAccessTokenExpiryDate(),
-    };
+    if (existingUser && !existingUser.isActive) {
+      throw new UnauthorizedError('User account is inactive', 'USER_INACTIVE');
+    }
+
+    if (
+      existingUser?.userType?.code &&
+      existingUser.userType.code !== USER_TYPE_CODES.CUSTOMER
+    ) {
+      throw new UnauthorizedError(
+        'Google sign-in is available only for customer accounts',
+        'GOOGLE_ROLE_NOT_ALLOWED'
+      );
+    }
+
+    const user = existingUser
+      ? await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            userTypeId: existingUser.userTypeId || customerType.id,
+            firstName: existingUser.firstName || firstName,
+            lastName: existingUser.lastName || lastName,
+            isActive: true,
+          },
+        })
+      : await prisma.user.create({
+          data: {
+            email,
+            password: null,
+            userTypeId: customerType.id,
+            firstName,
+            lastName,
+            isActive: true,
+          },
+        });
+
+    await prisma.customer.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: { userId: user.id },
+    });
+
+    const customerRole = assertRoleCode(USER_TYPE_CODES.CUSTOMER);
+    return this.issueTokens(user.id, customerRole, user.userTypeId || customerType.id);
   }
 
   async refresh(rawRefreshToken: string): Promise<AuthTokenBundle> {

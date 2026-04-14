@@ -7,6 +7,7 @@ const userTypes = [
   { code: '5x505', name: 'SALES_STAFF' },
   { code: '6x606', name: 'CASHIER' },
   { code: '7x707', name: 'RIDER' },
+  { code: '9x909', name: 'CUSTOMER' },
 ] as const;
 
 async function main() {

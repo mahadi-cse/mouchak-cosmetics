@@ -4,6 +4,7 @@ export const USER_TYPE_CODES = {
   SALES_STAFF: '5x505',
   CASHIER: '6x606',
   RIDER: '7x707',
+  CUSTOMER: '9x909',
 } as const;
 
 export type UserTypeCode = (typeof USER_TYPE_CODES)[keyof typeof USER_TYPE_CODES];
@@ -18,4 +19,8 @@ export const STAFF_ROLE_CODES: UserTypeCode[] = [
 
 export const isStaffRole = (role?: string | null): role is UserTypeCode => {
   return !!role && STAFF_ROLE_CODES.includes(role as UserTypeCode);
+};
+
+export const isCustomerRole = (role?: string | null): boolean => {
+  return role === USER_TYPE_CODES.CUSTOMER;
 };

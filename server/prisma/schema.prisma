@@ -395,9 +395,29 @@ model Order {
 
   items           OrderItem[]
   payment         Payment?
+  trackingEvents  OrderTrackingEvent[]
   auditLogs       AuditLog[]
 
   @@map("orders")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ORDER TRACKING EVENTS
+// Timeline entries for customer/staff order tracking views.
+// ─────────────────────────────────────────────────────────────
+
+model OrderTrackingEvent {
+  id            Int         @id @default(autoincrement())
+  orderId       Int         @map("order_id")
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status        OrderStatus
+  title         String      @db.VarChar(120)
+  description   String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@index([orderId, createdAt])
+  @@map("order_tracking_events")
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -10,6 +10,14 @@ export interface Category {
   updatedAt: string;
 }
 
+export interface ProductInventorySnapshot {
+  id: number;
+  warehouseId: number;
+  quantity: number;
+  reservedQty: number;
+  lowStockThreshold?: number;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -28,6 +36,7 @@ export interface Product {
   isActive: boolean;
   tags: string[];
   weight?: number;
+  inventories?: ProductInventorySnapshot[];
   createdAt: string;
   updatedAt: string;
 }

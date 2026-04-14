@@ -2,6 +2,7 @@ import { prisma } from '../../config/database';
 import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
 import { parsePagination } from '../../shared/utils/pagination';
 import {
+  CreateCodOrderInput,
   CreateOrderInput,
   UpdateOrderInput,
   UpdateOrderStatusInput,
@@ -10,6 +11,29 @@ import {
 } from './order.schema';
 
 export class OrderService {
+  private readonly trackingTitleMap: Record<string, string> = {
+    PENDING: 'Order placed',
+    CONFIRMED: 'Order confirmed',
+    PROCESSING: 'Order processing',
+    SHIPPED: 'Order shipped',
+    DELIVERED: 'Order delivered',
+    CANCELLED: 'Order cancelled',
+    REFUNDED: 'Order refunded',
+  };
+
+  private async appendTrackingEvent(orderId: number, status: string, description?: string) {
+    const title = this.trackingTitleMap[status] || `Status updated to ${status}`;
+
+    await prisma.orderTrackingEvent.create({
+      data: {
+        orderId,
+        status: status as any,
+        title,
+        description,
+      },
+    });
+  }
+
   async createOrder(data: CreateOrderInput) {
     // Validate products exist and have stock
     const products = await prisma.product.findMany({
@@ -104,13 +128,35 @@ export class OrderService {
     await prisma.payment.create({
       data: {
         orderId: order.id,
-        method: 'PENDING' as any,
-        status: 'PENDING',
+        method: data.paymentMethod || 'CASH',
+        status: data.paymentMethod === 'SSLCOMMERZ' ? 'INITIATED' : 'PENDING',
         amount: total,
       },
     });
 
+    await this.appendTrackingEvent(order.id, 'PENDING', 'Cash on delivery order has been placed');
+
     return order;
+  }
+
+  async createCodOrder(data: CreateCodOrderInput) {
+    return this.createOrder({
+      channel: 'ONLINE',
+      paymentMethod: 'CASH',
+      items: [
+        {
+          productId: data.productId,
+          quantity: data.quantity,
+        },
+      ],
+      shippingName: data.shippingName,
+      shippingPhone: data.shippingPhone,
+      shippingAddress: data.shippingAddress,
+      shippingCity: data.shippingCity,
+      shippingPostal: data.shippingPostal,
+      shippingCountry: data.shippingCountry,
+      notes: data.notes,
+    });
   }
 
   async listOrders(filters: {
@@ -151,6 +197,9 @@ export class OrderService {
           items: true,
           customer: { include: { user: true } },
           payment: true,
+          trackingEvents: {
+            orderBy: { createdAt: 'asc' },
+          },
         },
         skip,
         take,
@@ -175,6 +224,9 @@ export class OrderService {
         customer: { include: { user: true } },
         staffUser: true,
         payment: { include: { refunds: true } },
+        trackingEvents: {
+          orderBy: { createdAt: 'asc' },
+        },
         auditLogs: true,
       },
     });
@@ -241,11 +293,35 @@ export class OrderService {
       }
     }
 
-    return await prisma.order.update({
+    const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: updateData,
       include: { items: true, payment: true },
     });
+
+    await this.appendTrackingEvent(orderId, data.status);
+
+    return updatedOrder;
+  }
+
+  async getOrderTracking(orderId: number) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        trackingEvents: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundError('Order not found');
+    }
+
+    return order;
   }
 
   async addOrderNotes(orderId: number, notes: string) {

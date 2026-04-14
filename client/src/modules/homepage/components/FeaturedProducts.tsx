@@ -68,20 +68,21 @@ function EnhancedProductCard({ product }: { product: Product }) {
   const reviews = 0;
 
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="relative overflow-hidden rounded-2xl border-1.5 bg-white transition-all duration-300 cursor-pointer"
-      style={{
-        borderColor: hovered ? '#e91e8c' : '#f3e0ea',
-        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
-        boxShadow: hovered
-          ? '0 12px 32px rgba(233,30,140,0.13)'
-          : '0 2px 8px rgba(233,30,140,0.04)',
-      }}
-    >
-      {/* Image wrapper */}
-      <div className="relative overflow-hidden bg-pink-50 h-48">
+    <Link href={`/product/${product.slug}`} className="block">
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="relative overflow-hidden rounded-2xl border-1.5 bg-white transition-all duration-300 cursor-pointer"
+        style={{
+          borderColor: hovered ? '#e91e8c' : '#f3e0ea',
+          transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+          boxShadow: hovered
+            ? '0 12px 32px rgba(233,30,140,0.13)'
+            : '0 2px 8px rgba(233,30,140,0.04)',
+        }}
+      >
+        {/* Image wrapper */}
+        <div className="relative overflow-hidden bg-pink-50 h-48">
         <Image
           src={imageSrc}
           alt={product.name}
@@ -98,111 +99,112 @@ function EnhancedProductCard({ product }: { product: Product }) {
           }}
         />
 
-        {/* Discount badge */}
-        {discount && (
-          <div
-            className="absolute left-3 top-3 rounded-full bg-pink-600 px-2 py-0.5 text-center text-xs font-bold text-white"
-            style={{ letterSpacing: '0.5px' }}
-          >
-            -{discount}%
-          </div>
-        )}
-
-        {/* Tag badge */}
-        <div
-          className="absolute right-11 top-3 rounded-full border border-pink-200 bg-white bg-opacity-95 px-2 py-0.5 text-center text-xs font-bold text-pink-700"
-          style={{ letterSpacing: '0.5px' }}
-        >
-          Best Seller
-        </div>
-
-        {/* Wishlist button */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setWishlisted(!wishlisted);
-          }}
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-200"
-          style={{
-            background: wishlisted ? '#e91e8c' : 'rgba(255,255,255,0.95)',
-            borderColor: wishlisted ? 'none' : '#f3c8dc',
-          }}
-        >
-          <Heart
-            size={14}
-            className="transition-all"
-            fill={wishlisted ? 'white' : 'none'}
-            stroke={wishlisted ? 'white' : '#e91e8c'}
-            strokeWidth={2}
-          />
-        </button>
-
-        {/* Quick add overlay */}
-        <div
-          className="absolute bottom-0 left-0 right-0 flex items-center justify-center bg-opacity-93 py-2.5 text-center text-xs font-bold uppercase text-white transition-transform duration-300"
-          style={{
-            background: 'rgba(233,30,140,0.93)',
-            letterSpacing: '1px',
-            transform: hovered ? 'translateY(0)' : 'translateY(100%)',
-          }}
-        >
-          🛒 ADD TO CART
-        </div>
-      </div>
-
-      {/* Card body */}
-      <div className="space-y-2 p-4">
-        {/* Category pill */}
-        <span
-          className="inline-block rounded-full bg-pink-50 px-2 py-0.5 text-xs font-bold uppercase text-pink-600"
-          style={{ letterSpacing: '0.5px' }}
-        >
-          {category}
-        </span>
-
-        {/* Product name */}
-        <h3
-          className="line-clamp-2 font-semibold text-zinc-900"
-          style={{
-            fontSize: '13.5px',
-            lineHeight: 1.4,
-            letterSpacing: '-0.1px',
-          }}
-        >
-          {product.name}
-        </h3>
-
-        {/* Rating */}
-        <div className="flex items-center gap-1.5">
-          <StarRating rating={rating} />
-          <span className="text-xs text-zinc-500">({reviews})</span>
-        </div>
-
-        {/* Price row */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-base font-black text-pink-600">
-              ৳{Math.round(product.price).toLocaleString()}
-            </span>
-            {product.compareAtPrice && (
-              <span
-                className="text-xs text-zinc-400 line-through"
-              >
-                ৳{Math.round(product.compareAtPrice).toLocaleString()}
-              </span>
-            )}
-          </div>
+          {/* Discount badge */}
           {discount && (
             <div
-              className="inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-bold text-green-700"
+              className="absolute left-3 top-3 rounded-full bg-pink-600 px-2 py-0.5 text-center text-xs font-bold text-white"
+              style={{ letterSpacing: '0.5px' }}
             >
-              Save ৳{savingsAmount.toLocaleString()}
+              -{discount}%
             </div>
           )}
+
+          {/* Tag badge */}
+          <div
+            className="absolute right-11 top-3 rounded-full border border-pink-200 bg-white bg-opacity-95 px-2 py-0.5 text-center text-xs font-bold text-pink-700"
+            style={{ letterSpacing: '0.5px' }}
+          >
+            Best Seller
+          </div>
+
+          {/* Wishlist button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setWishlisted(!wishlisted);
+            }}
+            className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-200"
+            style={{
+              background: wishlisted ? '#e91e8c' : 'rgba(255,255,255,0.95)',
+              borderColor: wishlisted ? 'none' : '#f3c8dc',
+            }}
+          >
+            <Heart
+              size={14}
+              className="transition-all"
+              fill={wishlisted ? 'white' : 'none'}
+              stroke={wishlisted ? 'white' : '#e91e8c'}
+              strokeWidth={2}
+            />
+          </button>
+
+          {/* Quick add overlay */}
+          <div
+            className="absolute bottom-0 left-0 right-0 flex items-center justify-center bg-opacity-93 py-2.5 text-center text-xs font-bold uppercase text-white transition-transform duration-300"
+            style={{
+              background: 'rgba(233,30,140,0.93)',
+              letterSpacing: '1px',
+              transform: hovered ? 'translateY(0)' : 'translateY(100%)',
+            }}
+          >
+            View Details
+          </div>
+        </div>
+
+        {/* Card body */}
+        <div className="space-y-2 p-4">
+          {/* Category pill */}
+          <span
+            className="inline-block rounded-full bg-pink-50 px-2 py-0.5 text-xs font-bold uppercase text-pink-600"
+            style={{ letterSpacing: '0.5px' }}
+          >
+            {category}
+          </span>
+
+          {/* Product name */}
+          <h3
+            className="line-clamp-2 font-semibold text-zinc-900"
+            style={{
+              fontSize: '13.5px',
+              lineHeight: 1.4,
+              letterSpacing: '-0.1px',
+            }}
+          >
+            {product.name}
+          </h3>
+
+          {/* Rating */}
+          <div className="flex items-center gap-1.5">
+            <StarRating rating={rating} />
+            <span className="text-xs text-zinc-500">({reviews})</span>
+          </div>
+
+          {/* Price row */}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-base font-black text-pink-600">
+                ৳{Math.round(product.price).toLocaleString()}
+              </span>
+              {product.compareAtPrice && (
+                <span
+                  className="text-xs text-zinc-400 line-through"
+                >
+                  ৳{Math.round(product.compareAtPrice).toLocaleString()}
+                </span>
+              )}
+            </div>
+            {discount && (
+              <div
+                className="inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-bold text-green-700"
+              >
+                Save ৳{savingsAmount.toLocaleString()}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

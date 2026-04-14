@@ -15,6 +15,7 @@ export interface ListOrdersParams {
 export interface CreateOrderRequest {
   customerId?: number;
   channel?: 'ONLINE' | 'POS';
+  paymentMethod?: 'SSLCOMMERZ' | 'CASH' | 'CARD' | 'BKASH' | 'NAGAD' | 'ROCKET';
   items: Array<{ productId: number; quantity: number }>;
   shippingName: string;
   shippingPhone: string;
@@ -25,6 +26,18 @@ export interface CreateOrderRequest {
   discountAmount?: number;
   shippingCharge?: number;
   taxAmount?: number;
+  notes?: string;
+}
+
+export interface CreateCodOrderRequest {
+  productId: number;
+  quantity: number;
+  shippingName: string;
+  shippingPhone: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingPostal?: string;
+  shippingCountry?: string;
   notes?: string;
 }
 
@@ -68,6 +81,11 @@ export const ordersAPI = {
 
   createOrder: async (data: CreateOrderRequest) => {
     const response = await apiClient.post<ApiResponse<Order>>('/orders', data);
+    return response.data.data;
+  },
+
+  createCodOrder: async (data: CreateCodOrderRequest) => {
+    const response = await apiClient.post<ApiResponse<Order>>('/orders/cod', data);
     return response.data.data;
   },
 

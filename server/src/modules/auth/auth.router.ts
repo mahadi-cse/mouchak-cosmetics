@@ -7,6 +7,8 @@ import * as authController from './auth.controller';
 const router = Router();
 
 router.post('/login', authLimiter, authController.login);
+router.post('/register', authLimiter, authController.register);
+router.post('/google', authLimiter, authController.googleSignIn);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
 

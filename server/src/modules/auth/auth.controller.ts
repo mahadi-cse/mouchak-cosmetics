@@ -4,7 +4,7 @@ import { UnauthorizedError, ValidationError } from '../../shared/utils/AppError'
 import { ok } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import authService from './auth.service';
-import { loginSchema } from './auth.schema';
+import { googleSignInSchema, loginSchema, registerSchema } from './auth.schema';
 
 const buildRefreshCookieOptions = () => {
   const env = getEnv();
@@ -43,6 +43,54 @@ export const login: RequestHandler = asyncHandler(async (req, res) => {
         accessTokenExpiresAt: result.accessTokenExpiresAt,
       },
       'Login successful'
+    )
+  );
+});
+
+export const register: RequestHandler = asyncHandler(async (req, res) => {
+  const parsed = registerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid registration payload');
+  }
+
+  const result = await authService.register(parsed.data);
+  const env = getEnv();
+
+  // Keep refresh token HttpOnly and cookie-only.
+  res.cookie(env.REFRESH_TOKEN_COOKIE_NAME, result.refreshToken, buildRefreshCookieOptions());
+
+  res.json(
+    ok(
+      {
+        accessToken: result.accessToken,
+        user: result.user,
+        accessTokenExpiresAt: result.accessTokenExpiresAt,
+      },
+      'Registration successful'
+    )
+  );
+});
+
+export const googleSignIn: RequestHandler = asyncHandler(async (req, res) => {
+  const parsed = googleSignInSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid Google sign-in payload');
+  }
+
+  const result = await authService.loginWithGoogle(parsed.data);
+  const env = getEnv();
+
+  // Keep refresh token HttpOnly and cookie-only.
+  res.cookie(env.REFRESH_TOKEN_COOKIE_NAME, result.refreshToken, buildRefreshCookieOptions());
+
+  res.json(
+    ok(
+      {
+        accessToken: result.accessToken,
+        user: result.user,
+        accessTokenExpiresAt: result.accessTokenExpiresAt,
+      },
+      'Google sign-in successful'
     )
   );
 });
@@ -121,6 +169,8 @@ export const adminOnlyHealth: RequestHandler = asyncHandler(async (_req, res) =>
 
 export default {
   login,
+  register,
+  googleSignIn,
   refresh,
   logout,
   me,
