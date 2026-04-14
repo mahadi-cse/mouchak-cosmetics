@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { auth, getRoleFromAccessToken } from '@/auth';
 import { isStaffRole } from '@/shared/constants';
 
 export default auth((req) => {
@@ -15,7 +15,8 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (!isStaffRole(req.auth.user.role)) {
+  const role = getRoleFromAccessToken(req.auth?.accessToken);
+  if (!isStaffRole(role)) {
     return NextResponse.redirect(new URL('/', req.nextUrl.origin));
   }
 

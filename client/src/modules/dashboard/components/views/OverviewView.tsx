@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
-import { formatCurrency, statusStyles } from '@/modules/dashboard/utils/theme';
+import { formatCurrency } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
-import { Btn, Badge } from '../Primitives';
+import { useOverviewMetrics } from '@/modules/analytics';
+import type { OverviewMetrics } from '@/modules/analytics';
+import { Btn } from '../Primitives';
 import { Product, Order } from '@/modules/dashboard/data/mockData';
 
 interface OverviewViewProps {
@@ -11,15 +13,6 @@ interface OverviewViewProps {
   orders: Order[];
   onQuickSale?: () => void;
 }
-
-const revenueData = [
-  { month: 'Oct', revenue: 182000, orders: 134 },
-  { month: 'Nov', revenue: 215000, orders: 167 },
-  { month: 'Dec', revenue: 289000, orders: 221 },
-  { month: 'Jan', revenue: 198000, orders: 154 },
-  { month: 'Feb', revenue: 234000, orders: 178 },
-  { month: 'Mar', revenue: 312000, orders: 243 },
-];
 
 function Sparkline({ data, color = '#e91e8c' }: { data: number[]; color?: string }) {
   const w = 72;
@@ -75,19 +68,6 @@ function DonutChart({ segments, size = 110, thickness = 22 }: { segments: { valu
   );
 }
 
-function Bar({ pct, color = '#e91e8c' }: { pct: number; color?: string }) {
-  return (
-    <div className="w-full h-1.5 bg-background rounded-full overflow-hidden">
-      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-    </div>
-  );
-}
-
-function StockDot({ qty }: { qty: number }) {
-  const cls = qty <= 5 ? 'bg-red-500' : qty <= 20 ? 'bg-yellow-500' : 'bg-green-500';
-  return <span className={`inline-block w-2 h-2 rounded-full ${cls} shrink-0`} />;
-}
-
 function SectionHeading({ icon, title, sub, badge, badgeColor = 'bg-pink-100 text-pink-600' }: { icon: string; title: string; sub?: string; badge?: string; badgeColor?: string }) {
   return (
     <div className="flex items-center gap-2 mb-3">
@@ -106,72 +86,121 @@ function SectionHeading({ icon, title, sub, badge, badgeColor = 'bg-pink-100 tex
 export default function OverviewView({ products, orders, onQuickSale }: OverviewViewProps) {
   const { isMobile } = useResponsive();
   const [tab, setTab] = React.useState<'today' | 'week' | 'month'>('today');
+  const overviewQuery = useOverviewMetrics({ period: tab });
+  const overview = overviewQuery.data as OverviewMetrics | undefined;
+  const isOverviewLoading = overviewQuery.isLoading;
 
-  const categoryData = React.useMemo<{ label: string; value: number; color: string; rev: string }[]>(() => {
-    const total = products.length || 1;
-    const counts = products.reduce<Record<string, number>>((acc, p) => {
-      acc[p.category] = (acc[p.category] || 0) + 1;
-      return acc;
-    }, {});
-    const palette = ['#e91e8c', '#8b5cf6', '#0ea5e9', '#f59e0b', '#10b981'];
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-      .map(([name, count], i) => ({
-        label: name,
-        value: Math.round((count / total) * 100),
-        color: palette[i % palette.length],
-        rev: formatCurrency((count / total) * revenueData[revenueData.length - 1].revenue),
-      }));
-  }, [products]);
+  const comparisonLabel = overview?.range.comparisonLabel || (tab === 'today' ? 'yesterday' : tab === 'week' ? 'last week' : 'last month');
+  const totalSales = overview?.manualSales.totalSales || 0;
+  const transactions = overview?.manualSales.transactions || 0;
+  const avgTicket = overview?.manualSales.avgTicket || 0;
+  const salesDeltaPercent = overview?.manualSales.salesDeltaPercent || 0;
+  const transactionDelta = overview?.manualSales.transactionDelta || 0;
+  const avgTicketDelta = overview?.manualSales.avgTicketDelta || 0;
 
-  const latest = revenueData[revenueData.length - 1];
-  const previous = revenueData[revenueData.length - 2];
-  const momGrowth = ((latest.revenue - previous.revenue) / previous.revenue) * 100;
-  const flaggedProducts = products.filter((p) => p.status !== 'active');
-  const stockItems = products.slice(0, 6).map((p) => ({
-    name: p.name,
-    sku: p.sku,
-    qty: p.stock,
-    reorder: 20,
-    cat: p.category,
+  const revenueTrend = overview?.trend.revenue?.length ? overview.trend.revenue : [0, 0, 0, 0, 0, 0];
+  const transactionTrend = overview?.trend.transactions?.length ? overview.trend.transactions : [0, 0, 0, 0, 0, 0];
+  const avgTicketTrend = overview?.trend.avgTicket?.length ? overview.trend.avgTicket : [0, 0, 0, 0, 0, 0];
+
+  const categoryPalette = ['#e91e8c', '#8b5cf6', '#0ea5e9', '#f59e0b', '#10b981', '#f43f5e'];
+  const categoryData = (overview?.salesByCategory || []).map((item, i) => ({
+    label: item.categoryName,
+    value: Math.round(item.sharePercent),
+    color: categoryPalette[i % categoryPalette.length],
+    rev: formatCurrency(item.totalRevenue),
   }));
-  const topProducts = products.slice(0, 4).map((p, i) => ({
-    name: p.name,
-    sold: Math.max(4, 18 - i * 3),
-    rev: formatCurrency((i + 1) * 4800),
-    pct: Math.max(36, 90 - i * 18),
-  }));
+
+  const donutSegments = categoryData.length > 0
+    ? categoryData.map((c) => ({ value: Math.max(1, c.value), color: c.color }))
+    : [{ value: 1, color: '#e5e7eb' }];
+
   const invProductsSnapshot = {
     label: 'Total Products',
-    value: `${products.length}`,
-    spark: [170, 175, 178, 180, 184, 186],
-    detail: categoryData.map((d, i) => ({ cat: d.label, count: Math.max(1, Math.round((d.value / 100) * products.length)), color: d.color, idx: i })),
+    value: `${overview?.inventory.totalProducts ?? products.length}`,
+    spark: transactionTrend,
+    detail: (overview?.inventory.categoryDistribution || []).map((d, i) => ({
+      cat: d.categoryName,
+      count: d.count,
+      color: categoryPalette[i % categoryPalette.length],
+      idx: i,
+    })),
   };
+
   const invAlertsSnapshot = {
     label: 'Stock Alerts',
-    low: products.filter((p) => p.stock <= 5).length,
-    out: products.filter((p) => p.stock === 0).length,
-    spark: [0, 1, 0, 2, 1, 2],
+    low: overview?.inventory.lowStockCount ?? products.filter((p) => p.status === 'low').length,
+    out: overview?.inventory.outOfStockCount ?? products.filter((p) => p.status === 'out').length,
+    spark: revenueTrend,
   };
 
+  const topProducts = React.useMemo(() => {
+    const rows = overview?.topProducts || [];
+    if (rows.length === 0) {
+      return products.slice(0, 4).map((p, i) => ({
+        name: p.name,
+        sold: Math.max(1, p.manualSold || p.sold || 0),
+        rev: formatCurrency((p.manualSold || p.sold || 0) * p.price),
+        pct: Math.max(12, 92 - i * 20),
+      }));
+    }
+
+    const maxRevenue = Math.max(...rows.map((row) => row.revenue), 1);
+    return rows.slice(0, 4).map((row) => ({
+      name: row.productName,
+      sold: row.unitsSold,
+      rev: formatCurrency(row.revenue),
+      pct: Math.max(10, Math.round((row.revenue / maxRevenue) * 100)),
+    }));
+  }, [overview?.topProducts, products]);
+
+  const stockAlertItems = React.useMemo(() => {
+    if (overview?.inventory.alertItems?.length) {
+      return overview.inventory.alertItems.map((item) => ({
+        name: item.productName,
+        sku: item.sku,
+        qty: item.quantity,
+        threshold: item.threshold,
+        status: item.status,
+      }));
+    }
+
+    return products
+      .filter((p) => p.status !== 'active')
+      .slice(0, 8)
+      .map((p) => ({
+        name: p.name,
+        sku: p.sku,
+        qty: p.stock,
+        threshold: 10,
+        status: p.status === 'out' ? 'out' : 'low',
+      }));
+  }, [overview?.inventory.alertItems, products]);
+
   const manualKpis = [
-    { label: "Today's Sales", value: formatCurrency(latest.revenue * 0.09), delta: '+12% vs yesterday', up: true as const, spark: [18, 22, 19, 25, 21, 28], color: '#e91e8c' },
-    { label: 'Transactions', value: `${Math.round(latest.orders * 0.14)}`, delta: '+8 vs yesterday', up: true as const, spark: [22, 26, 28, 24, 30, 34], color: '#8b5cf6' },
-    { label: 'Avg Ticket', value: formatCurrency((latest.revenue * 0.09) / Math.max(1, Math.round(latest.orders * 0.14))), delta: '+৳43 vs yesterday', up: true as const, spark: [780, 800, 810, 790, 820, 837], color: '#0ea5e9' },
-  ];
-
-  const invKpis = [
-    { label: 'Total SKUs', value: `${products.length}`, sub: 'across all categories', color: '#6366f1' },
-    { label: 'Stock Value', value: formatCurrency(products.reduce((s, p) => s + p.stock * p.price, 0)), sub: 'at cost price', color: '#10b981' },
-    { label: 'Low Stock', value: `${products.filter((p) => p.stock <= 5).length}`, sub: 'need reorder', color: '#ef4444' },
-    { label: 'Out of Stock', value: `${products.filter((p) => p.stock === 0).length}`, sub: 'all clear', color: '#22c55e' },
-  ];
-
-  const ecomKpis = [
-    { label: 'Online Revenue', value: formatCurrency(latest.revenue), delta: `${momGrowth.toFixed(1)}% MoM`, spark: [182, 210, 295, 200, 234, 312], color: '#e91e8c' },
-    { label: 'Online Orders', value: `${latest.orders}`, delta: '+36.5% MoM', spark: [130, 150, 190, 135, 170, 209], color: '#8b5cf6' },
-    { label: 'Customers', value: '1,847', delta: '+8.2% total', spark: [1600, 1680, 1720, 1750, 1800, 1847], color: '#10b981' },
+    {
+      label: "Today's Sales",
+      value: formatCurrency(totalSales),
+      delta: `${salesDeltaPercent >= 0 ? '+' : ''}${salesDeltaPercent.toFixed(1)}% vs ${comparisonLabel}`,
+      up: salesDeltaPercent >= 0,
+      spark: revenueTrend,
+      color: '#e91e8c',
+    },
+    {
+      label: 'Transactions',
+      value: `${transactions}`,
+      delta: `${transactionDelta >= 0 ? '+' : ''}${transactionDelta} vs ${comparisonLabel}`,
+      up: transactionDelta >= 0,
+      spark: transactionTrend,
+      color: '#8b5cf6',
+    },
+    {
+      label: 'Avg Ticket',
+      value: formatCurrency(avgTicket),
+      delta: `${avgTicketDelta >= 0 ? '+' : '-'}${formatCurrency(Math.abs(avgTicketDelta))} vs ${comparisonLabel}`,
+      up: avgTicketDelta >= 0,
+      spark: avgTicketTrend,
+      color: '#0ea5e9',
+    },
   ];
 
   return (
@@ -182,7 +211,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
             Overview
           </div>
           <div className="text-sm text-muted-foreground mt-0.5">
-            Today's snapshot across all channels
+            {isOverviewLoading ? 'Loading latest dashboard data...' : `${tab[0].toUpperCase()}${tab.slice(1)} snapshot across all channels`}
           </div>
         </div>
 
@@ -194,7 +223,12 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
 
       <div className="bg-card rounded-2xl border border-pink-100 shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
-          <SectionHeading icon="🛒" title="Manual Sales" sub="In-store transactions today" badge="Primary Channel" />
+          <SectionHeading
+            icon="🛒"
+            title="Manual Sales"
+            sub={`In-store transactions ${tab === 'today' ? 'today' : `this ${tab}`}`}
+            badge="Primary Channel"
+          />
           <div className="flex bg-muted rounded-xl p-0.5 text-[11px] font-semibold">
             {(['today', 'week', 'month'] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)} className={`px-3 py-1 rounded-lg capitalize transition-colors ${tab === t ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
@@ -262,14 +296,16 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
             <p className="text-xs font-bold text-muted-foreground mb-3">🍩 Sales by Category</p>
             <div className="flex items-center gap-4">
               <div className="relative shrink-0">
-                <DonutChart segments={categoryData} size={110} thickness={22} />
+                <DonutChart segments={donutSegments} size={110} thickness={22} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <p className="text-[10px] text-muted-foreground font-semibold leading-none">Total</p>
-                  <p className="text-sm font-black text-foreground leading-tight">{formatCurrency(latest.revenue * 0.09)}</p>
+                  <p className="text-sm font-black text-foreground leading-tight">{formatCurrency(totalSales)}</p>
                 </div>
               </div>
               <div className="flex-1 space-y-2">
-                {categoryData.map((c) => (
+                {categoryData.length === 0 ? (
+                  <div className="text-[11px] text-muted-foreground">No category sales in this period</div>
+                ) : categoryData.map((c) => (
                   <div key={c.label} className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
@@ -309,12 +345,12 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
 
 
 
-      {flaggedProducts.length > 0 && (
+      {stockAlertItems.length > 0 && (
         <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
           <p className="text-sm font-black text-foreground mb-3">⚠ Stock Alerts</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {flaggedProducts.slice(0, 4).map((p) => {
-              const pct = Math.min((p.stock / 20) * 100, 100);
+            {stockAlertItems.slice(0, 4).map((p) => {
+              const pct = Math.min((p.qty / Math.max(1, p.threshold)) * 100, 100);
               return (
                 <div key={p.sku} className="mb-3 rounded-xl p-3 bg-muted">
                   <div className="flex justify-between mb-1">
@@ -324,10 +360,10 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
                     </div>
                     <div
                       className={`text-sm font-black ${
-                        p.stock === 0 ? 'text-red-600' : 'text-yellow-600'
+                        p.qty === 0 ? 'text-red-600' : 'text-yellow-600'
                       }`}
                     >
-                      {p.stock}
+                      {p.qty}
                     </div>
                   </div>
                   <div className="h-1 bg-background rounded-full">

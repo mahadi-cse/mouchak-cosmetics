@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { getSession, signOut } from 'next-auth/react';
+import type { Session } from 'next-auth';
 import { API_CONFIG } from '../constants/config';
 import { parseApiError, formatErrorLog } from '../utils/errors';
 
@@ -14,11 +15,104 @@ export const apiClient = axios.create({
   },
 });
 
+type JwtPayload = {
+  exp?: number;
+};
+
+const SESSION_REFRESH_BUFFER_MS = 30 * 1000;
+const UNAUTHENTICATED_CACHE_MS = 10 * 1000;
+const FALLBACK_CACHE_MS = 5 * 60 * 1000;
+
+let sessionPromise: Promise<Session | null> | null = null;
+let cachedSession: Session | null = null;
+let sessionCacheExpiresAt = 0;
+
+const parseJwtPayload = (token: string): JwtPayload | null => {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const paddingLength = (4 - (normalized.length % 4)) % 4;
+    const padded = normalized + '='.repeat(paddingLength);
+    const decoded = atob(padded);
+
+    return JSON.parse(decoded) as JwtPayload;
+  } catch {
+    return null;
+  }
+};
+
+const getAccessTokenExpiresAt = (accessToken?: string): number | null => {
+  if (!accessToken) {
+    return null;
+  }
+
+  const payload = parseJwtPayload(accessToken);
+  if (!payload?.exp || typeof payload.exp !== 'number') {
+    return null;
+  }
+
+  return payload.exp * 1000;
+};
+
+const getSessionCacheExpiresAt = (session: Session | null): number => {
+  const now = Date.now();
+  if (!session?.accessToken) {
+    return now + UNAUTHENTICATED_CACHE_MS;
+  }
+
+  const sessionExpiresAt = session.expires ? Date.parse(session.expires) : Number.NaN;
+  const tokenExpiresAt = getAccessTokenExpiresAt(session.accessToken);
+  const validExpiries = [sessionExpiresAt, tokenExpiresAt].filter(
+    (value): value is number => Number.isFinite(value)
+  );
+
+  if (validExpiries.length === 0) {
+    return now + FALLBACK_CACHE_MS;
+  }
+
+  const earliestExpiry = Math.min(...validExpiries);
+  return Math.max(now + 1000, earliestExpiry - SESSION_REFRESH_BUFFER_MS);
+};
+
+async function getCachedSession() {
+  if (typeof window === 'undefined') return null;
+
+  if (cachedSession && Date.now() < sessionCacheExpiresAt) {
+    return cachedSession;
+  }
+
+  if (sessionPromise) {
+    return sessionPromise;
+  }
+
+  sessionPromise = getSession()
+    .then((session) => {
+      cachedSession = session;
+      sessionCacheExpiresAt = getSessionCacheExpiresAt(session);
+      return session;
+    })
+    .catch((error) => {
+      cachedSession = null;
+      sessionCacheExpiresAt = 0;
+      throw error;
+    })
+    .finally(() => {
+      sessionPromise = null;
+    });
+
+  return sessionPromise;
+}
+
 // Request interceptor - Add auth token and logging
 apiClient.interceptors.request.use(
   async (config) => {
     if (typeof window !== 'undefined') {
-      const session = await getSession();
+      // Use a custom session cache to prevent multiple parallel /api/auth/session calls
+      const session = await getCachedSession();
       const accessToken = session?.accessToken;
 
       if (accessToken) {
@@ -49,6 +143,10 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     // Handle 401 - Unauthorized
     if (error.response?.status === 401) {
+      sessionPromise = null;
+      cachedSession = null;
+      sessionCacheExpiresAt = 0;
+
       if (typeof window !== 'undefined') {
         if (!window.location.pathname.includes('/login')) {
           // Sign out clears the session cookie and returns to login.

@@ -5,6 +5,7 @@ import { authenticate, authorize } from '../../middleware/authenticate';
 const router = Router();
 
 // Protected routes - ADMIN/STAFF only
+router.get('/overview', authenticate, authorize('ADMIN', 'STAFF'), analyticsController.getOverviewMetrics);
 router.get('/revenue', authenticate, authorize('ADMIN', 'STAFF'), analyticsController.getRevenueAnalytics);
 router.get('/sales-by-category', authenticate, authorize('ADMIN', 'STAFF'), analyticsController.getSalesByCategory);
 router.get('/top-products', authenticate, authorize('ADMIN', 'STAFF'), analyticsController.getTopProducts);

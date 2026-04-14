@@ -10,14 +10,51 @@ import {
   type SellLog,
   type Order as DashboardOrder,
 } from '@/modules/dashboard';
-import { isStaffRole } from '@/shared/constants';
 import { useListOrders } from '@/modules/orders';
 import { useInventorySummary } from '@/modules/inventory';
 import { useLowStockItems } from '@/modules/inventory';
 import { useListManualSales } from '@/modules/manual-sales';
 
+function DashboardSkeleton() {
+  return (
+    <div className="flex h-screen overflow-hidden bg-[#f6f7fb]">
+      <aside className="hidden w-56 shrink-0 border-r border-zinc-200 bg-white p-4 md:block">
+        <div className="mb-5 h-10 w-36 animate-pulse rounded-lg bg-zinc-100" />
+        <div className="space-y-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-9 animate-pulse rounded-lg bg-zinc-100" />
+          ))}
+        </div>
+      </aside>
+
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <header className="h-14 border-b border-zinc-200 bg-white px-5 py-3">
+          <div className="h-7 w-52 animate-pulse rounded-md bg-zinc-100" />
+        </header>
+
+        <div className="space-y-4 overflow-auto p-5">
+          <div className="h-9 w-56 animate-pulse rounded-md bg-zinc-100" />
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-28 animate-pulse rounded-xl border border-zinc-200 bg-white" />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="h-72 animate-pulse rounded-xl border border-zinc-200 bg-white" />
+            <div className="h-72 animate-pulse rounded-xl border border-zinc-200 bg-white" />
+          </div>
+
+          <div className="h-52 animate-pulse rounded-xl border border-zinc-200 bg-white" />
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function DashboardPageClient() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const bp = useBreakpoint();
   const [products, setProducts] = useState<Product[]>([]);
   const [sellLog, setSellLog] = useState<SellLog[]>([]);
@@ -97,10 +134,10 @@ export default function DashboardPageClient() {
   }, [ordersData, ordersLoading]);
 
   if (status === 'loading' || !mounted) {
-    return <div className="p-6 text-sm text-zinc-500">Checking your session...</div>;
+    return <DashboardSkeleton />;
   }
 
-  if (status === 'unauthenticated' || !isStaffRole(session?.user?.role)) {
+  if (status === 'unauthenticated') {
     return null;
   }
 

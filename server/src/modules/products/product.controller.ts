@@ -9,7 +9,7 @@ export const listProducts: RequestHandler = asyncHandler(async (req, res) => {
   const products = await productService.listProducts({
     category: category as string,
     search: search as string,
-    featured: featured === 'true',
+    featured: featured === undefined ? undefined : featured === 'true',
     minPrice: minPrice ? Number(minPrice) : undefined,
     maxPrice: maxPrice ? Number(maxPrice) : undefined,
     page: page ? Number(page) : 1,

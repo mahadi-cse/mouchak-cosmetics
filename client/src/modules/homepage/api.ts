@@ -67,7 +67,19 @@ export const homepageAPI = {
         limit,
       },
     });
-    return response.data.data as Product[];
+
+    const featuredProducts = response.data.data as Product[];
+    if (featuredProducts.length > 0) {
+      return featuredProducts;
+    }
+
+    const fallbackResponse = await apiClient.get<any>("/products", {
+      params: {
+        limit,
+      },
+    });
+
+    return fallbackResponse.data.data as Product[];
   },
 
   getAllSliders: async (): Promise<HeroSlider[]> => {

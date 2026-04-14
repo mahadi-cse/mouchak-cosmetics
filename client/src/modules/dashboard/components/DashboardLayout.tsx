@@ -368,7 +368,7 @@ export default function DashboardLayout({
   }, [profileOpen]);
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ callbackUrl: '/' });
   };
 
   return (

@@ -1,12 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingCart, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useHomepageFeaturedProducts, useHomepageCategories } from '@/modules/homepage';
-import { shopCategories } from './data';
 import { CategoryCard } from './CategoryCard';
+import type { Category, Product } from '@/shared/types';
+
+const PRODUCT_FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=900&q=80';
+
+const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  skincare: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=900&q=80',
+  makeup: 'https://images.unsplash.com/photo-1512207736890-6ffed8a84e8d?w=900&q=80',
+  haircare: 'https://images.unsplash.com/photo-1527799820374-87f7caad78ef?w=900&q=80',
+  fragrance: 'https://images.unsplash.com/photo-1587017539504-67cfbddac569?w=900&q=80',
+  default: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=900&q=80',
+};
+
+function normalizeImage(url?: string | null): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  return trimmed;
+}
+
+function getCategoryFallbackImage(slug?: string, name?: string): string {
+  const key = (slug || name || '').toLowerCase();
+  if (key.includes('skin')) return CATEGORY_FALLBACK_IMAGES.skincare;
+  if (key.includes('make')) return CATEGORY_FALLBACK_IMAGES.makeup;
+  if (key.includes('hair')) return CATEGORY_FALLBACK_IMAGES.haircare;
+  if (key.includes('frag') || key.includes('perfume') || key.includes('scent')) return CATEGORY_FALLBACK_IMAGES.fragrance;
+  return CATEGORY_FALLBACK_IMAGES.default;
+}
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -24,18 +51,21 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function EnhancedProductCard({ product }: any) {
+function EnhancedProductCard({ product }: { product: Product }) {
   const [hovered, setHovered] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
+  const [imageSrc, setImageSrc] = useState(
+    normalizeImage(product.images?.[0]) || PRODUCT_FALLBACK_IMAGE
+  );
 
   const discount = product.compareAtPrice
     ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
     : null;
+  const savingsAmount = product.compareAtPrice ? Math.round(product.compareAtPrice - product.price) : 0;
 
-  const productImage = product.images?.[0] || '/placeholder-product.png';
   const category = product.category?.name || 'Products';
-  const rating = product.rating || 4.5;
-  const reviews = product.reviews || 0;
+  const rating = 4.5;
+  const reviews = 0;
 
   return (
     <div
@@ -53,11 +83,16 @@ function EnhancedProductCard({ product }: any) {
       {/* Image wrapper */}
       <div className="relative overflow-hidden bg-pink-50 h-48">
         <Image
-          src={productImage}
+          src={imageSrc}
           alt={product.name}
           width={300}
           height={200}
           className="w-full h-full object-cover transition-transform duration-300"
+          onError={() => {
+            if (imageSrc !== PRODUCT_FALLBACK_IMAGE) {
+              setImageSrc(PRODUCT_FALLBACK_IMAGE);
+            }
+          }}
           style={{
             transform: hovered ? 'scale(1.06)' : 'scale(1)',
           }}
@@ -162,7 +197,7 @@ function EnhancedProductCard({ product }: any) {
             <div
               className="inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-bold text-green-700"
             >
-              Save ৳{Math.round(product.compareAtPrice - product.price).toLocaleString()}
+              Save ৳{savingsAmount.toLocaleString()}
             </div>
           )}
         </div>
@@ -171,13 +206,37 @@ function EnhancedProductCard({ product }: any) {
   );
 }
 
-const FILTER_OPTIONS = ['All', 'Skincare', 'Makeup', 'Haircare', 'Fragrance'];
+const DEFAULT_FILTER_OPTIONS = ['All'];
 
 export function FeaturedProducts() {
   const [activeFilter, setActiveFilter] = useState('All');
   const { data: products = [], isLoading, error } = useHomepageFeaturedProducts(8);
+  const { data: categories = [], isLoading: categoriesLoading } = useHomepageCategories();
 
-  if (isLoading) {
+  const activeCategories = useMemo(
+    () => [...categories]
+      .filter((c: Category) => c.isActive)
+      .sort((a: Category, b: Category) => a.sortOrder - b.sortOrder),
+    [categories]
+  );
+
+  const filterOptions = useMemo(
+    () => {
+      const byDb = activeCategories.map((c: Category) => c.name).filter(Boolean);
+      return byDb.length > 0 ? ['All', ...byDb] : DEFAULT_FILTER_OPTIONS;
+    },
+    [activeCategories]
+  );
+
+  const categoryProductCount = useMemo(() => {
+    const map = new Map<number, number>();
+    products.forEach((p: Product) => {
+      map.set(p.categoryId, (map.get(p.categoryId) || 0) + 1);
+    });
+    return map;
+  }, [products]);
+
+  if (isLoading || categoriesLoading) {
     return (
       <section className="space-y-8 bg-zinc-50 py-12 md:py-16">
         <div className="mx-auto max-w-6xl px-4">
@@ -237,7 +296,7 @@ export function FeaturedProducts() {
   const filtered =
     activeFilter === 'All'
       ? products
-      : products.filter((p: any) => p.category === activeFilter);
+      : products.filter((p: Product) => p.category?.name === activeFilter);
 
   return (
     <section className="space-y-12 bg-zinc-50 py-12 md:py-16">
@@ -271,7 +330,7 @@ export function FeaturedProducts() {
 
           {/* Filter pills */}
           <div className="mb-8 flex flex-wrap gap-2">
-            {FILTER_OPTIONS.map((filter) => (
+            {filterOptions.map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -290,7 +349,7 @@ export function FeaturedProducts() {
 
           {/* Product grid */}
           <div className="mb-12 grid gap-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-            {filtered.map((product: any) => (
+            {filtered.map((product: Product) => (
               <EnhancedProductCard key={product.id} product={product} />
             ))}
           </div>
@@ -357,8 +416,16 @@ export function FeaturedProducts() {
 
         {/* Category grid */}
         <div className="grid gap-5 grid-cols-2 sm:grid-cols-4">
-          {shopCategories.map((cat) => (
-            <CategoryCard key={cat.id} {...cat} />
+          {activeCategories.slice(0, 4).map((cat: Category) => (
+            <CategoryCard
+              key={cat.id}
+              id={cat.slug}
+              label={cat.name}
+              description={cat.description || 'Explore collection'}
+              count={`${categoryProductCount.get(cat.id) || 0} Products`}
+              image={normalizeImage(cat.imageUrl) || getCategoryFallbackImage(cat.slug, cat.name)}
+              fallbackImage={getCategoryFallbackImage(cat.slug, cat.name)}
+            />
           ))}
         </div>
       </div>

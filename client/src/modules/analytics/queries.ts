@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { analyticsAPI, type AnalyticsParams } from './api';
+import {
+  analyticsAPI,
+  type AnalyticsParams,
+  type OverviewMetrics,
+  type OverviewPeriod,
+} from './api';
 
 export const ANALYTICS_QUERY_KEYS = {
   all: ['analytics'] as const,
@@ -18,6 +23,9 @@ export const ANALYTICS_QUERY_KEYS = {
   invoices: () => [...ANALYTICS_QUERY_KEYS.all, 'invoices'] as const,
   invoicesWithParams: (params: AnalyticsParams) =>
     [...ANALYTICS_QUERY_KEYS.invoices(), params] as const,
+  overview: () => [...ANALYTICS_QUERY_KEYS.all, 'overview'] as const,
+  overviewWithParams: (params: { period?: OverviewPeriod; warehouseId?: number }) =>
+    [...ANALYTICS_QUERY_KEYS.overview(), params] as const,
   custom: () => [...ANALYTICS_QUERY_KEYS.all, 'custom'] as const,
   customWithParams: (query: any) => [...ANALYTICS_QUERY_KEYS.custom(), query] as const,
 };
@@ -66,6 +74,18 @@ export const useInvoiceData = (params?: AnalyticsParams, options?: any) => {
     queryKey: ANALYTICS_QUERY_KEYS.invoicesWithParams(params || {}),
     queryFn: () => analyticsAPI.getInvoiceData(params),
     staleTime: 10 * 60 * 1000, // 10 minutes
+    ...options,
+  });
+};
+
+export const useOverviewMetrics = (
+  params?: { period?: OverviewPeriod; warehouseId?: number },
+  options?: any
+) => {
+  return useQuery<OverviewMetrics, Error>({
+    queryKey: ANALYTICS_QUERY_KEYS.overviewWithParams(params || {}),
+    queryFn: () => analyticsAPI.getOverviewMetrics(params),
+    staleTime: 60 * 1000,
     ...options,
   });
 };

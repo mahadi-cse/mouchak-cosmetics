@@ -5,14 +5,13 @@ import { Heart, Search, ShoppingCart, User, MapPin, Mail, Phone } from "lucide-r
 import { signOut, useSession } from "next-auth/react";
 
 import { productCategories } from "./data";
-import { isStaffRole } from "@/shared/constants";
 import { useHomepageCategories, useHomepageStats, useSiteSettings } from "@/modules/homepage";
 
 export function Header() {
   const { data: categories = [] } = useHomepageCategories();
   const { data: settings } = useSiteSettings();
   const { data: stats } = useHomepageStats();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const storeName = settings?.storeName || "Mouchak Cosmetics";
   const [storeNameFirst, ...storeNameRest] = storeName.split(/\s+/).filter(Boolean);
@@ -21,18 +20,18 @@ export function Header() {
 
   const navCategories = categories.length
     ? categories.slice(0, 4).map((c) => ({
-        key: c.slug,
-        label: c.name,
-        href: `/shop?category=${c.slug}`,
-      }))
+      key: c.slug,
+      label: c.name,
+      href: `/shop?category=${c.slug}`,
+    }))
     : productCategories.map((name) => ({
-        key: name,
-        label: name,
-        href: "#",
-      }));
+      key: name,
+      label: name,
+      href: "#",
+    }));
 
   const isAuthenticated = status === "authenticated";
-  const canAccessDashboard = isStaffRole(session?.user?.role);
+  const canAccessDashboard = isAuthenticated;
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });
@@ -187,7 +186,7 @@ export function Header() {
             ))}
             <a href="/shop" className="text-primary font-medium whitespace-nowrap">Sale</a>
           </div>
-          
+
           {/* Free Delivery Badge - Prominent on Mobile */}
           <div className="flex items-center gap-1 ml-auto md:ml-auto">
             {(stats?.isFreeDeliveryActive ?? true) && (

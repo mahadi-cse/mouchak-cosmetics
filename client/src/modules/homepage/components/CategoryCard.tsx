@@ -11,10 +11,12 @@ interface CategoryCardProps {
   description: string;
   count: string;
   image: string;
+  fallbackImage?: string;
 }
 
-export function CategoryCard({ id, label, description, count, image }: CategoryCardProps) {
+export function CategoryCard({ id, label, description, count, image, fallbackImage }: CategoryCardProps) {
   const [hovered, setHovered] = useState(false);
+  const [imageSrc, setImageSrc] = useState(image);
 
   return (
     <Link href={`/shop?category=${id}`}>
@@ -32,10 +34,15 @@ export function CategoryCard({ id, label, description, count, image }: CategoryC
       >
         {/* Background image */}
         <Image
-          src={image}
+          src={imageSrc}
           alt={label}
           fill
           className="object-cover transition-transform duration-400"
+          onError={() => {
+            if (fallbackImage && imageSrc !== fallbackImage) {
+              setImageSrc(fallbackImage);
+            }
+          }}
           style={{
             transform: hovered ? 'scale(1.08)' : 'scale(1)',
           }}

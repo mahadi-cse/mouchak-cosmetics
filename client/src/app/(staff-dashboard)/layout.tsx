@@ -1,5 +1,5 @@
-﻿import { redirect } from 'next/navigation';
-import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { auth, getRoleFromAccessToken } from '@/auth';
 import { isStaffRole } from '@/shared/constants';
 
 export default async function StaffDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -9,7 +9,8 @@ export default async function StaffDashboardLayout({ children }: { children: Rea
 		redirect('/login?callbackUrl=/dashboard');
 	}
 
-	if (!isStaffRole(session.user.role)) {
+	const role = getRoleFromAccessToken(session.accessToken);
+	if (!isStaffRole(role)) {
 		redirect('/');
 	}
 

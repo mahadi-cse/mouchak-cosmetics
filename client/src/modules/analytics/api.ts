@@ -8,6 +8,8 @@ export interface AnalyticsParams {
   period?: 'day' | 'week' | 'month' | 'year';
 }
 
+export type OverviewPeriod = 'today' | 'week' | 'month';
+
 export interface RevenueAnalytics {
   period: any;
   totalRevenue: number;
@@ -45,6 +47,61 @@ export interface CustomerAnalytics {
     new: number;
     inactive: number;
   };
+}
+
+export interface OverviewMetrics {
+  period: OverviewPeriod;
+  range: {
+    startDate: string;
+    endDate: string;
+    comparisonLabel: string;
+  };
+  manualSales: {
+    totalSales: number;
+    totalQty: number;
+    transactions: number;
+    avgTicket: number;
+    salesDeltaPercent: number;
+    transactionDelta: number;
+    avgTicketDelta: number;
+  };
+  trend: {
+    revenue: number[];
+    cost: number[];
+    transactions: number[];
+    avgTicket: number[];
+  };
+  inventory: {
+    totalProducts: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+    categoryDistribution: Array<{
+      categoryName: string;
+      count: number;
+    }>;
+    alertItems: Array<{
+      productId: number;
+      productName: string;
+      sku: string;
+      categoryName: string;
+      quantity: number;
+      threshold: number;
+      status: 'low' | 'out';
+    }>;
+  };
+  salesByCategory: Array<{
+    categoryName: string;
+    totalRevenue: number;
+    totalItems: number;
+    sharePercent: number;
+  }>;
+  topProducts: Array<{
+    productId: number;
+    productName: string;
+    sku: string;
+    unitsSold: number;
+    revenue: number;
+  }>;
 }
 
 export const analyticsAPI = {
@@ -85,6 +142,13 @@ export const analyticsAPI = {
 
   getCustomReport: async (query: any) => {
     const response = await apiClient.get<ApiResponse<any>>('/analytics/custom', { params: query });
+    return response.data.data;
+  },
+
+  getOverviewMetrics: async (params?: { period?: OverviewPeriod; warehouseId?: number }) => {
+    const response = await apiClient.get<ApiResponse<OverviewMetrics>>('/analytics/overview', {
+      params,
+    });
     return response.data.data;
   },
 };

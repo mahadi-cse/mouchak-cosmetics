@@ -26,6 +26,8 @@ interface SaleLineItem {
   total: number;
 }
 
+const SALES_BRANCH_STORAGE_KEY = 'dashboard.sales.selectedBranchId';
+
 export default function SalesView({
   products,
 }: SalesViewProps) {
@@ -41,6 +43,7 @@ export default function SalesView({
   const [historyLimit, setHistoryLimit] = useState(10);
   const [historySortBy, setHistorySortBy] = useState<'createdAt' | 'totalAmount' | 'totalQty' | 'saleNumber'>('createdAt');
   const [historySortOrder, setHistorySortOrder] = useState<'asc' | 'desc'>('desc');
+  const [branchInitialized, setBranchInitialized] = useState(false);
   const searchBoxRef = useRef<HTMLDivElement | null>(null);
   const branchInventoryQuery = useInventorySummary({ page: 1, limit: 500, warehouseId: Number(saleBranchId) });
   const createManualSaleMutation = useCreateManualSaleMutation();
@@ -83,8 +86,29 @@ export default function SalesView({
   const historyMeta = manualSalesQuery.data?.pagination;
 
   useEffect(() => {
-    if (!saleBranchId && activeBranches.length > 0) {
-      setSaleBranchId(String(activeBranches[0].id));
+    if (branchInitialized || activeBranches.length === 0) return;
+
+    const savedBranchId = window.localStorage.getItem(SALES_BRANCH_STORAGE_KEY) || '';
+    const savedBranchStillActive = savedBranchId
+      ? activeBranches.some((b) => String(b.id) === savedBranchId)
+      : false;
+
+    setSaleBranchId(savedBranchStillActive ? savedBranchId : String(activeBranches[0].id));
+    setBranchInitialized(true);
+  }, [branchInitialized, activeBranches]);
+
+  useEffect(() => {
+    if (!saleBranchId) return;
+    window.localStorage.setItem(SALES_BRANCH_STORAGE_KEY, saleBranchId);
+  }, [saleBranchId]);
+
+  useEffect(() => {
+    if (!saleBranchId || activeBranches.length === 0) return;
+    const selectedStillActive = activeBranches.some((b) => String(b.id) === saleBranchId);
+    if (!selectedStillActive) {
+      const fallbackBranchId = String(activeBranches[0].id);
+      setSaleBranchId(fallbackBranchId);
+      window.localStorage.setItem(SALES_BRANCH_STORAGE_KEY, fallbackBranchId);
     }
   }, [saleBranchId, activeBranches]);
 

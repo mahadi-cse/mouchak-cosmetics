@@ -3,6 +3,11 @@ import analyticsService from './analytics.service';
 import { ok } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 
+const parseOverviewPeriod = (value: unknown): 'today' | 'week' | 'month' => {
+  if (value === 'week' || value === 'month') return value;
+  return 'today';
+};
+
 export const getRevenueAnalytics: RequestHandler = asyncHandler(async (req, res) => {
   const { startDate, endDate, period } = req.query;
 
@@ -33,6 +38,17 @@ export const getTopProducts: RequestHandler = asyncHandler(async (req, res) => {
     startDate: startDate as string,
     endDate: endDate as string,
     limit: limit ? Number(limit) : 10,
+  });
+
+  res.json(ok(result));
+});
+
+export const getOverviewMetrics: RequestHandler = asyncHandler(async (req, res) => {
+  const { period, warehouseId } = req.query;
+
+  const result = await analyticsService.getOverviewMetrics({
+    period: parseOverviewPeriod(period),
+    warehouseId: warehouseId ? Number(warehouseId) : undefined,
   });
 
   res.json(ok(result));
@@ -69,6 +85,7 @@ export default {
   getRevenueAnalytics,
   getSalesByCategory,
   getTopProducts,
+  getOverviewMetrics,
   getCustomerAnalytics,
   getInvoiceData,
   getCustomReport,

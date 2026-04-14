@@ -31,17 +31,49 @@ export default function InventoryView({
   const [batchName, setBatchName] = useState('');
   const [mfgDate, setMfgDate] = useState('');
   const [expDate, setExpDate] = useState('');
+  const [productQuery, setProductQuery] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'ok' | 'low' | 'out'>('all');
+  const productSearchRef = React.useRef<HTMLDivElement | null>(null);
   const adjustStockMutation = useAdjustStockMutation();
-  const branchInventoryQuery = useInventorySummary({ page: 1, limit: 500, warehouseId: Number(selectedBranch) });
+  const allInventoryQuery = useInventorySummary({ page: 1, limit: 500 });
+  const branchInventoryQuery = useInventorySummary({
+    page: 1,
+    limit: 500,
+    ...(selectedBranch ? { warehouseId: Number(selectedBranch) } : {}),
+  });
 
   const branchInventoryData = ((branchInventoryQuery as any).data?.data || []) as any[];
+  const allInventoryData = ((allInventoryQuery as any).data?.data || []) as any[];
+  const resolveBranchId = (item: any) => {
+    if (item.warehouseId) return item.warehouseId;
+    const byName = activeBranches.find((b: any) => b.name === item.warehouse);
+    return byName?.id;
+  };
+  const normalizeInventoryRows = (rows: any[]) =>
+    rows.map((item: any) => ({
+      id: item.productId || item.product?.id,
+      name: item.product?.name || 'Unknown Product',
+      sku: item.product?.sku || 'N/A',
+      stock: item.availableQty ?? item.quantity ?? 0,
+      branchId: resolveBranchId(item),
+      warehouse: item.warehouse || 'N/A',
+      status: 'active',
+      batchName: item.batchName || 'N/A',
+      manufactureDate: item.manufactureDate ? new Date(item.manufactureDate).toLocaleDateString() : 'N/A',
+      expiryDate: item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A',
+      rawMfgDate: item.manufactureDate || '',
+      rawExpDate: item.expiryDate || '',
+    }));
+
+  const allProducts = normalizeInventoryRows(allInventoryData);
   const branchProducts = branchInventoryData.map((item: any) => ({
     id: item.productId || item.product?.id,
     name: item.product?.name || 'Unknown Product',
     sku: item.product?.sku || 'N/A',
     stock: item.availableQty ?? item.quantity ?? 0,
+    branchId: resolveBranchId(item),
     warehouse: item.warehouse || 'N/A',
     status: 'active',
     batchName: item.batchName || 'N/A',
@@ -51,6 +83,20 @@ export default function InventoryView({
     rawExpDate: item.expiryDate || '',
   }));
   const viewProducts = branchProducts;
+  const modalProducts = useMemo(() => {
+    if (!formBranchId) return [];
+    return allProducts.filter((p: any) => String(p.branchId || '') === formBranchId);
+  }, [allProducts, formBranchId]);
+  const searchableModalProducts = useMemo(() => {
+    if (!formBranchId) return [];
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return modalProducts.slice(0, 50);
+    return modalProducts
+      .filter((p: any) =>
+        p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+      )
+      .slice(0, 50);
+  }, [formBranchId, modalProducts, productQuery]);
 
   // Helper functions
   const getStatus = (stock: number) => {
@@ -98,15 +144,18 @@ export default function InventoryView({
     };
   }, [branchProducts]);
 
-  const selectedProduct = viewProducts.find((p: any) => p.id === parseInt(formProductId));
-
-  React.useEffect(() => {
-    if (!selectedBranch && activeBranches.length > 0) {
-      setSelectedBranch(String(activeBranches[0].id));
-    }
-  }, [selectedBranch, activeBranches]);
+  const selectedProduct = modalProducts.find((p: any) => p.id === parseInt(formProductId));
 
   const handleFormSubmit = async () => {
+    if (!formBranchId) {
+      toast.error('Please select a branch first');
+      return;
+    }
+    if (!formProductId) {
+      toast.error('Please search and select a product first');
+      return;
+    }
+
     const productId = parseInt(formProductId);
     const enteredValue = parseInt(formStockValue);
 
@@ -127,7 +176,7 @@ export default function InventoryView({
         productId,
         quantity: quantityChange,
         type: 'ADJUSTMENT',
-        warehouseId: Number(selectedBranch),
+        warehouseId: Number(formBranchId),
         notes: formMode === 'set' ? 'Manual set stock from inventory dashboard' : 'Manual add stock from inventory dashboard',
         ...(formMode === 'add' && quantityChange > 0
           ? {
@@ -149,12 +198,10 @@ export default function InventoryView({
   };
 
   const openAddModal = () => {
-    if (viewProducts.length === 0) {
-      toast.error('No products available in the selected branch');
-      return;
-    }
-    setFormProductId(viewProducts[0]?.id.toString() || '1');
-    setFormBranchId(selectedBranch);
+    setFormBranchId(selectedBranch || '');
+    setFormProductId('');
+    setProductQuery('');
+    setShowProductDropdown(false);
     setFormStockValue('');
     setFormMode('set');
     setBatchName('');
@@ -164,15 +211,39 @@ export default function InventoryView({
   };
 
   React.useEffect(() => {
-    if (viewProducts.length === 0) {
-      setFormProductId('1');
+    if (!formBranchId) {
+      setFormProductId('');
       return;
     }
-    const exists = viewProducts.some((p: any) => String(p.id) === formProductId);
-    if (!exists) {
-      setFormProductId(String(viewProducts[0].id));
+    if (modalProducts.length === 0) {
+      setFormProductId('');
+      return;
     }
-  }, [formProductId, viewProducts]);
+    if (!formProductId) {
+      return;
+    }
+    const exists = modalProducts.some((p: any) => String(p.id) === formProductId);
+    if (!exists) {
+      setFormProductId('');
+      setProductQuery('');
+    }
+  }, [formBranchId, formProductId, modalProducts]);
+
+  React.useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (!productSearchRef.current?.contains(target)) {
+        setShowProductDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col gap-4">
@@ -183,7 +254,10 @@ export default function InventoryView({
             Inventory Management
           </div>
           <div className="mt-1 text-[13px]" style={{ color: Theme.mutedFg }}>
-            {branches.find((b) => b.id === Number(selectedBranch))?.name || 'N/A'} · Live stock synced from inventory API
+            {(selectedBranch
+              ? branches.find((b) => b.id === Number(selectedBranch))?.name
+              : 'All Branches') || 'N/A'}{' '}
+            · Live stock synced from inventory API
           </div>
         </div>
 
@@ -244,6 +318,7 @@ export default function InventoryView({
             className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
             style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
           >
+            <option value="">All Branches</option>
             {activeBranches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -251,7 +326,7 @@ export default function InventoryView({
             ))}
           </select>
 
-          <Btn onClick={openAddModal} disabled={viewProducts.length === 0}>
+          <Btn onClick={openAddModal}>
             + Add Stock
           </Btn>
         </div>
@@ -433,6 +508,9 @@ export default function InventoryView({
                         <button
                           onClick={() => {
                             setFormProductId(p.id.toString());
+                            setFormBranchId(selectedBranch || String(p.branchId || ''));
+                            setProductQuery(`${p.name} (${p.sku})`);
+                            setShowProductDropdown(false);
                             setFormMode('set');
                             setFormStockValue(String(p.stock ?? 0));
                             setBatchName(p.batchName !== 'N/A' ? p.batchName : '');
@@ -471,7 +549,7 @@ export default function InventoryView({
           onClick={() => setModalOpen(false)}
         >
           <div
-            className="max-h-[90vh] w-[90%] max-w-[500px] overflow-y-auto"
+            className="max-h-[92vh] w-[94%] max-w-[720px] overflow-y-auto"
             onClick={(e: any) => e.stopPropagation()}
           >
             <Card>
@@ -499,20 +577,55 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    Select Product
+                    Search Product
                   </label>
-                  <select
-                    value={formProductId}
-                    onChange={(e) => setFormProductId(e.target.value)}
-                    className="w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
-                    style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
-                  >
-                    {viewProducts.map((p: any) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={productSearchRef}>
+                    <input
+                      value={productQuery}
+                      onChange={(e) => {
+                        setProductQuery(e.target.value);
+                        setFormProductId('');
+                        setShowProductDropdown(true);
+                      }}
+                      onFocus={() => {
+                        if (formBranchId) setShowProductDropdown(true);
+                      }}
+                      disabled={!formBranchId}
+                      placeholder={formBranchId ? 'Search by product name or SKU...' : 'Select branch first'}
+                      className="w-full rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
+                      style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                    />
+
+                    {showProductDropdown && formBranchId && (
+                      <div
+                        className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border bg-white"
+                        style={{ borderColor: Theme.border, boxShadow: '0 8px 20px rgba(0,0,0,0.08)' }}
+                      >
+                        {searchableModalProducts.length === 0 ? (
+                          <div className="px-3 py-2 text-xs" style={{ color: Theme.mutedFg }}>
+                            No products found for this branch.
+                          </div>
+                        ) : (
+                          searchableModalProducts.map((p: any) => (
+                            <button
+                              key={`${p.id}-${p.branchId || 'na'}`}
+                              type="button"
+                              onClick={() => {
+                                setFormProductId(String(p.id));
+                                setProductQuery(`${p.name} (${p.sku})`);
+                                setShowProductDropdown(false);
+                              }}
+                              className="w-full cursor-pointer border-0 px-3 py-2 text-left text-[13px]"
+                              style={{ background: '#fff', color: Theme.fg }}
+                            >
+                              <div className="font-semibold">{p.name}</div>
+                              <div className="text-[11px]" style={{ color: Theme.mutedFg }}>SKU: {p.sku}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label
@@ -523,11 +636,17 @@ export default function InventoryView({
                   </label>
                   <select
                     value={formBranchId}
-                    onChange={() => undefined}
-                    disabled
+                    onChange={(e) => {
+                      const nextBranchId = e.target.value;
+                      setFormBranchId(nextBranchId);
+                      setFormProductId('');
+                      setProductQuery('');
+                      setShowProductDropdown(false);
+                    }}
                     className="w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
                     style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
                   >
+                    <option value="">Select Branch</option>
                     {activeBranches.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.name}

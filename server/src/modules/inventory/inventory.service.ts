@@ -50,6 +50,7 @@ export class InventoryService {
         availableQty: inv.quantity - inv.reservedQty,
         lowStockThreshold: inv.lowStockThreshold,
         reorderPoint: inv.reorderPoint,
+        warehouseId: inv.warehouseId,
         warehouse: inv.branch?.name || 'N/A',
         lastCountedAt: inv.lastCountedAt,
       })),

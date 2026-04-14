@@ -50,6 +50,22 @@ const decodeAccessToken = (token: string): AccessTokenClaims => {
   return JSON.parse(decoded) as AccessTokenClaims;
 };
 
+export const getAccessTokenClaims = (token?: string | null): AccessTokenClaims | null => {
+  if (!token) {
+    return null;
+  }
+
+  try {
+    return decodeAccessToken(token);
+  } catch {
+    return null;
+  }
+};
+
+export const getRoleFromAccessToken = (token?: string | null): string | null => {
+  return getAccessTokenClaims(token)?.role ?? null;
+};
+
 const getSetCookieHeaders = (headers: Headers): string[] => {
   const withGetSetCookie = headers as Headers & { getSetCookie?: () => string[] };
   if (typeof withGetSetCookie.getSetCookie === 'function') {
@@ -228,8 +244,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user = {
         ...session.user,
         id: String(token.userId || token.sub || ''),
-        role: typeof token.role === 'string' ? token.role : '',
-        typeId: typeof token.typeId === 'number' ? token.typeId : undefined,
       };
 
       session.accessToken = typeof token.accessToken === 'string' ? token.accessToken : undefined;

@@ -146,8 +146,18 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
   const { isMobile } = useResponsive();
   const [saved, setSaved] = useState(false);
   const [filterBranchId, setFilterBranchId] = useState('');
+  const [productCategoryBranchId, setProductCategoryBranchId] = useState('');
   
   const { data: apiCategories = [], isLoading: isLoadingCats } = useListCategories({ includeInactive: true }); // Always fetch all for UI control
+  const { data: productCategories = [], isLoading: isLoadingProductCategories } = useListCategories(
+    productCategoryBranchId
+      ? { includeInactive: true, branchId: Number(productCategoryBranchId) }
+      : undefined,
+    {
+      enabled: !!productCategoryBranchId,
+      queryKey: ['categories', 'list', 'product-form', { branchId: productCategoryBranchId, includeInactive: true }],
+    }
+  );
   const { data: apiProducts = [], isLoading: isLoadingProducts } = useListProducts(
     { 
       limit: 100, 
@@ -201,6 +211,20 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     description: '',
     image: '',
   });
+
+  React.useEffect(() => {
+    if (!productForm.branchId && productForm.categoryId) {
+      setProductForm((prev) => ({ ...prev, categoryId: '' }));
+    }
+  }, [productForm.branchId, productForm.categoryId]);
+
+  React.useEffect(() => {
+    if (!productForm.categoryId || productCategories.length === 0) return;
+    const selectedCategoryExists = productCategories.some((c: any) => String(c.id) === productForm.categoryId);
+    if (!selectedCategoryExists) {
+      setProductForm((prev) => ({ ...prev, categoryId: '' }));
+    }
+  }, [productCategories, productForm.categoryId]);
 
   const handleAddCategory = async () => {
     if (!catForm.name || !catForm.branchId) {
@@ -393,6 +417,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                 variant="primary"
                 size="sm"
                 onClick={() => {
+                  setProductCategoryBranchId(filterBranchId);
                   setProductForm({
                     name: '',
                     sku: '',
@@ -446,14 +471,26 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                     <select
                       className={selectClass}
                       value={productForm.categoryId}
+                      disabled={!productForm.branchId || isLoadingProductCategories}
                       onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
                     >
-                      <option value="">Select Category</option>
-                      {categories.map((c) => (
+                      <option value="">
+                        {!productForm.branchId
+                          ? 'Select Branch First'
+                          : isLoadingProductCategories
+                            ? 'Loading categories...'
+                            : 'Select Category'}
+                      </option>
+                      {productCategories.map((c: any) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>
                       ))}
+                      {productForm.branchId && !isLoadingProductCategories && productCategories.length === 0 && (
+                        <option value="" disabled>
+                          No categories for selected branch
+                        </option>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -461,7 +498,11 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                     <select
                       className={selectClass}
                       value={productForm.branchId}
-                      onChange={(e) => setProductForm({ ...productForm, branchId: e.target.value })}
+                      onChange={(e) => {
+                        const nextBranchId = e.target.value;
+                        setProductCategoryBranchId(nextBranchId);
+                        setProductForm({ ...productForm, branchId: nextBranchId, categoryId: '' });
+                      }}
                     >
                       <option value="">Select Branch</option>
                       {branches.map((b) => (
@@ -520,6 +561,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                     onClick={() => {
                       setShowAddProduct(false);
                       setEditProduct(null);
+                      setProductCategoryBranchId('');
                     }}
                   >
                     Cancel
@@ -577,11 +619,13 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                       variant="ghost"
                       size="sm"
                       onClick={() => {
+                        const editBranchId = p.inventories?.[0]?.warehouseId?.toString() || '';
+                        setProductCategoryBranchId(editBranchId);
                         setProductForm({
                           name: p.name,
                           sku: p.sku,
                           categoryId: p.categoryId?.toString() || '',
-                          branchId: p.inventories?.[0]?.warehouseId?.toString() || '',
+                          branchId: editBranchId,
                           price: p.price?.toString() || '',
                           costPrice: p.costPrice?.toString() || '',
                           stock: '',
