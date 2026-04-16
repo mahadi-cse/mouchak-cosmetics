@@ -45,8 +45,11 @@ export const homepageAPI = {
   },
 
   updateStats: async (data: Partial<HomepageStats>): Promise<HomepageStats> => {
-    const response = await apiClient.put<HomepageStats>("/homepage/stats", data);
-    return response.data;
+    const response = await apiClient.put<{ message?: string; data?: HomepageStats } | HomepageStats>("/homepage/stats", data);
+    if (typeof response.data === 'object' && response.data !== null && 'data' in response.data && response.data.data) {
+      return response.data.data;
+    }
+    return response.data as HomepageStats;
   },
 
   // Slider methods

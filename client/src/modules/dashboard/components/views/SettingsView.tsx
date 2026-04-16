@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, Btn, Badge } from '../Primitives';
 import { SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
-import { INITIAL_PRODUCTS } from '@/modules/dashboard/data/mockData';
 import {
   useListCategories,
   useCreateCategory,
@@ -22,6 +21,8 @@ import {
 } from '@/modules/products/queries';
 import { useListBranches } from '@/modules/branches/queries';
 import { toast } from 'react-hot-toast';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { homepageAPI, useHomepageStats, useSiteSettings } from '@/modules/homepage';
 
 interface SettingsViewProps {
   products: any[];
@@ -29,7 +30,82 @@ interface SettingsViewProps {
   setTab: (tab: string) => void;
 }
 
-const STAFF_LIST = [
+type StaffStatus = 'active' | 'inactive';
+
+interface StaffMember {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  branch: string;
+  status: StaffStatus;
+}
+
+interface SettingsState {
+  storeName: string;
+  currency: string;
+  taxRate: number;
+  timezone: string;
+  lowStockThreshold: number;
+  autoReserve: boolean;
+  barcodeEnabled: boolean;
+  sslStoreId: string;
+  sslStoreSecret: string;
+  refundDays: number;
+  defaultShipping: number;
+  freeShippingOver: number;
+  deliveryEstimate: string;
+  emailOrders: boolean;
+  emailStock: boolean;
+  emailNewCustomer: boolean;
+  smsOrders: boolean;
+  smsDelivery: boolean;
+  storeLogo: string;
+  acceptedPayments: {
+    bkash: boolean;
+    nagad: boolean;
+    card: boolean;
+    cash: boolean;
+  };
+}
+
+interface Promotion {
+  id: number;
+  label: string;
+  active: boolean;
+  pct: number;
+  ends: string;
+  banner: string;
+}
+
+const DASHBOARD_SETTINGS_KEY = 'mouchak.dashboard.settings.v1';
+const DASHBOARD_STAFF_KEY = 'mouchak.dashboard.staff.v1';
+const DASHBOARD_PROMOTIONS_KEY = 'mouchak.dashboard.promotions.v1';
+
+const DEFAULT_SETTINGS: SettingsState = {
+  storeName: 'Mouchak Cosmetics',
+  currency: 'BDT',
+  taxRate: 15,
+  timezone: 'Asia/Dhaka',
+  lowStockThreshold: 15,
+  autoReserve: true,
+  barcodeEnabled: true,
+  sslStoreId: 'mouchak_store_01',
+  sslStoreSecret: '',
+  refundDays: 7,
+  defaultShipping: 80,
+  freeShippingOver: 1000,
+  deliveryEstimate: '3-5 business days',
+  emailOrders: true,
+  emailStock: true,
+  emailNewCustomer: false,
+  smsOrders: false,
+  smsDelivery: true,
+  storeLogo: '',
+  acceptedPayments: { bkash: true, nagad: true, card: true, cash: true },
+};
+
+const STAFF_LIST: StaffMember[] = [
   {
     id: 1,
     name: 'Karim Hossain',
@@ -56,46 +132,22 @@ const STAFF_LIST = [
   },
 ];
 
-const INITIAL_CATEGORIES = [
+const DEFAULT_PROMOTIONS: Promotion[] = [
   {
     id: 1,
-    name: 'Skincare',
-    slug: 'skincare',
-    desc: 'Serums, moisturisers, cleansers',
+    label: 'Eid Flash Sale',
     active: true,
-    products: 48,
+    pct: 20,
+    ends: 'Apr 15',
+    banner: 'Eid Special - 20% off sitewide!',
   },
   {
     id: 2,
-    name: 'Lipstick',
-    slug: 'lipstick',
-    desc: 'Matte, gloss, liquid lip colours',
-    active: true,
-    products: 34,
-  },
-  {
-    id: 3,
-    name: 'Foundation',
-    slug: 'foundation',
-    desc: 'Liquid, powder, cushion bases',
-    active: true,
-    products: 22,
-  },
-  {
-    id: 4,
-    name: 'Eyewear',
-    slug: 'eyewear',
-    desc: 'Palettes, liner, mascara',
-    active: true,
-    products: 17,
-  },
-  {
-    id: 5,
-    name: 'Fragrance',
-    slug: 'fragrance',
-    desc: 'Perfumes and body mists',
+    label: 'Skincare Week',
     active: false,
-    products: 9,
+    pct: 15,
+    ends: 'Apr 20',
+    banner: 'Skincare Week - 15% off all skincare',
   },
 ];
 
@@ -142,13 +194,23 @@ const categoryEmojis: any = {
   Fragrance: '🌸',
 };
 
-export default function SettingsView({ products, tab, setTab }: SettingsViewProps) {
+export default function SettingsView({ products: _products, tab, setTab }: SettingsViewProps) {
   const { isMobile } = useResponsive();
+  const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [filterBranchId, setFilterBranchId] = useState('');
   const [productCategoryBranchId, setProductCategoryBranchId] = useState('');
+  const [isHydrated, setIsHydrated] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+
+  const { data: siteSettingsData } = useSiteSettings();
+  const { data: homepageStatsData } = useHomepageStats();
   
-  const { data: apiCategories = [], isLoading: isLoadingCats } = useListCategories({ includeInactive: true }); // Always fetch all for UI control
+  const { data: apiCategories = [], isLoading: isLoadingCats } = useListCategories(
+    filterBranchId ? { includeInactive: true, branchId: Number(filterBranchId) } : { includeInactive: true },
+    { queryKey: ['categories', 'list', 'settings', { branchId: filterBranchId || null, includeInactive: true }] }
+  );
   const { data: productCategories = [], isLoading: isLoadingProductCategories } = useListCategories(
     productCategoryBranchId
       ? { includeInactive: true, branchId: Number(productCategoryBranchId) }
@@ -163,10 +225,10 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
       limit: 100, 
       includeInactive: true, // Display everything in settings
       ...(filterBranchId ? { branchId: Number(filterBranchId) } : {}) 
-    },
+    } as any,
     { queryKey: ['products', 'list', { branchId: filterBranchId, includeInactive: true }] }
   );
-  const { data: branches = [], isLoading: isLoadingBranches } = useListBranches();
+  const { data: branches = [] } = useListBranches();
 
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
@@ -177,9 +239,24 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const updateProductStatus = useUpdateProductStatus();
+  const updateSiteSettingsMutation = useMutation({
+    mutationFn: (data: Partial<{ storeName: string }>) => homepageAPI.updateSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['homepage', 'settings'] });
+    },
+  });
+  const updateHomepageStatsMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => homepageAPI.updateStats(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['homepage', 'stats'] });
+    },
+  });
 
   const [categories, setCategories] = useState<any[]>([]);
   const [productsList, setProductsList] = useState<any[]>([]);
+  const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
+  const [staff, setStaff] = useState<StaffMember[]>(STAFF_LIST);
+  const [promotions, setPromotions] = useState<Promotion[]>(DEFAULT_PROMOTIONS);
 
   React.useEffect(() => {
     if (apiCategories) setCategories(apiCategories);
@@ -189,12 +266,21 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     if (apiProducts) setProductsList(apiProducts);
   }, [apiProducts]);
 
-  const [staff, setStaff] = useState(STAFF_LIST);
   const [editCat, setEditCat] = useState<number | null>(null);
   const [showAddCat, setShowAddCat] = useState(false);
   const [catForm, setCatForm] = useState({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: '' });
   const [editingStaff, setEditingStaff] = useState<number | null>(null);
-  const [staffForm, setStaffForm] = useState({ role: '', branch: '', status: 'active' });
+  const [showInviteStaff, setShowInviteStaff] = useState(false);
+  const [staffForm, setStaffForm] = useState({ name: '', email: '', role: 'Staff', branch: '', status: 'active' as StaffStatus });
+  const [showPromotionEditor, setShowPromotionEditor] = useState(false);
+  const [editingPromotionId, setEditingPromotionId] = useState<number | null>(null);
+  const [promotionForm, setPromotionForm] = useState({
+    label: '',
+    pct: '',
+    ends: '',
+    banner: '',
+    active: true,
+  });
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editProduct, setEditProduct] = useState<number | null>(null);
@@ -226,6 +312,87 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
     }
   }, [productCategories, productForm.categoryId]);
 
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const storedSettings = window.localStorage.getItem(DASHBOARD_SETTINGS_KEY);
+      if (storedSettings) {
+        const parsed = JSON.parse(storedSettings) as Partial<SettingsState>;
+        setSettings((prev) => ({ ...prev, ...parsed }));
+      }
+
+      const storedStaff = window.localStorage.getItem(DASHBOARD_STAFF_KEY);
+      if (storedStaff) {
+        const parsed = JSON.parse(storedStaff) as StaffMember[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStaff(parsed);
+        }
+      }
+
+      const storedPromotions = window.localStorage.getItem(DASHBOARD_PROMOTIONS_KEY);
+      if (storedPromotions) {
+        const parsed = JSON.parse(storedPromotions) as Promotion[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPromotions(parsed);
+        }
+      }
+    } catch {
+      toast.error('Unable to read saved settings from browser storage');
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!siteSettingsData && !homepageStatsData) return;
+
+    setSettings((prev) => ({
+      ...prev,
+      ...(siteSettingsData ? { storeName: siteSettingsData.storeName || prev.storeName } : {}),
+      ...(homepageStatsData
+        ? {
+            freeShippingOver: homepageStatsData.minFreeDeliveryAmount ?? prev.freeShippingOver,
+            deliveryEstimate: homepageStatsData.deliveryTimeframe || prev.deliveryEstimate,
+          }
+        : {}),
+    }));
+
+    if (homepageStatsData) {
+      setPromotions((prev) => {
+        const homepagePromo: Promotion = {
+          id: 1,
+          label: prev.find((item) => item.id === 1)?.label || 'Homepage Offer',
+          active: Boolean(homepageStatsData.isOfferActive),
+          pct: Number(homepageStatsData.currentOfferPercentage || 0),
+          ends: prev.find((item) => item.id === 1)?.ends || '',
+          banner: homepageStatsData.currentOfferText || prev.find((item) => item.id === 1)?.banner || '',
+        };
+
+        if (prev.some((item) => item.id === 1)) {
+          return prev.map((item) => (item.id === 1 ? homepagePromo : item));
+        }
+
+        return [homepagePromo, ...prev];
+      });
+    }
+  }, [homepageStatsData, siteSettingsData]);
+
+  React.useEffect(() => {
+    if (!isHydrated || typeof window === 'undefined') return;
+    window.localStorage.setItem(DASHBOARD_SETTINGS_KEY, JSON.stringify(settings));
+  }, [isHydrated, settings]);
+
+  React.useEffect(() => {
+    if (!isHydrated || typeof window === 'undefined') return;
+    window.localStorage.setItem(DASHBOARD_STAFF_KEY, JSON.stringify(staff));
+  }, [isHydrated, staff]);
+
+  React.useEffect(() => {
+    if (!isHydrated || typeof window === 'undefined') return;
+    window.localStorage.setItem(DASHBOARD_PROMOTIONS_KEY, JSON.stringify(promotions));
+  }, [isHydrated, promotions]);
+
   const handleAddCategory = async () => {
     if (!catForm.name || !catForm.branchId) {
       return toast.error('Category name and Branch are required');
@@ -240,7 +407,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
             isActive: catForm.active,
             imageUrl: catForm.imageUrl,
             branchId: Number(catForm.branchId),
-          },
+          } as any,
         });
         toast.success('Category updated');
       } else {
@@ -250,7 +417,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
           isActive: catForm.active,
           imageUrl: catForm.imageUrl,
           branchId: Number(catForm.branchId),
-        });
+        } as any);
         toast.success('Category created');
       }
       setShowAddCat(false);
@@ -301,7 +468,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
             branchId: Number(productForm.branchId),
             description: productForm.description,
             images,
-          },
+          } as any,
         });
         toast.success('Product updated successfully');
       } else {
@@ -314,7 +481,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
           branchId: Number(productForm.branchId),
           description: productForm.description,
           images,
-        });
+        } as any);
         toast.success('Product created successfully');
       }
 
@@ -355,30 +522,293 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
       }
     }
   };
-  const [settings, setSettings] = useState({
-    storeName: 'Mouchak Cosmetics',
-    currency: 'BDT',
-    taxRate: 15,
-    timezone: 'Asia/Dhaka',
-    lowStockThreshold: 15,
-    autoReserve: true,
-    barcodeEnabled: true,
-    sslStoreId: 'mouchak_store_01',
-    refundDays: 7,
-    defaultShipping: 80,
-    freeShippingOver: 1000,
-    deliveryEstimate: '3-5 business days',
-    emailOrders: true,
-    emailStock: true,
-    emailNewCustomer: false,
-    smsOrders: false,
-    smsDelivery: true,
-    acceptedPayments: { bkash: true, nagad: true, card: true, cash: true },
-  });
-
-  const handleSave = () => {
+  const triggerSavedIndicator = () => {
     setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    window.setTimeout(() => setSaved(false), 2500);
+  };
+
+  const activePromotion = useMemo(
+    () => promotions.find((promotion) => promotion.active) ?? null,
+    [promotions]
+  );
+
+  const availableBranchNames = useMemo(() => {
+    const dynamicBranchNames = branches.map((branch: any) => branch.name);
+    if (dynamicBranchNames.length > 0) return dynamicBranchNames;
+    return ['Dhaka Main', 'Chittagong', 'Sylhet Outlet'];
+  }, [branches]);
+
+  const openProductEditor = (product: any) => {
+    const editBranchId = product.inventories?.[0]?.warehouseId?.toString() || '';
+    setProductCategoryBranchId(editBranchId);
+    setProductForm({
+      name: product.name,
+      sku: product.sku,
+      categoryId: product.categoryId?.toString() || '',
+      branchId: editBranchId,
+      price: product.price?.toString() || '',
+      costPrice: product.costPrice?.toString() || '',
+      stock: '',
+      description: product.description || '',
+      image: product.images?.[0] || '',
+    });
+    setEditProduct(product.id);
+    setShowAddProduct(true);
+  };
+
+  const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be under 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSettings((prev) => ({ ...prev, storeLogo: String(reader.result || '') }));
+      toast.success('Logo selected. Save to apply.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveStaffMember = () => {
+    if (!staffForm.name.trim() || !staffForm.email.trim() || !staffForm.branch.trim()) {
+      toast.error('Name, email and branch are required');
+      return;
+    }
+
+    if (editingStaff !== null) {
+      setStaff((prev) =>
+        prev.map((item) =>
+          item.id === editingStaff
+            ? {
+                ...item,
+                name: staffForm.name.trim(),
+                email: staffForm.email.trim(),
+                role: staffForm.role,
+                branch: staffForm.branch,
+                status: staffForm.status,
+              }
+            : item
+        )
+      );
+      toast.success('Staff member updated');
+    } else {
+      setStaff((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          name: staffForm.name.trim(),
+          email: staffForm.email.trim(),
+          role: staffForm.role,
+          branch: staffForm.branch,
+          status: staffForm.status,
+        },
+      ]);
+      toast.success('Staff member invited');
+    }
+
+    setEditingStaff(null);
+    setShowInviteStaff(false);
+    setStaffForm({ name: '', email: '', role: 'Staff', branch: '', status: 'active' });
+    triggerSavedIndicator();
+  };
+
+  const handleToggleStaffStatus = (id: number) => {
+    setStaff((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: item.status === 'active' ? 'inactive' : 'active',
+            }
+          : item
+      )
+    );
+    triggerSavedIndicator();
+  };
+
+  const handleDeleteStaff = (id: number) => {
+    if (!window.confirm('Remove this staff member from dashboard settings list?')) return;
+    setStaff((prev) => prev.filter((item) => item.id !== id));
+    triggerSavedIndicator();
+    toast.success('Staff member removed');
+  };
+
+  const openPromotionEditor = (promotion?: Promotion) => {
+    if (promotion) {
+      setEditingPromotionId(promotion.id);
+      setPromotionForm({
+        label: promotion.label,
+        pct: String(promotion.pct),
+        ends: promotion.ends,
+        banner: promotion.banner,
+        active: promotion.active,
+      });
+    } else {
+      setEditingPromotionId(null);
+      setPromotionForm({ label: '', pct: '', ends: '', banner: '', active: true });
+    }
+    setShowPromotionEditor(true);
+  };
+
+  const handleSavePromotion = () => {
+    if (!promotionForm.label.trim() || !promotionForm.banner.trim()) {
+      toast.error('Promotion label and banner text are required');
+      return;
+    }
+
+    const percentage = Number(promotionForm.pct);
+    if (!Number.isFinite(percentage) || percentage <= 0 || percentage > 95) {
+      toast.error('Discount percentage must be between 1 and 95');
+      return;
+    }
+
+    const draftPromotion: Promotion = {
+      id: editingPromotionId ?? Date.now(),
+      label: promotionForm.label.trim(),
+      pct: Math.round(percentage),
+      ends: promotionForm.ends.trim(),
+      banner: promotionForm.banner.trim(),
+      active: promotionForm.active,
+    };
+
+    setPromotions((prev) => {
+      let next =
+        editingPromotionId !== null
+          ? prev.map((item) => (item.id === editingPromotionId ? draftPromotion : item))
+          : [...prev, draftPromotion];
+
+      if (draftPromotion.active) {
+        next = next.map((item) =>
+          item.id === draftPromotion.id ? { ...item, active: true } : { ...item, active: false }
+        );
+      }
+
+      return next;
+    });
+
+    setShowPromotionEditor(false);
+    setEditingPromotionId(null);
+    triggerSavedIndicator();
+    toast.success('Promotion saved');
+  };
+
+  const handleTogglePromotionActive = (id: number) => {
+    setPromotions((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (!target) return prev;
+
+      const shouldActivate = !target.active;
+      return prev.map((item) => {
+        if (item.id === id) return { ...item, active: shouldActivate };
+        return shouldActivate ? { ...item, active: false } : item;
+      });
+    });
+    triggerSavedIndicator();
+  };
+
+  const handleResetCurrentTab = () => {
+    if (tab === 'general') {
+      setSettings((prev) => ({
+        ...prev,
+        storeName: siteSettingsData?.storeName || DEFAULT_SETTINGS.storeName,
+        currency: DEFAULT_SETTINGS.currency,
+        taxRate: DEFAULT_SETTINGS.taxRate,
+        timezone: DEFAULT_SETTINGS.timezone,
+        storeLogo: '',
+      }));
+    }
+
+    if (tab === 'payment') {
+      setSettings((prev) => ({
+        ...prev,
+        sslStoreId: DEFAULT_SETTINGS.sslStoreId,
+        sslStoreSecret: DEFAULT_SETTINGS.sslStoreSecret,
+        refundDays: DEFAULT_SETTINGS.refundDays,
+        acceptedPayments: DEFAULT_SETTINGS.acceptedPayments,
+      }));
+    }
+
+    if (tab === 'shipping') {
+      setSettings((prev) => ({
+        ...prev,
+        defaultShipping: DEFAULT_SETTINGS.defaultShipping,
+        freeShippingOver: homepageStatsData?.minFreeDeliveryAmount || DEFAULT_SETTINGS.freeShippingOver,
+        deliveryEstimate: homepageStatsData?.deliveryTimeframe || DEFAULT_SETTINGS.deliveryEstimate,
+      }));
+    }
+
+    if (tab === 'inventory') {
+      setSettings((prev) => ({
+        ...prev,
+        lowStockThreshold: DEFAULT_SETTINGS.lowStockThreshold,
+        autoReserve: DEFAULT_SETTINGS.autoReserve,
+        barcodeEnabled: DEFAULT_SETTINGS.barcodeEnabled,
+      }));
+    }
+
+    if (tab === 'notifications') {
+      setSettings((prev) => ({
+        ...prev,
+        emailOrders: DEFAULT_SETTINGS.emailOrders,
+        emailStock: DEFAULT_SETTINGS.emailStock,
+        emailNewCustomer: DEFAULT_SETTINGS.emailNewCustomer,
+        smsOrders: DEFAULT_SETTINGS.smsOrders,
+        smsDelivery: DEFAULT_SETTINGS.smsDelivery,
+      }));
+    }
+
+    if (tab === 'staff') {
+      setStaff(STAFF_LIST);
+    }
+
+    toast.success('Current tab reset');
+  };
+
+  const handleSave = async (targetTab: string = tab) => {
+    try {
+      setIsSaving(true);
+
+      if (targetTab === 'general') {
+        await updateSiteSettingsMutation.mutateAsync({
+          storeName: settings.storeName.trim() || DEFAULT_SETTINGS.storeName,
+        });
+      }
+
+      if (targetTab === 'shipping') {
+        await updateHomepageStatsMutation.mutateAsync({
+          minFreeDeliveryAmount: Number(settings.freeShippingOver) || 0,
+          deliveryTimeframe: settings.deliveryEstimate || DEFAULT_SETTINGS.deliveryEstimate,
+        });
+      }
+
+      if (targetTab === 'discounts') {
+        await updateHomepageStatsMutation.mutateAsync({
+          currentOfferText: activePromotion?.banner || '',
+          currentOfferPercentage: activePromotion?.pct || 0,
+          isOfferActive: Boolean(activePromotion),
+          minFreeDeliveryAmount: Number(settings.freeShippingOver) || 0,
+          deliveryTimeframe: settings.deliveryEstimate || DEFAULT_SETTINGS.deliveryEstimate,
+        });
+      }
+
+      if (targetTab === 'trending') {
+        toast.success('Featured products published');
+      } else if (targetTab === 'discounts') {
+        toast.success('Promotions published');
+      } else {
+        toast.success('Settings saved');
+      }
+
+      triggerSavedIndicator();
+    } catch {
+      toast.error('Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const currentLabel = SETTINGS_ITEMS.find((i) => i.id === tab)?.label || '';
@@ -566,7 +996,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                   >
                     Cancel
                   </Btn>
-                  <Btn variant="primary" size="sm" onClick={handleAddProduct} isLoading={createProduct.isPending || updateProduct.isPending}>
+                  <Btn variant="primary" size="sm" onClick={handleAddProduct}>
                     {editProduct !== null ? 'Save Changes' : 'Create Product'}
                   </Btn>
                 </div>
@@ -618,23 +1048,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                     <Btn
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        const editBranchId = p.inventories?.[0]?.warehouseId?.toString() || '';
-                        setProductCategoryBranchId(editBranchId);
-                        setProductForm({
-                          name: p.name,
-                          sku: p.sku,
-                          categoryId: p.categoryId?.toString() || '',
-                          branchId: editBranchId,
-                          price: p.price?.toString() || '',
-                          costPrice: p.costPrice?.toString() || '',
-                          stock: '',
-                          description: p.description || '',
-                          image: p.images?.[0] || '',
-                        });
-                        setEditProduct(p.id);
-                        setShowAddProduct(true);
-                      }}
+                      onClick={() => openProductEditor(p)}
                     >
                       Edit
                     </Btn>
@@ -789,7 +1203,6 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                   variant="primary"
                   size="sm"
                   onClick={handleAddCategory}
-                  isLoading={createCategory.isPending || updateCategory.isPending}
                 >
                   {editCat !== null ? 'Save Changes' : 'Create Category'}
                 </Btn>
@@ -931,14 +1344,32 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
           <div>
             <label className={labelClass}>Store Logo</label>
             <div
+              onClick={() => logoInputRef.current?.click()}
               className="cursor-pointer rounded-[10px] border-2 border-dashed border-border px-5 py-5 text-center"
               style={{ background: Theme.muted }}
             >
-              <div className="mb-1.5 text-2xl">🖼️</div>
+              {settings.storeLogo ? (
+                <img
+                  src={settings.storeLogo}
+                  alt="Store logo preview"
+                  className="mx-auto mb-2 h-16 w-16 rounded-lg object-cover"
+                />
+              ) : (
+                <div className="mb-1.5 text-2xl">🖼️</div>
+              )}
               <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
-                Click to upload logo · PNG or SVG · Max 2MB
+                {settings.storeLogo
+                  ? 'Click to replace logo · PNG or SVG · Max 2MB'
+                  : 'Click to upload logo · PNG or SVG · Max 2MB'}
               </div>
             </div>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/png,image/svg+xml,image/jpeg,image/webp"
+              onChange={handleLogoFileChange}
+              className="hidden"
+            />
           </div>
         </FormSection>
       </div>
@@ -968,7 +1399,13 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
           </div>
           <div>
             <label className={labelClass}>Store Signature (API Secret)</label>
-            <input type="password" defaultValue="*********************" className={inputClass} />
+            <input
+              type="password"
+              value={settings.sslStoreSecret}
+              onChange={(e) => setSettings({ ...settings, sslStoreSecret: e.target.value })}
+              className={inputClass}
+              placeholder="Enter API secret"
+            />
           </div>
         </FormSection>
         <FormSection title="Accepted Payment Methods">
@@ -1137,12 +1574,15 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
 
     staff: (
       <div>
-        {editingStaff !== null && (
+        {(editingStaff !== null || showInviteStaff) && (
           <div
             className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${
               isMobile ? 'items-end p-0' : 'items-center p-4'
             }`}
-            onClick={() => setEditingStaff(null)}
+            onClick={() => {
+              setEditingStaff(null);
+              setShowInviteStaff(false);
+            }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -1161,14 +1601,17 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
               >
                 <div>
                   <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
-                    Edit Staff Member
+                    {editingStaff !== null ? 'Edit Staff Member' : 'Invite Staff Member'}
                   </div>
                   <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>
-                    {staff.find((s) => s.id === editingStaff)?.name}
+                    {editingStaff !== null ? staff.find((s) => s.id === editingStaff)?.name : 'Add a new team member'}
                   </div>
                 </div>
                 <button
-                  onClick={() => setEditingStaff(null)}
+                  onClick={() => {
+                    setEditingStaff(null);
+                    setShowInviteStaff(false);
+                  }}
                   className="cursor-pointer border-none bg-transparent text-xl leading-none"
                   style={{ color: Theme.mutedFg }}
                 >
@@ -1177,6 +1620,25 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
               </div>
 
               <div className="flex flex-col gap-[18px] p-6">
+                <div>
+                  <label className={labelClass}>Name</label>
+                  <input
+                    value={staffForm.name}
+                    onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                    className={inputClass}
+                    placeholder="Staff full name"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Email</label>
+                  <input
+                    type="email"
+                    value={staffForm.email}
+                    onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                    className={inputClass}
+                    placeholder="staff@company.com"
+                  />
+                </div>
                 <div>
                   <label className={labelClass}>Role</label>
                   <select
@@ -1196,16 +1658,21 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                     onChange={(e) => setStaffForm({ ...staffForm, branch: e.target.value })}
                     className={selectClass}
                   >
-                    <option value="Dhaka Main">Dhaka Main</option>
-                    <option value="Chittagong">Chittagong</option>
-                    <option value="Sylhet Outlet">Sylhet Outlet</option>
+                    <option value="">Select Branch</option>
+                    {availableBranchNames.map((branchName) => (
+                      <option key={branchName} value={branchName}>
+                        {branchName}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className={labelClass}>Status</label>
                   <select
                     value={staffForm.status}
-                    onChange={(e) => setStaffForm({ ...staffForm, status: e.target.value })}
+                    onChange={(e) =>
+                      setStaffForm({ ...staffForm, status: e.target.value as StaffStatus })
+                    }
                     className={selectClass}
                   >
                     <option value="active">Active</option>
@@ -1213,30 +1680,17 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                   </select>
                 </div>
                 <div className="flex justify-end gap-2.5 pt-2">
-                  <Btn variant="ghost" onClick={() => setEditingStaff(null)}>
-                    Cancel
-                  </Btn>
                   <Btn
-                    variant="primary"
+                    variant="ghost"
                     onClick={() => {
-                      setStaff((prev) =>
-                        prev.map((s) =>
-                          s.id === editingStaff
-                            ? {
-                                ...s,
-                                role: staffForm.role,
-                                branch: staffForm.branch,
-                                status: staffForm.status,
-                              }
-                            : s
-                        )
-                      );
                       setEditingStaff(null);
-                      setSaved(true);
-                      setTimeout(() => setSaved(false), 2500);
+                      setShowInviteStaff(false);
                     }}
                   >
-                    Save Changes
+                    Cancel
+                  </Btn>
+                  <Btn variant="primary" onClick={handleSaveStaffMember}>
+                    {editingStaff !== null ? 'Save Changes' : 'Invite Staff'}
                   </Btn>
                 </div>
               </div>
@@ -1278,7 +1732,14 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setStaffForm({ role: s.role, branch: s.branch, status: s.status });
+                      setStaffForm({
+                        name: s.name,
+                        email: s.email,
+                        role: s.role,
+                        branch: s.branch,
+                        status: s.status,
+                      });
+                      setShowInviteStaff(false);
                       setEditingStaff(s.id);
                     }}
                   >
@@ -1287,26 +1748,32 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                   <Btn
                     variant="ghost"
                     size="sm"
-                    onClick={() =>
-                      setStaff((prev) =>
-                        prev.map((item) =>
-                          item.id === s.id
-                            ? {
-                                ...item,
-                                status: item.status === 'active' ? 'inactive' : 'active',
-                              }
-                            : item
-                        )
-                      )
-                    }
+                    onClick={() => handleToggleStaffStatus(s.id)}
                   >
                     {s.status === 'active' ? 'Deactivate' : 'Activate'}
+                  </Btn>
+                  <Btn variant="ghost" size="sm" onClick={() => handleDeleteStaff(s.id)}>
+                    Remove
                   </Btn>
                 </div>
               </div>
             ))}
           </div>
-          <Btn variant="primary" size="sm">
+          <Btn
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setStaffForm({
+                name: '',
+                email: '',
+                role: 'Staff',
+                branch: availableBranchNames[0] || '',
+                status: 'active',
+              });
+              setEditingStaff(null);
+              setShowInviteStaff(true);
+            }}
+          >
             + Invite Staff Member
           </Btn>
         </FormSection>
@@ -1339,6 +1806,7 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                           id: p.id,
                           data: { isFeatured: e.target.checked },
                         });
+                        triggerSavedIndicator();
                         toast.success('Product updated');
                       } catch {
                         toast.error('Failed to update product');
@@ -1360,7 +1828,8 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        // Implement edit product if needed
+                        setTab('products');
+                        openProductEditor(p);
                       }}
                     >
                       Edit
@@ -1379,26 +1848,99 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
 
     discounts: (
       <div>
+        {showPromotionEditor && (
+          <div
+            className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${
+              isMobile ? 'items-end p-0' : 'items-center p-4'
+            }`}
+            onClick={() => setShowPromotionEditor(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={`max-h-[92vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${
+                isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'
+              }`}
+            >
+              <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5">
+                <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
+                  {editingPromotionId !== null ? 'Edit Promotion' : 'Create Promotion'}
+                </div>
+                <button
+                  onClick={() => setShowPromotionEditor(false)}
+                  className="cursor-pointer border-none bg-transparent text-xl leading-none"
+                  style={{ color: Theme.mutedFg }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-4 p-6">
+                <div>
+                  <label className={labelClass}>Promotion Name *</label>
+                  <input
+                    className={inputClass}
+                    value={promotionForm.label}
+                    onChange={(e) => setPromotionForm((prev) => ({ ...prev, label: e.target.value }))}
+                    placeholder="e.g. Eid Flash Sale"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Discount Percentage *</label>
+                  <input
+                    type="number"
+                    className={inputClass}
+                    min={1}
+                    max={95}
+                    value={promotionForm.pct}
+                    onChange={(e) => setPromotionForm((prev) => ({ ...prev, pct: e.target.value }))}
+                    placeholder="e.g. 20"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Banner Text *</label>
+                  <textarea
+                    className={`${inputClass} h-20 resize-y`}
+                    value={promotionForm.banner}
+                    onChange={(e) => setPromotionForm((prev) => ({ ...prev, banner: e.target.value }))}
+                    placeholder="e.g. Eid Special - 20% off sitewide!"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Offer End Date (label)</label>
+                  <input
+                    className={inputClass}
+                    value={promotionForm.ends}
+                    onChange={(e) => setPromotionForm((prev) => ({ ...prev, ends: e.target.value }))}
+                    placeholder="e.g. Apr 30"
+                  />
+                </div>
+                <label className="flex cursor-pointer items-center gap-2 text-[13px]">
+                  <input
+                    type="checkbox"
+                    checked={promotionForm.active}
+                    onChange={(e) =>
+                      setPromotionForm((prev) => ({ ...prev, active: e.target.checked }))
+                    }
+                    style={{ accentColor: Theme.primary }}
+                  />
+                  Mark as active offer
+                </label>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Btn variant="ghost" onClick={() => setShowPromotionEditor(false)}>
+                    Cancel
+                  </Btn>
+                  <Btn variant="primary" onClick={handleSavePromotion}>
+                    Save Promotion
+                  </Btn>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <FormSection title="Active Promotions">
           <div className="flex flex-col gap-3">
-            {[
-              {
-                id: 1,
-                label: 'Eid Flash Sale',
-                active: true,
-                pct: 20,
-                ends: 'Apr 15',
-                banner: '🎉 Eid Special — 20% off sitewide!',
-              },
-              {
-                id: 2,
-                label: 'Skincare Week',
-                active: false,
-                pct: 15,
-                ends: 'Apr 20',
-                banner: '✨ Skincare Week — 15% off all skincare',
-              },
-            ].map((d) => (
+            {promotions.map((d) => (
               <div
                 key={d.id}
                 className="rounded-xl border-[1.5px] p-4"
@@ -1421,19 +1963,30 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                   </div>
                 </div>
                 <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
-                  {d.banner} · Ends {d.ends}
+                  {d.banner}
+                  {d.ends ? ` · Ends ${d.ends}` : ''}
                 </div>
                 <div className="flex gap-2">
-                  <Btn variant="ghost" size="sm">
+                  <Btn variant="ghost" size="sm" onClick={() => handleTogglePromotionActive(d.id)}>
                     {d.active ? 'Pause' : 'Activate'}
                   </Btn>
-                  <Btn variant="ghost" size="sm">
+                  <Btn variant="ghost" size="sm" onClick={() => openPromotionEditor(d)}>
                     Edit
+                  </Btn>
+                  <Btn
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setPromotions((prev) => prev.filter((item) => item.id !== d.id));
+                      triggerSavedIndicator();
+                    }}
+                  >
+                    Remove
                   </Btn>
                 </div>
               </div>
             ))}
-            <Btn variant="secondary" size="sm">
+            <Btn variant="secondary" size="sm" onClick={() => openPromotionEditor()}>
               ＋ Create New Promotion
             </Btn>
           </div>
@@ -1471,8 +2024,8 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                   ✓ Saved
                 </span>
               )}
-              <Btn variant="primary" size="sm" onClick={handleSave}>
-                Save & Publish
+              <Btn variant="primary" size="sm" onClick={() => handleSave(tab)}>
+                {isSaving ? 'Saving...' : 'Save & Publish'}
               </Btn>
             </div>
           )}
@@ -1492,11 +2045,11 @@ export default function SettingsView({ products, tab, setTab }: SettingsViewProp
                   ✓ Saved
                 </span>
               )}
-              <Btn variant="ghost" size="sm">
+              <Btn variant="ghost" size="sm" onClick={handleResetCurrentTab}>
                 Reset
               </Btn>
-              <Btn variant="primary" size="sm" onClick={handleSave}>
-                Save Changes
+              <Btn variant="primary" size="sm" onClick={() => handleSave(tab)}>
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </Btn>
             </div>
           </div>
