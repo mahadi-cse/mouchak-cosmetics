@@ -195,6 +195,7 @@ model Customer {
   totalOrders     Int       @default(0)
   lastOrderAt     DateTime?
   segment         CustomerSegment @default(NEW)
+  isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -398,6 +399,8 @@ model Order {
   trackingEvents  OrderTrackingEvent[]
   auditLogs       AuditLog[]
 
+  @@index([customerId, createdAt])
+  @@index([customerId, status])
   @@map("orders")
 }
 
@@ -540,6 +543,7 @@ model Wishlist {
   createdAt   DateTime  @default(now())
 
   @@unique([customerId, productId])
+  @@index([customerId, createdAt])
   @@map("wishlist")
 }
 

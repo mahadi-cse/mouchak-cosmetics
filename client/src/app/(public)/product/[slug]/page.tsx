@@ -41,6 +41,8 @@ interface MockFaq {
   a: string;
 }
 
+const BANGLADESH_PHONE_REGEX = /^(?:\+?88)?01[3-9]\d{8}$/;
+
 function formatMoney(value?: number | string | null) {
   return `৳${Number(value || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
 }
@@ -201,6 +203,10 @@ export default function ProductDetailPage() {
   const handlePlaceOrder = async () => {
     if (!product) return;
 
+    if (codMutation.isPending) {
+      return;
+    }
+
     if (!inStock) {
       toast.error('This product is currently out of stock.');
       return;
@@ -220,15 +226,21 @@ export default function ProductDetailPage() {
       }
     }
 
+    const normalizedPhone = form.shippingPhone.replace(/\s+/g, '');
+    if (!BANGLADESH_PHONE_REGEX.test(normalizedPhone)) {
+      toast.error('Please enter a valid Bangladeshi phone number.');
+      return;
+    }
+
     await codMutation.mutateAsync({
       productId: product.id,
       quantity: safeQuantity,
       shippingName: form.shippingName.trim(),
-      shippingPhone: form.shippingPhone.trim(),
+      shippingPhone: normalizedPhone,
       shippingAddress: form.shippingAddress.trim(),
       shippingCity: form.shippingCity.trim(),
       shippingPostal: form.shippingPostal.trim() || undefined,
-      shippingCountry: form.shippingCountry.trim(),
+      shippingCountry: form.shippingCountry.trim() || 'Bangladesh',
       notes: form.notes.trim() || undefined,
     });
   };
@@ -407,10 +419,10 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <div style={{ background: PINK_PALE, borderRadius: 16, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-              <span style={{ fontSize: 34, fontWeight: 800, color: PINK }}>৳ {formatMoney(price)}</span>
+              <span style={{ fontSize: 34, fontWeight: 800, color: PINK }}>{formatMoney(price)}</span>
               {hasDiscount && (
                 <div>
-                  <span style={{ fontSize: 16, color: GRAY_LIGHT, textDecoration: 'line-through', display: 'block' }}>৳ {formatMoney(compareAtPrice)}</span>
+                  <span style={{ fontSize: 16, color: GRAY_LIGHT, textDecoration: 'line-through', display: 'block' }}>{formatMoney(compareAtPrice)}</span>
                   <span style={{ background: PINK, color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>Save {discountPercent}%</span>
                 </div>
               )}
@@ -442,7 +454,7 @@ export default function ProductDetailPage() {
                 {inStock ? 'Buy Now' : 'Out of Stock'}
               </button>
               <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, padding: '14px 20px', borderRadius: 14, background: DARK, color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', opacity: inStock ? 1 : 0.5 }}>
-                Add to Cart →
+                Order with COD →
               </button>
             </div>
 
@@ -727,7 +739,7 @@ export default function ProductDetailPage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', padding: 0 }}>
           <div style={{ width: '100%', maxWidth: 448, background: '#fff', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
             {/* Header */}
-            <div style={{ display: 'sticky', top: 0, zIndex: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid #f3e0ea`, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', padding: '20px 24px', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
+            <div style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid #f3e0ea`, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', padding: '20px 24px', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
               <div>
                 <h2 style={{ fontSize: 18, fontWeight: 700, color: DARK }}>Complete Your Order</h2>
                 <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#059669', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: 999, width: 'fit-content' }}>
@@ -758,28 +770,34 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handlePlaceOrder();
+                }}
+                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+              >
                 <h3 style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: DARK }}>Shipping Details</h3>
 
                 <div>
                   <label style={{ marginBottom: 6, display: 'block', fontSize: 13, fontWeight: 600, color: '#374151' }}>Full Name *</label>
-                  <input value={form.shippingName} onChange={(e) => handleFormField('shippingName', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} placeholder="e.g. Mahadi Hasan" />
+                  <input required value={form.shippingName} onChange={(e) => handleFormField('shippingName', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} placeholder="e.g. Mahadi Hasan" />
                 </div>
 
                 <div>
                   <label style={{ marginBottom: 6, display: 'block', fontSize: 13, fontWeight: 600, color: '#374151' }}>Phone Number *</label>
-                  <input value={form.shippingPhone} onChange={(e) => handleFormField('shippingPhone', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} placeholder="01XXXXXXXXX" />
+                  <input required value={form.shippingPhone} onChange={(e) => handleFormField('shippingPhone', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} placeholder="01XXXXXXXXX" />
                 </div>
 
                 <div>
                   <label style={{ marginBottom: 6, display: 'block', fontSize: 13, fontWeight: 600, color: '#374151' }}>Shipping Address *</label>
-                  <textarea value={form.shippingAddress} onChange={(e) => handleFormField('shippingAddress', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s', resize: 'none', fontFamily: 'inherit' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} rows={2} placeholder="House, road, area" />
+                  <textarea required value={form.shippingAddress} onChange={(e) => handleFormField('shippingAddress', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s', resize: 'none', fontFamily: 'inherit' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} rows={2} placeholder="House, road, area" />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div>
                     <label style={{ marginBottom: 6, display: 'block', fontSize: 13, fontWeight: 600, color: '#374151' }}>City *</label>
-                    <input value={form.shippingCity} onChange={(e) => handleFormField('shippingCity', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} />
+                    <input required value={form.shippingCity} onChange={(e) => handleFormField('shippingCity', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} />
                   </div>
                   <div>
                     <label style={{ marginBottom: 6, display: 'block', fontSize: 13, fontWeight: 600, color: '#374151' }}>Postal Code</label>
@@ -791,23 +809,29 @@ export default function ProductDetailPage() {
                   <label style={{ marginBottom: 6, display: 'block', fontSize: 13, fontWeight: 600, color: '#374151' }}>Order Notes (Optional)</label>
                   <textarea value={form.notes} onChange={(e) => handleFormField('notes', e.target.value)} style={{ width: '100%', borderRadius: 12, border: `1px solid ${PINK_LIGHT}`, background: '#f9fafb', padding: '12px 16px', fontSize: 13, outline: 'none', transition: 'all 0.2s', resize: 'none', fontFamily: 'inherit' }} onFocus={(e) => { e.target.style.borderColor = PINK; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 4px ${PINK_PALE}`; }} onBlur={(e) => { e.target.style.borderColor = PINK_LIGHT; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }} rows={2} placeholder="Special instructions for delivery" />
                 </div>
-              </div>
 
-              <div style={{ marginTop: 32 }}>
-                <button onClick={handlePlaceOrder} disabled={codMutation.isPending} style={{ display: 'flex', width: '100%', height: 56, alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, background: DARK, padding: '0 24px', fontSize: 16, fontWeight: 700, color: '#fff', transition: 'all 0.3s', border: 'none', cursor: codMutation.isPending ? 'not-allowed' : 'pointer', opacity: codMutation.isPending ? 0.6 : 1 }}>
-                  {codMutation.isPending ? (
-                    <>
-                      <LoadingSpinner size="sm" /> Processing...
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck size={20} /> Complete Purchase
-                    </>
-                  )}
+                <div style={{ marginTop: 16 }}>
+                  <button type="submit" disabled={codMutation.isPending} style={{ display: 'flex', width: '100%', height: 56, alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, background: DARK, padding: '0 24px', fontSize: 16, fontWeight: 700, color: '#fff', transition: 'all 0.3s', border: 'none', cursor: codMutation.isPending ? 'not-allowed' : 'pointer', opacity: codMutation.isPending ? 0.6 : 1 }}>
+                    {codMutation.isPending ? (
+                      <>
+                        <LoadingSpinner size="sm" /> Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={20} /> Complete Purchase
+                      </>
+                    )}
+                  </button>
+                  <p style={{ marginTop: 16, textAlign: 'center', fontSize: 12, fontWeight: 500, color: '#9ca3af' }}>
+                    By completing this purchase, you agree to pay <span style={{ color: DARK }}>{formatMoney(subtotal)}</span> at your doorstep.
+                  </p>
+                </div>
+              </form>
+
+              <div style={{ marginTop: 16 }}>
+                <button onClick={() => setIsCheckoutOpen(false)} disabled={codMutation.isPending} style={{ width: '100%', height: 44, borderRadius: 12, background: '#fff', border: `1px solid ${PINK_LIGHT}`, color: DARK, fontSize: 14, fontWeight: 600, cursor: codMutation.isPending ? 'not-allowed' : 'pointer', opacity: codMutation.isPending ? 0.6 : 1 }}>
+                  Cancel
                 </button>
-                <p style={{ marginTop: 16, textAlign: 'center', fontSize: 12, fontWeight: 500, color: '#9ca3af' }}>
-                  By completing this purchase, you agree to pay <span style={{ color: DARK }}>{formatMoney(subtotal)}</span> at your doorstep.
-                </p>
               </div>
             </div>
           </div>

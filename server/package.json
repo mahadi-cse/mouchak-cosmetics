@@ -15,6 +15,7 @@
     "db:seed:auth-admin": "tsx prisma/seed-auth-admin.ts",
     "db:seed:featured": "tsx prisma/seed-featured-products.ts",
     "db:seed:dashboard": "tsx prisma/seed-dashboard.ts",
+    "db:seed:customer-dashboard": "tsx prisma/seed-customer-dashboard.ts",
     "db:seed:rbac": "tsx prisma/seed-rbac.ts",
     "db:studio": "prisma studio",
     "db:push": "prisma db push"

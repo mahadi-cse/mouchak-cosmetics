@@ -3,10 +3,34 @@
 import { useListProducts } from '@/modules/products';
 import { SkeletonGrid, ErrorMessage, EmptyState } from '@/shared/components';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+function parsePositiveInt(value: string | null, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.floor(parsed);
+}
 
 export default function ShopPage() {
-  const [params, setParams] = useState({ page: 1, limit: 12 });
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const params = useMemo(() => {
+    const search = searchParams.get('search')?.trim();
+    const category = searchParams.get('category')?.trim();
+
+    return {
+      page: parsePositiveInt(searchParams.get('page'), 1),
+      limit: parsePositiveInt(searchParams.get('limit'), 12),
+      ...(search ? { search } : {}),
+      ...(category ? { category } : {}),
+    };
+  }, [searchParams]);
+
+  const hasFilters = Boolean(params.search || params.category);
   const { data, isLoading, isError, error, refetch } = useListProducts(params);
 
   if (isLoading) return <SkeletonGrid columns={4} count={12} />;
@@ -27,7 +51,7 @@ export default function ShopPage() {
       <EmptyState
         title="No Products Found"
         description="Try adjusting your search or filter criteria"
-        action={{ label: 'Clear Filters', onClick: () => setParams({ page: 1, limit: 12 }) }}
+        action={{ label: 'Clear Filters', onClick: () => router.push('/shop') }}
       />
     );
   }
@@ -35,6 +59,13 @@ export default function ShopPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Shop</h1>
+      {hasFilters && (
+        <p className="text-sm text-gray-600 mb-6">
+          Showing results
+          {params.search ? ` for "${params.search}"` : ''}
+          {params.category ? ` in ${params.category}` : ''}
+        </p>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {data.map((product) => (
           <Link

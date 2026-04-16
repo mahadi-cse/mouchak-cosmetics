@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heart, Search, ShoppingCart, User, MapPin, Mail, Phone } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import { useState, type FormEvent } from "react";
 
 import { productCategories } from "./data";
 import { useHomepageCategories, useHomepageStats, useSiteSettings } from "@/modules/homepage";
 
 export function Header() {
+  const router = useRouter();
   const { data: categories = [] } = useHomepageCategories();
   const { data: settings } = useSiteSettings();
   const { data: stats } = useHomepageStats();
   const { status } = useSession();
+  const [searchTerm, setSearchTerm] = useState('');
 
   const storeName = settings?.storeName || "Mouchak Cosmetics";
   const [storeNameFirst, ...storeNameRest] = storeName.split(/\s+/).filter(Boolean);
@@ -22,7 +26,7 @@ export function Header() {
     ? categories.slice(0, 4).map((c) => ({
       key: c.slug,
       label: c.name,
-      href: `/shop?category=${c.slug}`,
+      href: `/categories/${c.slug}`,
     }))
     : productCategories.map((name) => ({
       key: name,
@@ -35,6 +39,18 @@ export function Header() {
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });
+  };
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = searchTerm.trim();
+
+    if (!trimmed) {
+      router.push('/shop');
+      return;
+    }
+
+    router.push(`/shop?search=${encodeURIComponent(trimmed)}`);
   };
 
   return (
@@ -77,15 +93,20 @@ export function Header() {
 
           {/* Search Bar - Center */}
           <div className="hidden lg:flex flex-1 justify-center px-12">
-            <div className="flex w-full max-w-sm overflow-hidden rounded-full border border-zinc-300 bg-zinc-50 transition focus-within:border-primary">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex w-full max-w-sm overflow-hidden rounded-full border border-zinc-300 bg-zinc-50 transition focus-within:border-primary"
+            >
               <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search skincare, lipstick, perfume…"
                 className="w-full bg-transparent px-5 py-2.5 text-sm outline-none placeholder-zinc-500"
               />
-              <button className="px-4 text-zinc-600 transition hover:text-primary" aria-label="Search">
+              <button type="submit" className="px-4 text-zinc-600 transition hover:text-primary" aria-label="Search">
                 <Search size={16} />
               </button>
-            </div>
+            </form>
           </div>
 
           {/* Right Actions */}
@@ -167,7 +188,7 @@ export function Header() {
               </a>
             ))}
             {/* Sale Link */}
-            <a href="/shop" className="flex items-center gap-2 px-4 py-3 text-sm text-primary font-medium whitespace-nowrap">
+            <a href="/products" className="flex items-center gap-2 px-4 py-3 text-sm text-primary font-medium whitespace-nowrap">
               <span className="w-1 h-1 rounded-full bg-current"></span>
               Sale
             </a>
@@ -184,7 +205,7 @@ export function Header() {
                 {cat.label}
               </a>
             ))}
-            <a href="/shop" className="text-primary font-medium whitespace-nowrap">Sale</a>
+            <a href="/products" className="text-primary font-medium whitespace-nowrap">Sale</a>
           </div>
 
           {/* Free Delivery Badge - Prominent on Mobile */}
