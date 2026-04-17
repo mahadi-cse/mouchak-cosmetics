@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { jest } from '@jest/globals';
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_API_URL = 'http://localhost:4000/api';
@@ -11,7 +12,7 @@ const localStorageMock = {
   clear: jest.fn(),
 };
 
-global.localStorage = localStorageMock as any;
+global.localStorage = localStorageMock as unknown as Storage;
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

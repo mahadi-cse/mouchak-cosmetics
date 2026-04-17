@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
+import { User, LogOut } from 'lucide-react';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
 import { usePathname, useSearchParams } from 'next/navigation';
 import OverviewView from './views/OverviewView';
@@ -498,15 +499,24 @@ export default function DashboardLayout({
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[13px] font-extrabold transition-all hover:shadow-md"
+                className="flex items-center gap-2 px-1.5 py-1 shrink-0 cursor-pointer rounded-full transition-all hover:shadow-md"
                 style={{
                   background: Theme.secondary,
-                  color: Theme.primary,
-                  border: `2px solid ${Theme.border}`,
+                  border: `1px solid ${Theme.border}`,
                 }}
                 title="User Profile"
               >
-                {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                <div 
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-extrabold"
+                  style={{ background: Theme.primary, color: 'white' }}
+                >
+                  {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                {!isMobile && (
+                  <span className="text-[13px] font-bold pr-1" style={{ color: Theme.fg }}>
+                    {session?.user?.name || 'User'}
+                  </span>
+                )}
               </button>
 
               {/* AdminLTE Style Dropdown Menu */}
@@ -519,73 +529,70 @@ export default function DashboardLayout({
                 >
                   {/* User Header Section */}
                   <div
-                    className="px-4 py-4 border-b"
+                    className="px-6 py-6 border-b text-center"
                     style={{
                       borderColor: Theme.border,
-                      background: Theme.secondary + '20',
+                      background: `linear-gradient(180deg, ${Theme.secondary}20 0%, transparent 100%)`,
                     }}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center gap-3">
                       <div
-                        className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-extrabold text-white"
-                        style={{ background: Theme.primary }}
+                        className="flex h-20 w-20 items-center justify-center rounded-full text-[28px] font-black text-white shadow-lg"
+                        style={{ 
+                          background: `linear-gradient(135deg, ${Theme.primary} 0%, ${Theme.primary}dd 100%)`,
+                          border: `4px solid ${Theme.card}`,
+                        }}
                       >
                         {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="space-y-1">
                         <div
-                          className="text-[14px] font-bold truncate"
+                          className="text-[16px] font-bold tracking-tight"
                           style={{ color: Theme.fg }}
                         >
                           {session?.user?.name || 'User'}
+                        </div>
+                        <div
+                          className="text-[11px] font-medium uppercase tracking-widest opacity-60"
+                          style={{ color: Theme.mutedFg }}
+                        >
+                          Administrator
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Button Section - Side by Side */}
-                  <div className="flex gap-2 px-4 py-3 border-t" style={{ borderColor: Theme.border }}>
+                  <div className="flex gap-3 px-5 py-4" style={{ background: Theme.card }}>
                     {/* Profile Button */}
                     <button
                       onClick={() => {
                         navigate('profile');
                         setProfileOpen(false);
                       }}
-                      className="flex-1 px-3 py-2 rounded-md text-center text-[12px] font-medium transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-3 py-2.5 rounded-xl text-center text-[12px] font-bold transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
                       style={{
-                        background: Theme.secondary + '30',
+                        background: Theme.secondary + '40',
                         color: Theme.primary,
                         border: `1px solid ${Theme.secondary}`,
                       }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = Theme.secondary + '50';
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = Theme.secondary + '30';
-                      }}
                     >
-                      <span>👤</span>
-                      <span>Profile</span>
+                      <User size={15} strokeWidth={2.5} />
+                      <span>Account</span>
                     </button>
 
                     {/* Sign Out Button */}
                     <button
                       onClick={handleLogout}
-                      className="flex-1 px-3 py-2 rounded-md text-center text-[12px] font-medium transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-3 py-2.5 rounded-xl text-center text-[12px] font-bold transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
                       style={{
-                        background: '#fee2e2',
-                        color: '#dc2626',
-                        border: '1px solid #fecaca',
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = '#fecaca';
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = '#fee2e2';
+                        background: '#fff1f2',
+                        color: '#e11d48',
+                        border: '1px solid #ffe4e6',
                       }}
                     >
-                      <span>🚪</span>
-                      <span>Sign Out</span>
+                      <LogOut size={15} strokeWidth={2.5} />
+                      <span>Logout</span>
                     </button>
                   </div>
                 </div>

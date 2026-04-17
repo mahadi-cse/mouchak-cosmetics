@@ -1,6 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { categoryAPI } from './api';
 import { Category } from '@/shared/types';
+
+type ListCategoriesOptions = Partial<UseQueryOptions<Category[], Error>>;
+type CategoryBySlugOptions = Partial<UseQueryOptions<Category, Error>>;
 
 export const CATEGORIES_QUERY_KEYS = {
   all: ['categories'] as const,
@@ -10,7 +13,10 @@ export const CATEGORIES_QUERY_KEYS = {
   detail: (slug: string) => [...CATEGORIES_QUERY_KEYS.details(), slug] as const,
 };
 
-export const useListCategories = (params?: { branchId?: number; includeInactive?: boolean }, options?: any) => {
+export const useListCategories = (
+  params?: { branchId?: number; includeInactive?: boolean },
+  options?: ListCategoriesOptions
+) => {
   return useQuery<Category[], Error>({
     queryKey: [...CATEGORIES_QUERY_KEYS.list(), params].filter(Boolean),
     queryFn: () => categoryAPI.listCategories(params),
@@ -19,8 +25,8 @@ export const useListCategories = (params?: { branchId?: number; includeInactive?
   });
 };
 
-export const useCategoryBySlug = (slug: string, options?: any) => {
-  return useQuery({
+export const useCategoryBySlug = (slug: string, options?: CategoryBySlugOptions) => {
+  return useQuery<Category, Error>({
     queryKey: CATEGORIES_QUERY_KEYS.detail(slug),
     queryFn: () => categoryAPI.getCategoryBySlug(slug),
     enabled: !!slug,

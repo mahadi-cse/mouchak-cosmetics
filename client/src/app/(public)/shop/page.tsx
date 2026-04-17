@@ -3,7 +3,7 @@
 import { useListProducts } from '@/modules/products';
 import { SkeletonGrid, ErrorMessage, EmptyState } from '@/shared/components';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function parsePositiveInt(value: string | null, fallback: number) {
@@ -14,7 +14,7 @@ function parsePositiveInt(value: string | null, fallback: number) {
   return Math.floor(parsed);
 }
 
-export default function ShopPage() {
+function ShopPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -94,5 +94,13 @@ export default function ShopPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={<SkeletonGrid columns={4} count={12} />}>
+      <ShopPageContent />
+    </Suspense>
   );
 }

@@ -8,7 +8,9 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle2, ChevronRight, Clock, ShieldCheck, ShoppingBag, Truck, X, Heart, Share2, Star, Zap, TrendingUp } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Clock, ShieldCheck, ShoppingBag, Truck, X, Heart, Share2, Star, Zap, TrendingUp, ShoppingCart } from 'lucide-react';
+import { Header } from '@/modules/homepage/components/Header';
+import { Footer } from '@/modules/homepage/components/Footer';
 
 interface CheckoutFormState {
   shippingName: string;
@@ -81,7 +83,7 @@ export default function ProductDetailPage() {
   const [wishlist, setWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('description');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  
+
   // Checkout State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<PlacedOrderSummary | null>(null);
@@ -278,41 +280,18 @@ export default function ProductDetailPage() {
   const GRAY_LIGHT = '#9ca3af';
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fafafa', minHeight: '100vh', color: DARK }}>
-      {/* Top Banner */}
-      <div style={{ background: PINK, color: '#fff', textAlign: 'center', padding: '8px 16px', fontSize: 13, fontWeight: 500, letterSpacing: '0.04em' }}>
-        🎁 Free delivery on orders over ৳ 999 · Use code <strong>GLOW10</strong> for 10% off
-      </div>
-
-      {/* Navbar */}
-      <nav style={{ background: '#fff', borderBottom: `1px solid ${PINK_LIGHT}`, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, position: 'sticky', top: 0, zIndex: 40 }}>
-        <Link href="/" style={{ fontWeight: 800, fontSize: 22, color: PINK, letterSpacing: '-0.02em', textDecoration: 'none' }}>mouchak</Link>
-        <div style={{ display: 'flex', gap: 24, fontSize: 14, fontWeight: 500, color: GRAY }}>
-          {['Skincare', 'Makeup', 'Haircare', 'Combos'].map((n) => (
-            <span key={n} style={{ cursor: 'pointer' }}>{n}</span>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={GRAY} strokeWidth="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <button style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setWishlist(!wishlist)}>
-            <Heart width="20" height="20" color={GRAY} fill={wishlist ? PINK : 'none'} strokeWidth={1.8} />
-          </button>
-          <div style={{ position: 'relative' }}>
-            <ShoppingBag size={20} color={GRAY} strokeWidth={1.8} />
-            <span style={{ position: 'absolute', top: -6, right: -6, background: PINK, color: '#fff', borderRadius: 999, width: 16, height: 16, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>3</span>
-          </div>
-        </div>
-      </nav>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
+      <Header />
 
       {/* Breadcrumb */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT }}>
-        <Link href="/" style={{ color: GRAY, fontWeight: 400, cursor: 'pointer', textDecoration: 'none' }}>Home</Link>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT }}>
+        <Link href="/" style={{ color: GRAY, fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}>Home</Link>
         <span style={{ color: GRAY_LIGHT }}>›</span>
-        <Link href="/shop" style={{ color: GRAY, fontWeight: 400, cursor: 'pointer', textDecoration: 'none' }}>Shop</Link>
+        <Link href="/shop" style={{ color: GRAY, fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}>Shop</Link>
         <span style={{ color: GRAY_LIGHT }}>›</span>
-        {product.category?.name && <span style={{ color: GRAY, fontWeight: 400 }}>{product.category.name}</span>}
+        {product.category?.name && <span style={{ color: GRAY, fontWeight: 500 }}>{product.category.name}</span>}
         {product.category?.name && <span style={{ color: GRAY_LIGHT }}>›</span>}
-        <span style={{ color: PINK, fontWeight: 600 }}>{product.name}</span>
+        <span style={{ color: PINK, fontWeight: 700 }}>{product.name}</span>
       </div>
 
       {/* Successful Order Banner */}
@@ -364,7 +343,7 @@ export default function ProductDetailPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginTop: 12 }}>
                 {images.map((img, i) => (
                   <div key={i} onClick={() => setActiveImageIndex(i)} style={{ borderRadius: 14, border: `1.5px solid ${i === activeImageIndex ? PINK : PINK_LIGHT}`, background: PINK_PALE, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: 10, color: GRAY, fontWeight: 600, overflow: 'hidden' }}>
-                    <img src={img} alt={`thumb ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={img} alt={`thumb ${i}`} style={{ width: '40%', height: '40%', objectFit: 'cover' }} />
                   </div>
                 ))}
               </div>
@@ -447,14 +426,10 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* CTA Buttons */}
-            <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-              <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, padding: '14px 20px', borderRadius: 14, background: inStock ? PINK : '#d1d5db', color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', boxShadow: `0 6px 20px ${PINK}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <ShoppingBag size={18} />
-                {inStock ? 'Buy Now' : 'Out of Stock'}
-              </button>
-              <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, padding: '14px 20px', borderRadius: 14, background: DARK, color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', opacity: inStock ? 1 : 0.5 }}>
-                Order with COD →
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+              <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, minWidth: 200, padding: '16px 24px', borderRadius: 16, background: inStock ? PINK : '#d1d5db', color: '#fff', fontSize: 16, fontWeight: 800, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', boxShadow: inStock ? `0 10px 25px ${PINK}44` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                <ShoppingCart size={20} />
+                {inStock ? 'Checkout Now' : 'Out of Stock'}
               </button>
             </div>
 
@@ -498,12 +473,12 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* TABS SECTION */}
+        {/* TABS SECTION - Description/Specs/Reviews FIRST */}
         <div style={{ marginTop: 64 }}>
           {/* Tab Navigation */}
-          <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${PINK_LIGHT}`, marginBottom: 36 }}>
+          <div style={{ display: 'flex', gap: 8, borderBottom: `2px solid ${PINK_LIGHT}`, marginBottom: 48, paddingBottom: 2 }}>
             {(['description', 'specifications', 'reviews', 'faqs'] as TabType[]).map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '12px 28px', fontSize: 14, fontWeight: 600, color: activeTab === tab ? PINK : GRAY, borderBottom: `2px solid ${activeTab === tab ? PINK : 'transparent'}`, marginBottom: -2, textTransform: 'capitalize', letterSpacing: '0.02em', transition: 'all 0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '16px 32px', fontSize: 15, fontWeight: 700, color: activeTab === tab ? PINK : GRAY, borderBottom: `3px solid ${activeTab === tab ? PINK : 'transparent'}`, marginBottom: -4, textTransform: 'capitalize', letterSpacing: '0.02em', transition: 'all 0.3s', background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}>
                 {tab === 'faqs' ? 'FAQs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -524,7 +499,7 @@ export default function ProductDetailPage() {
               <div>
                 <h2 style={{ fontSize: 20, fontWeight: 700, color: DARK, marginBottom: 20, paddingBottom: 10, borderBottom: `2px solid ${PINK_LIGHT}`, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
-                  Features & Benefits
+                  Features &amp; Benefits
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {[
@@ -578,15 +553,12 @@ export default function ProductDetailPage() {
                 <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
                 Customer Reviews
               </h2>
-              {/* Summary */}
               <div style={{ display: 'flex', gap: 32, alignItems: 'center', background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 20, padding: '24px 28px', marginBottom: 32, maxWidth: 680 }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 52, fontWeight: 800, color: DARK, lineHeight: 1 }}>4.8</div>
                   <span style={{ display: 'flex', gap: 2 }}>
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <svg key={s} width={18} height={18} viewBox="0 0 20 20" fill="#f59e0b">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
+                      <svg key={s} width={18} height={18} viewBox="0 0 20 20" fill="#f59e0b"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                     ))}
                   </span>
                   <p style={{ fontSize: 12, color: GRAY_LIGHT, marginTop: 4 }}>284 reviews</p>
@@ -597,7 +569,7 @@ export default function ProductDetailPage() {
                     return (
                       <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: GRAY, width: 10 }}>{n}</span>
-                        <svg width="12" height="12" viewBox="0 0 20 20" fill="#f59e0b"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 20 20" fill="#f59e0b"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                         <div style={{ flex: 1, height: 8, borderRadius: 999, background: PINK_PALE, overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${pct}%`, background: PINK, borderRadius: 999 }} />
                         </div>
@@ -609,7 +581,7 @@ export default function ProductDetailPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 {mockReviews.map((r, i) => (
-                  <div key={i} style={{ background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 18, padding: '18px 20px', transition: 'box-shadow 0.2s', cursor: 'pointer' }}>
+                  <div key={i} style={{ background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 18, padding: '18px 20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 36, height: 36, borderRadius: '50%', background: PINK_PALE, color: PINK, fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{r.name[0]}</div>
@@ -622,9 +594,7 @@ export default function ProductDetailPage() {
                     </div>
                     <span style={{ display: 'flex', gap: 2 }}>
                       {[1, 2, 3, 4, 5].map((s) => (
-                        <svg key={s} width={13} height={13} viewBox="0 0 20 20" fill={s <= r.rating ? '#f59e0b' : '#e5e7eb'}>
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
+                        <svg key={s} width={13} height={13} viewBox="0 0 20 20" fill={s <= r.rating ? '#f59e0b' : '#e5e7eb'}><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                       ))}
                     </span>
                     <p style={{ fontSize: 13, color: GRAY, lineHeight: 1.7, marginTop: 10 }}>{r.text}</p>
@@ -642,13 +612,13 @@ export default function ProductDetailPage() {
                 Frequently Asked Questions
               </h2>
               {mockFaqs.map((faq, i) => (
-                <div key={i} onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)} style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 14, marginBottom: 10, overflow: 'hidden', cursor: 'pointer', transition: 'background 0.2s', background: openFaqIndex === i ? PINK_PALE : '#fff' }}>
+                <div key={i} onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)} style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 14, marginBottom: 10, overflow: 'hidden', cursor: 'pointer', background: openFaqIndex === i ? PINK_PALE : '#fff' }}>
                   <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: DARK, paddingRight: 20 }}>{faq.q}</p>
-                    <span style={{ color: PINK, fontSize: 18, fontWeight: 700, flexShrink: 0, transform: openFaqIndex === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }}>+</span>
+                    <span style={{ color: PINK, fontSize: 18, fontWeight: 700, flexShrink: 0, transform: openFaqIndex === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>+</span>
                   </div>
                   {openFaqIndex === i && (
-                    <div style={{ padding: '0 20px 16px', fontSize: 13, color: GRAY, lineHeight: 1.75, borderTop: `1px solid ${PINK_LIGHT}`, paddingTop: 12 }}>{faq.a}</div>
+                    <div style={{ padding: '12px 20px 16px', fontSize: 13, color: GRAY, lineHeight: 1.75, borderTop: `1px solid ${PINK_LIGHT}` }}>{faq.a}</div>
                   )}
                 </div>
               ))}
@@ -656,83 +626,41 @@ export default function ProductDetailPage() {
           )}
         </div>
 
-        {/* Brand Info */}
-        <div style={{ marginTop: 64, background: 'linear-gradient(135deg, #fce7f3 0%, #fff 60%)', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 24, padding: '28px 32px', display: 'flex', alignItems: 'center', gap: 28 }}>
-          <div style={{ width: 72, height: 72, borderRadius: 18, background: PINK, color: '#fff', fontWeight: 800, fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>M</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 800, color: DARK }}>Mouchak Cosmetics</h3>
-              <span style={{ background: PINK_PALE, color: PINK, borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>Official Brand</span>
-            </div>
-            <p style={{ fontSize: 13, color: GRAY, lineHeight: 1.7 }}>Bangladesh's leading clean beauty brand, crafting dermatologist-tested skincare and cosmetics with ethically sourced, halal-certified ingredients. Trusted by 200,000+ customers since 2018.</p>
+        {/* Related Products - LAST for better scroll engagement */}
+        <div style={{ marginTop: 80, padding: '40px 32px', background: '#fcfcfc', borderRadius: 32, border: `1px solid ${PINK_LIGHT}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: DARK, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ width: 6, height: 28, background: PINK, borderRadius: 3, display: 'inline-block' }} />
+              You Might Also Like
+            </h2>
+            <Link href="/shop" style={{ color: PINK, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>View All →</Link>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-            <button style={{ padding: '10px 22px', borderRadius: 12, background: PINK, color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}>Visit Brand Store →</button>
-            <button style={{ padding: '10px 22px', borderRadius: 12, background: 'transparent', color: PINK, fontSize: 13, fontWeight: 700, border: `1.5px solid ${PINK}`, cursor: 'pointer' }}>Follow</button>
-          </div>
-        </div>
-
-        {/* Certification Badges */}
-        <div style={{ display: 'flex', gap: 16, marginTop: 28, flexWrap: 'wrap' }}>
-          {['🌿 Halal Certified', '🐰 Cruelty Free', '♻️ Eco Packaging', '🔬 Dermatologist Tested', '🏆 ISO 22716'].map((b) => (
-            <span key={b} style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 600, color: GRAY }}>{b}</span>
-          ))}
-        </div>
-
-        {/* Related Products */}
-        <div style={{ marginTop: 64 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: DARK, marginBottom: 20, paddingBottom: 10, borderBottom: `2px solid ${PINK_LIGHT}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
-            You Might Also Like
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
             {['Rose Petal Toner', 'Glow Moisturizer SPF 30', 'Niacinamide Serum', 'Vitamin C Eye Cream'].map((name, i) => (
-              <div key={i} style={{ background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 20, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 2px 8px rgba(233,30,140,0.04)' }}>
-                <div style={{ height: 150, background: 'linear-gradient(135deg,#fce7f3,#f9a8d4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="50" height="90" viewBox="0 0 50 90" fill="none">
-                    <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6"/>
-                    <rect x="10" y="10" width="30" height="70" rx="10" fill="white" fillOpacity="0.8" stroke={PINK} strokeWidth="1"/>
+              <div key={i} style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(233,30,140,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
+                <div style={{ height: 180, background: 'linear-gradient(135deg,#fdf2f8,#fce7f3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="60" height="100" viewBox="0 0 50 90" fill="none">
+                    <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6" />
+                    <rect x="10" y="10" width="30" height="70" rx="10" fill="white" fillOpacity="0.8" stroke={PINK} strokeWidth="1" />
                   </svg>
                 </div>
-                <div style={{ padding: '14px 16px' }}>
-                  <span style={{ fontSize: 10, color: PINK, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>SKINCARE</span>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: DARK, marginTop: 4, marginBottom: 8, lineHeight: 1.4 }}>{name}</p>
+                <div style={{ padding: '20px' }}>
+                  <span style={{ fontSize: 10, color: PINK, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>SKINCARE</span>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>{name}</p>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: PINK }}>৳ {(1200 + i * 200).toLocaleString()}</span>
-                    <button style={{ width: 30, height: 30, borderRadius: '50%', background: PINK, color: '#fff', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>+</button>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: DARK }}>৳ {(1200 + i * 200).toLocaleString()}</span>
+                    <button style={{ width: 32, height: 32, borderRadius: 10, background: PINK, color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: `0 4px 10px ${PINK}44` }}>+</button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
+
       </div>
 
-      {/* Footer */}
-      <footer style={{ background: DARK, color: '#9ca3af', padding: '40px 24px 24px', marginTop: 80 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 40, marginBottom: 40 }}>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 26, color: PINK, marginBottom: 12 }}>mouchak</div>
-              <p style={{ fontSize: 13, lineHeight: 1.75 }}>Clean beauty, consciously crafted. Skincare and cosmetics that are good for you and the planet.</p>
-            </div>
-            {[
-              { title: 'Products', links: ['Skincare', 'Makeup', 'Haircare', 'Combos'] },
-              { title: 'Company', links: ['About Us', 'Blog', 'Careers', 'Press'] },
-              { title: 'Support', links: ['Help Center', 'Track Order', 'Returns', 'Contact'] },
-            ].map((col) => (
-              <div key={col.title}>
-                <p style={{ fontWeight: 700, color: '#e5e7eb', marginBottom: 14, fontSize: 14 }}>{col.title}</p>
-                {col.links.map((l) => <p key={l} style={{ fontSize: 13, marginBottom: 8, cursor: 'pointer' }}>{l}</p>)}
-              </div>
-            ))}
-          </div>
-          <div style={{ borderTop: '1px solid #374151', paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-            <span>© 2025 Mouchak Cosmetics. All rights reserved.</span>
-            <span>Made with ♥ in Bangladesh</span>
-          </div>
-        </div>
-      </footer>
+
+      <Footer />
 
       {/* Checkout Modal */}
       {isCheckoutOpen && (
