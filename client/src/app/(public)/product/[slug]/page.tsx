@@ -83,10 +83,17 @@ export default function ProductDetailPage() {
   const [wishlist, setWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('description');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [tabExpanded, setTabExpanded] = useState<Record<TabType, boolean>>({
+    description: false,
+    specifications: false,
+    reviews: false,
+    faqs: false,
+  });
 
   // Checkout State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<PlacedOrderSummary | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(1200);
   const [form, setForm] = useState<CheckoutFormState>({
     shippingName: '',
     shippingPhone: '',
@@ -136,6 +143,13 @@ export default function ProductDetailPage() {
     };
   }, [isCheckoutOpen]);
 
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const availableStock = useMemo(() => {
     return (product?.inventories || []).reduce((total, inventory) => {
       const available = Math.max(0, (inventory.quantity || 0) - (inventory.reservedQty || 0));
@@ -181,6 +195,17 @@ export default function ProductDetailPage() {
   const discountPercent = hasDiscount ? Math.round((savings / compareAtPrice) * 100) : 0;
   const subtotal = price * safeQuantity;
   const highlights = (product?.tags || []).slice(0, 5);
+  const descriptionContent =
+    product?.description ||
+    'This premium product is formulated with the finest ingredients to deliver exceptional results. Crafted with care and backed by scientific research, it offers powerful benefits for daily use.';
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth < 1024;
+  const relatedProducts = [
+    'Rose Petal Toner',
+    'Glow Moisturizer SPF 30',
+    'Niacinamide Serum',
+    'Vitamin C Eye Cream',
+  ];
 
   const updateQuantity = (next: number) => {
     if (!inStock) {
@@ -284,7 +309,7 @@ export default function ProductDetailPage() {
       <Header />
 
       {/* Breadcrumb */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT, flexWrap: 'wrap' }}>
         <Link href="/" style={{ color: GRAY, fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}>Home</Link>
         <span style={{ color: GRAY_LIGHT }}>›</span>
         <Link href="/shop" style={{ color: GRAY, fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}>Shop</Link>
@@ -310,12 +335,12 @@ export default function ProductDetailPage() {
       )}
 
       {/* Main Content */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'flex-start' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '16px' : '20px 24px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '0.92fr 1.08fr', gap: isMobile ? 16 : 20, alignItems: 'flex-start' }}>
           {/* LEFT: Gallery */}
-          <div style={{ position: 'sticky', top: 90 }}>
+          <div style={{ position: isTablet ? 'relative' : 'sticky', top: isTablet ? 0 : 90 }}>
             {/* Main Image */}
-            <div style={{ borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${PINK_LIGHT}`, background: PINK_PALE, height: 460, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.3s' }}>
+            <div style={{ borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 260 : 320, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.3s' }}>
               <img src={images[activeImageIndex]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               {hasDiscount && (
                 <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -342,7 +367,7 @@ export default function ProductDetailPage() {
             {images.length > 1 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginTop: 12 }}>
                 {images.map((img, i) => (
-                  <div key={i} onClick={() => setActiveImageIndex(i)} style={{ borderRadius: 14, border: `1.5px solid ${i === activeImageIndex ? PINK : PINK_LIGHT}`, background: PINK_PALE, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: 10, color: GRAY, fontWeight: 600, overflow: 'hidden' }}>
+                  <div key={i} onClick={() => setActiveImageIndex(i)} style={{ borderRadius: 14, border: `1.5px solid ${i === activeImageIndex ? PINK : PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 60 : 72, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: 10, color: GRAY, fontWeight: 600, overflow: 'hidden' }}>
                     <img src={img} alt={`thumb ${i}`} style={{ width: '40%', height: '40%', objectFit: 'cover' }} />
                   </div>
                 ))}
@@ -350,16 +375,18 @@ export default function ProductDetailPage() {
             )}
 
             {/* Share Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, color: GRAY_LIGHT, fontWeight: 500 }}>Share:</span>
               {['Facebook', 'Instagram', 'WhatsApp', 'Copy link'].map((s) => (
                 <button key={s} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 999, border: `1px solid ${PINK_LIGHT}`, color: GRAY, fontWeight: 500, transition: 'all 0.2s', background: '#fff', cursor: 'pointer' }}>{s}</button>
               ))}
             </div>
+
+           
           </div>
 
           {/* RIGHT: Details */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {/* Category & Badges */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ background: PINK_PALE, color: PINK, borderRadius: 999, padding: '3px 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
@@ -375,14 +402,14 @@ export default function ProductDetailPage() {
 
             {/* Title */}
             <div>
-              <h1 style={{ fontSize: 28, fontWeight: 800, color: DARK, lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+              <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 800, color: DARK, lineHeight: 1.25, letterSpacing: '-0.02em' }}>
                 {product.name}
               </h1>
               <p style={{ fontSize: 13, color: GRAY_LIGHT, marginTop: 4 }}>SKU: {product.id}</p>
             </div>
 
             {/* Rating */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ display: 'flex', gap: 2 }}>
                 {[1, 2, 3, 4, 5].map((s) => (
                   <svg key={s} width={16} height={16} viewBox="0 0 20 20" fill="#f59e0b">
@@ -397,8 +424,8 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Price */}
-            <div style={{ background: PINK_PALE, borderRadius: 16, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-              <span style={{ fontSize: 34, fontWeight: 800, color: PINK }}>{formatMoney(price)}</span>
+            <div style={{ background: PINK_PALE, borderRadius: 16, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 26, fontWeight: 800, color: PINK }}>{formatMoney(price)}</span>
               {hasDiscount && (
                 <div>
                   <span style={{ fontSize: 16, color: GRAY_LIGHT, textDecoration: 'line-through', display: 'block' }}>{formatMoney(compareAtPrice)}</span>
@@ -408,7 +435,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Stock Status */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: inStock ? '#059669' : '#ef4444', display: 'inline-block' }} />
               <span style={{ fontSize: 14, fontWeight: 600, color: inStock ? '#059669' : '#ef4444' }}>
                 {inStock ? 'In Stock' : 'Out of Stock'}
@@ -416,39 +443,19 @@ export default function ProductDetailPage() {
               {inStock && <span style={{ fontSize: 13, color: '#f59e0b', fontWeight: 600 }}>Only {availableStock} left!</span>}
             </div>
 
-            {/* Quantity Selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>Quantity:</p>
-              <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
-                <button onClick={() => updateQuantity(safeQuantity - 1)} style={{ width: 40, height: 40, fontSize: 18, fontWeight: 700, color: GRAY, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>−</button>
-                <span style={{ width: 40, textAlign: 'center', fontSize: 15, fontWeight: 700, color: DARK }}>{safeQuantity}</span>
-                <button onClick={() => updateQuantity(safeQuantity + 1)} style={{ width: 40, height: 40, fontSize: 18, fontWeight: 700, color: GRAY, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>+</button>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: 10, marginTop: 2, background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, padding: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>Qty</p>
+                <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+                  <button onClick={() => updateQuantity(safeQuantity - 1)} style={{ width: 36, height: 36, fontSize: 17, fontWeight: 700, color: GRAY, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>−</button>
+                  <span style={{ width: 34, textAlign: 'center', fontSize: 14, fontWeight: 700, color: DARK }}>{safeQuantity}</span>
+                  <button onClick={() => updateQuantity(safeQuantity + 1)} style={{ width: 36, height: 36, fontSize: 17, fontWeight: 700, color: GRAY, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>+</button>
+                </div>
               </div>
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
-              <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, minWidth: 200, padding: '16px 24px', borderRadius: 16, background: inStock ? PINK : '#d1d5db', color: '#fff', fontSize: 16, fontWeight: 800, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', boxShadow: inStock ? `0 10px 25px ${PINK}44` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <ShoppingCart size={20} />
+              <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, width: isMobile ? '100%' : undefined, minWidth: isMobile ? '100%' : 180, padding: '14px 18px', borderRadius: 14, background: inStock ? PINK : '#d1d5db', color: '#fff', fontSize: 15, fontWeight: 800, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', boxShadow: inStock ? `0 10px 25px ${PINK}44` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <ShoppingCart size={18} />
                 {inStock ? 'Checkout Now' : 'Out of Stock'}
               </button>
-            </div>
-
-            {/* Trust Signals */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
-              {[
-                { icon: '🔒', label: 'Secure Checkout', sub: 'SSL encrypted' },
-                { icon: '🚚', label: 'Fast Delivery', sub: '2–4 business days' },
-                { icon: '↩️', label: 'Easy Returns', sub: '15-day policy' },
-                { icon: '⭐', label: 'Authentic', sub: '100% genuine' },
-              ].map((t) => (
-                <div key={t.label} style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 20 }}>{t.icon}</span>
-                  <div>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: DARK }}>{t.label}</p>
-                    <p style={{ fontSize: 11, color: GRAY_LIGHT }}>{t.sub}</p>
-                  </div>
-                </div>
-              ))}
             </div>
 
             {/* Highlights */}
@@ -474,11 +481,11 @@ export default function ProductDetailPage() {
         </div>
 
         {/* TABS SECTION - Description/Specs/Reviews FIRST */}
-        <div style={{ marginTop: 64 }}>
+        <div style={{ marginTop: isMobile ? 40 : 64 }}>
           {/* Tab Navigation */}
-          <div style={{ display: 'flex', gap: 8, borderBottom: `2px solid ${PINK_LIGHT}`, marginBottom: 48, paddingBottom: 2 }}>
+          <div style={{ display: 'flex', gap: 8, borderBottom: `2px solid ${PINK_LIGHT}`, marginBottom: isMobile ? 24 : 48, paddingBottom: 2, overflowX: 'auto', scrollbarWidth: 'thin' }}>
             {(['description', 'specifications', 'reviews', 'faqs'] as TabType[]).map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '16px 32px', fontSize: 15, fontWeight: 700, color: activeTab === tab ? PINK : GRAY, borderBottom: `3px solid ${activeTab === tab ? PINK : 'transparent'}`, marginBottom: -4, textTransform: 'capitalize', letterSpacing: '0.02em', transition: 'all 0.3s', background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}>
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: isMobile ? '12px 14px' : '16px 32px', whiteSpace: 'nowrap', fontSize: isMobile ? 14 : 15, fontWeight: 700, color: activeTab === tab ? PINK : GRAY, borderBottom: `3px solid ${activeTab === tab ? PINK : 'transparent'}`, borderTop: 'none', borderLeft: 'none', borderRight: 'none', marginBottom: -4, textTransform: 'capitalize', letterSpacing: '0.02em', transition: 'all 0.3s', background: 'none', cursor: 'pointer', position: 'relative' }}>
                 {tab === 'faqs' ? 'FAQs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -486,38 +493,107 @@ export default function ProductDetailPage() {
 
           {/* Description Tab */}
           {activeTab === 'description' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: DARK, marginBottom: 20, paddingBottom: 10, borderBottom: `2px solid ${PINK_LIGHT}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
-                  Full Description
-                </h2>
-                <p style={{ fontSize: 14, color: GRAY, lineHeight: 1.85, marginBottom: 16 }}>
-                  {product.description || 'This premium product is formulated with the finest ingredients to deliver exceptional results. Crafted with care and backed by scientific research, it offers powerful benefits for daily use.'}
-                </p>
-              </div>
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: DARK, marginBottom: 20, paddingBottom: 10, borderBottom: `2px solid ${PINK_LIGHT}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
-                  Features &amp; Benefits
-                </h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {[
-                    { icon: '✦', title: 'Premium Quality', desc: 'Made with the finest ingredients sourced globally.' },
-                    { icon: '✦', title: 'Dermatologist Tested', desc: 'Safe and effective for all skin types.' },
-                    { icon: '✦', title: 'Fast Results', desc: 'Visible improvements in 2-4 weeks.' },
-                    { icon: '✦', title: 'Clean Beauty', desc: 'Free from harmful chemicals and additives.' },
-                  ].map((f, i) => (
-                    <div key={i} style={{ background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, padding: '16px 18px', display: 'flex', gap: 14 }}>
-                      <span style={{ width: 36, height: 36, borderRadius: 10, background: PINK_PALE, color: PINK, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{f.icon}</span>
-                      <div>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 4 }}>{f.title}</p>
-                        <p style={{ fontSize: 13, color: GRAY, lineHeight: 1.6 }}>{f.desc}</p>
+            <div style={{ position: 'relative' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 20 : 48,
+                  ...(tabExpanded.description
+                    ? {}
+                    : {
+                      maxHeight: isMobile ? 220 : 185,
+                      overflow: 'hidden',
+                    }),
+                }}
+              >
+                <div>
+                  <h2 style={{ fontSize: 20, fontWeight: 700, color: DARK, marginBottom: 20, paddingBottom: 10, borderBottom: `2px solid ${PINK_LIGHT}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
+                    Full Description
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: 14,
+                      color: GRAY,
+                      lineHeight: 1.85,
+                      marginBottom: 16,
+                      ...(tabExpanded.description
+                        ? {}
+                        : {
+                          display: '-webkit-box',
+                          WebkitLineClamp: 1,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }),
+                    }}
+                  >
+                    {descriptionContent}
+                  </p>
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 20, fontWeight: 700, color: DARK, marginBottom: 20, paddingBottom: 10, borderBottom: `2px solid ${PINK_LIGHT}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
+                    Features &amp; Benefits
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {(tabExpanded.description
+                      ? [
+                        { icon: '✦', title: 'Premium Quality', desc: 'Made with the finest ingredients sourced globally.' },
+                        { icon: '✦', title: 'Dermatologist Tested', desc: 'Safe and effective for all skin types.' },
+                        { icon: '✦', title: 'Fast Results', desc: 'Visible improvements in 2-4 weeks.' },
+                        { icon: '✦', title: 'Clean Beauty', desc: 'Free from harmful chemicals and additives.' },
+                      ]
+                      : [
+                        { icon: '✦', title: 'Premium Quality', desc: 'Made with the finest ingredients sourced globally.' },
+                        { icon: '✦', title: 'Dermatologist Tested', desc: 'Safe and effective for all skin types.' },
+                      ]).map((f, i) => (
+                      <div key={i} style={{ background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, padding: '16px 18px', display: 'flex', gap: 14 }}>
+                        <span style={{ width: 36, height: 36, borderRadius: 10, background: PINK_PALE, color: PINK, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{f.icon}</span>
+                        <div>
+                          <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 4 }}>{f.title}</p>
+                          <p style={{ fontSize: 13, color: GRAY, lineHeight: 1.6 }}>{f.desc}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
+
+              {tabExpanded.description ? (
+                <div style={{ marginTop: 16 }}>
+                  <button
+                    onClick={() => setTabExpanded((prev) => ({ ...prev, description: !prev.description }))}
+                    style={{ border: `1px solid ${PINK_LIGHT}`, background: '#fff', color: PINK, borderRadius: 999, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    See less
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 90,
+                      background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.88) 55%, rgba(255,255,255,1) 100%)',
+                      backdropFilter: 'blur(2px)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div style={{ position: 'absolute', left: '50%', bottom: isMobile ? 14 : 20, transform: 'translateX(-50%)' }}>
+                    <button
+                      onClick={() => setTabExpanded((prev) => ({ ...prev, description: !prev.description }))}
+                      style={{ border: `1px solid ${PINK_LIGHT}`, background: '#fff', color: PINK, borderRadius: 999, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 24px rgba(15,23,42,0.10)' }}
+                    >
+                      See more
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -529,20 +605,32 @@ export default function ProductDetailPage() {
                 Product Specifications
               </h2>
               <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden' }}>
-                {[
+                {(tabExpanded.specifications
+                  ? [
+                    { label: 'Category', value: product.category?.name || 'Beauty' },
+                    { label: 'Shelf Life', value: '24 months' },
+                    { label: 'Storage', value: 'Keep in cool, dry place' },
+                    { label: 'Country of Origin', value: 'Bangladesh' },
+                    { label: 'Certified', value: 'ISO 22716, Halal Certified' },
+                    { label: 'Packaging', value: 'Premium Glass/Bottle' },
+                  ]
+                  : [
                   { label: 'Category', value: product.category?.name || 'Beauty' },
                   { label: 'Shelf Life', value: '24 months' },
                   { label: 'Storage', value: 'Keep in cool, dry place' },
-                  { label: 'Country of Origin', value: 'Bangladesh' },
-                  { label: 'Certified', value: 'ISO 22716, Halal Certified' },
-                  { label: 'Packaging', value: 'Premium Glass/Bottle' },
-                ].map((s, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '200px 1fr', padding: '13px 20px', borderBottom: i < 5 ? `1px solid ${PINK_LIGHT}` : 'none', background: i % 2 === 1 ? PINK_PALE : '#fff' }}>
+                  ]).map((s, i, arr) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '200px 1fr', gap: isMobile ? 6 : 0, padding: '13px 20px', borderBottom: i < arr.length - 1 ? `1px solid ${PINK_LIGHT}` : 'none', background: i % 2 === 1 ? PINK_PALE : '#fff' }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>{s.label}</span>
                     <span style={{ fontSize: 13, color: DARK }}>{s.value}</span>
                   </div>
                 ))}
               </div>
+              <button
+                onClick={() => setTabExpanded((prev) => ({ ...prev, specifications: !prev.specifications }))}
+                style={{ marginTop: 14, border: `1px solid ${PINK_LIGHT}`, background: '#fff', color: PINK, borderRadius: 999, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {tabExpanded.specifications ? 'See less' : 'See more'}
+              </button>
             </div>
           )}
 
@@ -553,7 +641,7 @@ export default function ProductDetailPage() {
                 <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
                 Customer Reviews
               </h2>
-              <div style={{ display: 'flex', gap: 32, alignItems: 'center', background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 20, padding: '24px 28px', marginBottom: 32, maxWidth: 680 }}>
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 32, alignItems: isMobile ? 'stretch' : 'center', background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 20, padding: isMobile ? '18px 16px' : '24px 28px', marginBottom: 32, maxWidth: 680 }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 52, fontWeight: 800, color: DARK, lineHeight: 1 }}>4.8</div>
                   <span style={{ display: 'flex', gap: 2 }}>
@@ -579,8 +667,8 @@ export default function ProductDetailPage() {
                   })}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                {mockReviews.map((r, i) => (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+                {(tabExpanded.reviews ? mockReviews : mockReviews.slice(0, 2)).map((r, i) => (
                   <div key={i} style={{ background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 18, padding: '18px 20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -601,6 +689,12 @@ export default function ProductDetailPage() {
                   </div>
                 ))}
               </div>
+              <button
+                onClick={() => setTabExpanded((prev) => ({ ...prev, reviews: !prev.reviews }))}
+                style={{ marginTop: 14, border: `1px solid ${PINK_LIGHT}`, background: '#fff', color: PINK, borderRadius: 999, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {tabExpanded.reviews ? 'See less' : 'See more'}
+              </button>
             </div>
           )}
 
@@ -611,7 +705,7 @@ export default function ProductDetailPage() {
                 <span style={{ width: 4, height: 22, background: PINK, borderRadius: 2, display: 'inline-block' }} />
                 Frequently Asked Questions
               </h2>
-              {mockFaqs.map((faq, i) => (
+              {(tabExpanded.faqs ? mockFaqs : mockFaqs.slice(0, 2)).map((faq, i) => (
                 <div key={i} onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)} style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 14, marginBottom: 10, overflow: 'hidden', cursor: 'pointer', background: openFaqIndex === i ? PINK_PALE : '#fff' }}>
                   <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: DARK, paddingRight: 20 }}>{faq.q}</p>
@@ -622,29 +716,35 @@ export default function ProductDetailPage() {
                   )}
                 </div>
               ))}
+              <button
+                onClick={() => setTabExpanded((prev) => ({ ...prev, faqs: !prev.faqs }))}
+                style={{ marginTop: 6, border: `1px solid ${PINK_LIGHT}`, background: '#fff', color: PINK, borderRadius: 999, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {tabExpanded.faqs ? 'See less' : 'See more'}
+              </button>
             </div>
           )}
         </div>
 
         {/* Related Products - LAST for better scroll engagement */}
-        <div style={{ marginTop: 80, padding: '40px 32px', background: '#fcfcfc', borderRadius: 32, border: `1px solid ${PINK_LIGHT}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: DARK, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ marginTop: isMobile ? 48 : 80, padding: isMobile ? '24px 16px' : '40px 32px', background: '#fcfcfc', borderRadius: isMobile ? 20 : 32, border: `1px solid ${PINK_LIGHT}` }}>
+          <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 10 : 0, marginBottom: 32 }}>
+            <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: DARK, display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ width: 6, height: 28, background: PINK, borderRadius: 3, display: 'inline-block' }} />
               You Might Also Like
             </h2>
             <Link href="/shop" style={{ color: PINK, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>View All →</Link>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-            {['Rose Petal Toner', 'Glow Moisturizer SPF 30', 'Niacinamide Serum', 'Vitamin C Eye Cream'].map((name, i) => (
-              <div key={i} style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(233,30,140,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
-                <div style={{ height: 180, background: 'linear-gradient(135deg,#fdf2f8,#fce7f3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : (isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)'), gap: isMobile ? 12 : 24 }}>
+            {relatedProducts.map((name, i) => (
+              <div key={i} style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: isMobile ? 16 : 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(233,30,140,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
+                <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg,#fdf2f8,#fce7f3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="60" height="100" viewBox="0 0 50 90" fill="none">
                     <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6" />
                     <rect x="10" y="10" width="30" height="70" rx="10" fill="white" fillOpacity="0.8" stroke={PINK} strokeWidth="1" />
                   </svg>
                 </div>
-                <div style={{ padding: '20px' }}>
+                <div style={{ padding: isMobile ? '12px' : '20px' }}>
                   <span style={{ fontSize: 10, color: PINK, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>SKINCARE</span>
                   <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>{name}</p>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
