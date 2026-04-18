@@ -8,6 +8,8 @@ import { useState, useEffect, useRef, type FormEvent } from "react";
 
 import { productCategories } from "./data";
 import { useHomepageCategories, useHomepageStats, useSiteSettings, useSearchProducts } from "@/modules/homepage";
+import { useCart } from "@/shared/contexts/CartContext";
+import { useWishlist } from "@/shared/contexts/WishlistContext";
 import Image from "next/image";
 
 export function Header() {
@@ -16,6 +18,8 @@ export function Header() {
   const { data: settings } = useSiteSettings();
   const { data: stats } = useHomepageStats();
   const { status } = useSession();
+  const { totalItems: cartCount, setIsOpen: setCartOpen } = useCart();
+  const { count: wishlistCount } = useWishlist();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -186,13 +190,25 @@ export function Header() {
             {/* Wishlist */}
             <button className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" aria-label="Wishlist">
               <Heart size={18} />
-              <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">3</span>
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
             </button>
 
             {/* Cart */}
-            <button className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" aria-label="Cart">
+            <button 
+              onClick={() => setCartOpen(true)}
+              className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" 
+              aria-label="Cart"
+            >
               <ShoppingCart size={18} />
-              <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">2</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
             </button>
 
             {isAuthenticated ? (

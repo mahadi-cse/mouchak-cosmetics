@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Heart } from 'lucide-react';
 import { useHomepageFeaturedProducts, useHomepageCategories } from '@/modules/homepage';
+import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { CategoryCard } from './CategoryCard';
 import type { Category, Product } from '@/shared/types';
 
@@ -53,7 +54,7 @@ function StarRating({ rating }: { rating: number }) {
 
 function EnhancedProductCard({ product }: { product: Product }) {
   const [hovered, setHovered] = useState(false);
-  const [wishlisted, setWishlisted] = useState(false);
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [imageSrc, setImageSrc] = useState(
     normalizeImage(product.images?.[0]) || PRODUCT_FALLBACK_IMAGE
   );
@@ -66,6 +67,7 @@ function EnhancedProductCard({ product }: { product: Product }) {
   const category = product.category?.name || 'Products';
   const rating = 4.5;
   const reviews = 0;
+  const inWishlist = isInWishlist(product.id);
 
   return (
     <Link href={`/product/${product.slug}`} className="block">
@@ -122,19 +124,29 @@ function EnhancedProductCard({ product }: { product: Product }) {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setWishlisted(!wishlisted);
+              if (inWishlist) {
+                removeFromWishlist(product.id);
+              } else {
+                addToWishlist({
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  image: product.images?.[0],
+                  slug: product.slug,
+                });
+              }
             }}
             className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-200"
             style={{
-              background: wishlisted ? '#e91e8c' : 'rgba(255,255,255,0.95)',
-              borderColor: wishlisted ? 'none' : '#f3c8dc',
+              background: inWishlist ? '#e91e8c' : 'rgba(255,255,255,0.95)',
+              borderColor: inWishlist ? '#e91e8c' : '#f3c8dc',
             }}
           >
             <Heart
               size={14}
               className="transition-all"
-              fill={wishlisted ? 'white' : 'none'}
-              stroke={wishlisted ? 'white' : '#e91e8c'}
+              fill={inWishlist ? 'white' : 'none'}
+              stroke={inWishlist ? 'white' : '#e91e8c'}
               strokeWidth={2}
             />
           </button>

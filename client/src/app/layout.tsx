@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import AuthProvider from "@/shared/providers/AuthProvider";
 import QueryProvider from "@/shared/providers/QueryProvider";
+import { CartProvider } from "@/shared/contexts/CartContext";
+import { WishlistProvider } from "@/shared/contexts/WishlistContext";
+import { CartDrawer } from "@/shared/components/CartDrawer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,7 +24,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <AuthProvider>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <CartProvider>
+              <WishlistProvider>
+                {children}
+                <CartDrawer />
+              </WishlistProvider>
+            </CartProvider>
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>
