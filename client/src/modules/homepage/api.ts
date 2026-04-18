@@ -85,6 +85,17 @@ export const homepageAPI = {
     return fallbackResponse.data.data as Product[];
   },
 
+  searchProducts: async (query: string, limit: number = 5): Promise<Product[]> => {
+    if (!query) return [];
+    const response = await apiClient.get<any>("/products", {
+      params: {
+        search: query,
+        limit,
+      },
+    });
+    return response.data.data as Product[];
+  },
+
   getAllSliders: async (): Promise<HeroSlider[]> => {
     const response = await apiClient.get<HeroSlider[]>("/homepage/slider/all");
     return response.data;

@@ -44,7 +44,11 @@ export const createCodOrder: RequestHandler = asyncHandler(async (req, res) => {
     throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid COD order payload');
   }
 
-  const order = await orderService.createCodOrder(parsed.data);
+  if (!req.user?.id) {
+    throw new ValidationError('Authentication is required to place COD order');
+  }
+
+  const order = await orderService.createCodOrder(parsed.data, req.user.id);
   res.status(201).json(ok(order, 'Cash on delivery order placed successfully'));
 });
 

@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Heart, Search, ShoppingCart, User, MapPin, Mail, Phone } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 
 import { productCategories } from "./data";
-import { useHomepageCategories, useHomepageStats, useSiteSettings } from "@/modules/homepage";
+import { useHomepageCategories, useHomepageStats, useSiteSettings, useSearchProducts } from "@/modules/homepage";
+import Image from "next/image";
 
 export function Header() {
   const router = useRouter();
@@ -16,6 +17,28 @@ export function Header() {
   const { data: stats } = useHomepageStats();
   const { status } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const { data: searchResults, isLoading: isSearching } = useSearchProducts(debouncedSearchTerm, 5);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const storeName = settings?.storeName || "Mouchak Cosmetics";
   const [storeNameFirst, ...storeNameRest] = storeName.split(/\s+/).filter(Boolean);
@@ -92,21 +115,70 @@ export function Header() {
           </div>
 
           {/* Search Bar - Center */}
-          <div className="hidden lg:flex flex-1 justify-center px-12">
-            <form
-              onSubmit={handleSearchSubmit}
-              className="flex w-full max-w-sm overflow-hidden rounded-full border border-zinc-300 bg-zinc-50 transition focus-within:border-primary"
-            >
-              <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search skincare, lipstick, perfume…"
-                className="w-full bg-transparent px-5 py-2.5 text-sm outline-none placeholder-zinc-500"
-              />
-              <button type="submit" className="px-4 text-zinc-600 transition hover:text-primary" aria-label="Search">
-                <Search size={16} />
-              </button>
-            </form>
+          <div className="hidden lg:flex flex-1 justify-center px-12 relative" ref={searchContainerRef}>
+            <div className="w-full max-w-sm relative">
+              <form
+                onSubmit={handleSearchSubmit}
+                className="flex w-full overflow-hidden rounded-full border border-zinc-300 bg-zinc-50 transition focus-within:border-primary"
+              >
+                <input
+                  value={searchTerm}
+                  onChange={(event) => {
+                    setSearchTerm(event.target.value);
+                    setIsSearchOpen(true);
+                  }}
+                  onFocus={() => setIsSearchOpen(true)}
+                  placeholder="Search skincare, lipstick, perfume…"
+                  className="w-full bg-transparent px-5 py-2.5 text-sm outline-none placeholder-zinc-500"
+                />
+                <button type="submit" className="px-4 text-zinc-600 transition hover:text-primary" aria-label="Search">
+                  <Search size={16} />
+                </button>
+              </form>
+
+              {/* Search Results Dropdown */}
+              {isSearchOpen && searchTerm && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-50">
+                  {isSearching ? (
+                    <div className="p-4 text-center text-sm text-zinc-500">Searching...</div>
+                  ) : searchResults && searchResults.length > 0 ? (
+                    <div className="flex flex-col">
+                      {searchResults.map((product) => (
+                        <Link
+                          key={product.id}
+                          href={`/products/${product.slug}`}
+                          onClick={() => setIsSearchOpen(false)}
+                          className="flex items-center gap-3 p-3 hover:bg-zinc-50 transition border-b border-zinc-100 last:border-0"
+                        >
+                          <div className="h-10 w-10 flex-shrink-0 bg-zinc-100 rounded-md overflow-hidden relative">
+                            {product.images && product.images.length > 0 && product.images[0] ? (
+                              <Image src={typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as any).url} alt={product.name} fill className="object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                                <Search size={14} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-zinc-900 truncate">{product.name}</p>
+                            <p className="text-xs text-zinc-500">৳{product.price}</p>
+                          </div>
+                        </Link>
+                      ))}
+                      <Link
+                        href={`/shop?search=${encodeURIComponent(searchTerm)}`}
+                        onClick={() => setIsSearchOpen(false)}
+                        className="p-3 text-center text-sm text-primary font-medium bg-rose-50 hover:bg-rose-100 transition"
+                      >
+                        View all results
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-zinc-500">No products found for "{searchTerm}"</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Actions */}

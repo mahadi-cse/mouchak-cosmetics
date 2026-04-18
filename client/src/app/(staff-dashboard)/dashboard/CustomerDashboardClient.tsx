@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   useAddCustomerWishlistItem,
   useCustomerDashboardOrders,
@@ -263,7 +264,13 @@ function OrderCard({ order, onTrack }: { order: CustomerDashboardOrder; onTrack:
 }
 
 export default function CustomerDashboardClient() {
-  const [activeNav, setActiveNav] = React.useState<CustomerNavId>('profile');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams?.get('tab') as CustomerNavId | null;
+  const validTabs: CustomerNavId[] = ['profile', 'order', 'wishlist', 'order-tracking'];
+  const initialTab: CustomerNavId = tabParam && validTabs.includes(tabParam) ? tabParam : 'profile';
+
+  const [activeNav, setActiveNav] = React.useState<CustomerNavId>(initialTab);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [orderSearch, setOrderSearch] = React.useState('');
   const [trackingOrderId, setTrackingOrderId] = React.useState<number | undefined>(undefined);
@@ -272,6 +279,15 @@ export default function CustomerDashboardClient() {
   const [profileNotice, setProfileNotice] = React.useState<string>('');
   const [wishlistNotice, setWishlistNotice] = React.useState<string>('');
   const [profileDirty, setProfileDirty] = React.useState(false);
+
+  const handleNavChange = (id: CustomerNavId) => {
+    setActiveNav(id);
+    setSidebarOpen(false);
+    // Keep URL in sync
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', id);
+    void router.replace(url.pathname + url.search, { scroll: false });
+  };
 
   const activeContent = contentByNav[activeNav];
 
@@ -880,7 +896,7 @@ export default function CustomerDashboardClient() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveNav(item.id)}
+                onClick={() => handleNavChange(item.id)}
                 className="flex w-full items-center gap-3 rounded-[10px] border-0 px-3 py-[11px] text-left text-[14px] transition"
                 style={{
                   background: isActive ? DESIGN.softPink : 'transparent',
@@ -895,6 +911,16 @@ export default function CustomerDashboardClient() {
             );
           })}
         </nav>
+        <div style={{ padding: '12px 8px', borderTop: `1px solid ${DESIGN.border}` }}>
+          <a
+            href="/"
+            className="flex w-full items-center gap-3 rounded-[10px] px-3 py-[11px] text-[14px] transition"
+            style={{ color: DESIGN.mutedFg, fontWeight: 500 }}
+          >
+            <span style={{ fontSize: 15 }}>🛍️</span>
+            <span>Back to Shop</span>
+          </a>
+        </div>
       </aside>
 
       {sidebarOpen && (
@@ -938,10 +964,7 @@ export default function CustomerDashboardClient() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      setActiveNav(item.id);
-                      setSidebarOpen(false);
-                    }}
+                    onClick={() => handleNavChange(item.id)}
                     className="flex w-full items-center gap-3 rounded-[10px] border-0 px-3 py-[11px] text-left text-[14px] transition"
                     style={{
                       background: isActive ? DESIGN.softPink : 'transparent',
@@ -992,62 +1015,6 @@ export default function CustomerDashboardClient() {
         </header>
 
         <section className="flex-1 overflow-auto p-4 md:p-6">
-          <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div
-              className="rounded-2xl border bg-white p-4 shadow-[0_2px_8px_rgba(233,30,140,0.04)]"
-              style={{ borderColor: DESIGN.border }}
-            >
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: DESIGN.mutedFg }}>
-                Current Section
-              </p>
-              <p className="mt-2 text-lg font-black" style={{ color: DESIGN.fg }}>
-                {activeContent.title}
-              </p>
-            </div>
-            <div
-              className="rounded-2xl border bg-white p-4 shadow-[0_2px_8px_rgba(233,30,140,0.04)]"
-              style={{ borderColor: DESIGN.border }}
-            >
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: DESIGN.mutedFg }}>
-                Saved Items
-              </p>
-              <p className="mt-2 text-lg font-black" style={{ color: DESIGN.primary }}>
-                {summaryQuery.isLoading ? '...' : (summary?.wishlistCount ?? 0)}
-              </p>
-            </div>
-            <div
-              className="rounded-2xl border bg-white p-4 shadow-[0_2px_8px_rgba(233,30,140,0.04)]"
-              style={{ borderColor: DESIGN.border }}
-            >
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: DESIGN.mutedFg }}>
-                Trackable Orders
-              </p>
-              <p className="mt-2 text-lg font-black" style={{ color: DESIGN.fg }}>
-                {summaryQuery.isLoading ? '...' : (summary?.trackableOrders ?? 0)}
-              </p>
-            </div>
-            <div
-              className="rounded-2xl border bg-white p-4 shadow-[0_2px_8px_rgba(233,30,140,0.04)]"
-              style={{ borderColor: DESIGN.border }}
-            >
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: DESIGN.mutedFg }}>
-                Loyalty Points
-              </p>
-              <p className="mt-2 text-lg font-black" style={{ color: DESIGN.fg }}>
-                {summaryQuery.isLoading ? '...' : (summary?.loyaltyPoints ?? 0)}
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-xl font-black" style={{ color: DESIGN.fg }}>
-              {activeContent.title}
-            </p>
-            <p className="mt-1 text-sm" style={{ color: DESIGN.mutedFg }}>
-              {activeContent.subtitle}
-            </p>
-          </div>
-
           {renderActiveSection()}
         </section>
       </main>

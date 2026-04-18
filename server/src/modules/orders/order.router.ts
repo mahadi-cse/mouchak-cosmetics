@@ -4,8 +4,8 @@ import { authenticate, authorize } from '../../middleware/authenticate';
 
 const router = Router();
 
-// Public COD checkout route from product details page
-router.post('/cod', orderController.createCodOrder);
+// COD checkout requires authenticated customer account
+router.post('/cod', authenticate, authorize('CUSTOMER'), orderController.createCodOrder);
 
 // Protected routes - All require auth
 router.get('/', authenticate, orderController.listOrders);

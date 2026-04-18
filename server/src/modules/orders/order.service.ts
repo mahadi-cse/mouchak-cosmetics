@@ -34,6 +34,53 @@ export class OrderService {
     });
   }
 
+  private async getOrCreateCustomerByUserId(userId: number) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        address: true,
+        isActive: true,
+        customer: {
+          select: {
+            id: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    if (!user || !user.isActive) {
+      throw new NotFoundError('Authenticated user not found');
+    }
+
+    if (user.customer?.isActive) {
+      return user.customer.id;
+    }
+
+    if (user.customer && !user.customer.isActive) {
+      const reactivated = await prisma.customer.update({
+        where: { userId: user.id },
+        data: { isActive: true },
+        select: { id: true },
+      });
+      return reactivated.id;
+    }
+
+    const created = await prisma.customer.create({
+      data: {
+        userId: user.id,
+        defaultAddress: user.address || null,
+      },
+      select: { id: true },
+    });
+
+    return created.id;
+  }
+
   async createOrder(data: CreateOrderInput) {
     // Validate products exist and have stock
     const products = await prisma.product.findMany({
@@ -139,10 +186,16 @@ export class OrderService {
     return order;
   }
 
-  async createCodOrder(data: CreateCodOrderInput) {
+  async createCodOrder(data: CreateCodOrderInput, userId: number) {
+    const customerId = await this.getOrCreateCustomerByUserId(userId);
+
     return this.createOrder({
+      customerId,
       channel: 'ONLINE',
       paymentMethod: 'CASH',
+      discountAmount: 0,
+      shippingCharge: 0,
+      taxAmount: 0,
       items: [
         {
           productId: data.productId,

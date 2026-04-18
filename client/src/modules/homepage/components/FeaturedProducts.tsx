@@ -408,7 +408,7 @@ export function FeaturedProducts() {
             </h2>
           </div>
           <Link
-            href="/shop"
+            href="/categories"
             className="rounded-full border-1.5 border-pink-600 px-5 py-2 text-sm font-bold text-pink-600 transition-all duration-200 hover:bg-pink-600 hover:text-white"
             style={{ letterSpacing: '0.5px' }}
           >

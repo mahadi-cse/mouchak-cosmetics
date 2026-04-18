@@ -22,6 +22,7 @@ export const HOMEPAGE_QUERY_KEYS = {
   slider: (id: number) => [...HOMEPAGE_QUERY_KEYS.sliders(), id] as const,
   categories: () => [...HOMEPAGE_QUERY_KEYS.all, "categories"] as const,
   featuredProducts: (limit: number) => [...HOMEPAGE_QUERY_KEYS.all, "featuredProducts", limit] as const,
+  searchProducts: (query: string, limit: number) => [...HOMEPAGE_QUERY_KEYS.all, "searchProducts", query, limit] as const,
 };
 
 export const useSiteSettings = (
@@ -81,6 +82,20 @@ export const useHomepageFeaturedProducts = (
     queryFn: () => homepageAPI.getFeaturedProducts(limit),
     staleTime: 10 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
+    ...options,
+  });
+};
+
+export const useSearchProducts = (
+  query: string,
+  limit: number = 5,
+  options?: UseQueryOptions<Product[], Error>
+): UseQueryResult<Product[], Error> => {
+  return useQuery<Product[], Error>({
+    queryKey: HOMEPAGE_QUERY_KEYS.searchProducts(query, limit),
+    queryFn: () => homepageAPI.searchProducts(query, limit),
+    enabled: !!query,
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 };

@@ -11,6 +11,7 @@ export {
   useCreateSlider,
   useUpdateSlider,
   useDeleteSlider,
+  useSearchProducts,
   HOMEPAGE_QUERY_KEYS
 } from './queries';
 
