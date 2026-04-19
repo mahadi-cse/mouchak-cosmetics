@@ -19,7 +19,7 @@ export function Header() {
   const { data: stats } = useHomepageStats();
   const { status } = useSession();
   const { totalItems: cartCount, setIsOpen: setCartOpen } = useCart();
-  const { count: wishlistCount } = useWishlist();
+  const { count: wishlistCount, setIsOpen: setWishlistOpen } = useWishlist();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -188,7 +188,11 @@ export function Header() {
           {/* Right Actions */}
           <div className="flex items-center gap-3">
             {/* Wishlist */}
-            <button className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" aria-label="Wishlist">
+            <button 
+              onClick={() => setWishlistOpen(true)}
+              className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" 
+              aria-label="Wishlist"
+            >
               <Heart size={18} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">

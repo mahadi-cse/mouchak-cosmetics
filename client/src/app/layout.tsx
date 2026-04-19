@@ -4,6 +4,7 @@ import QueryProvider from "@/shared/providers/QueryProvider";
 import { CartProvider } from "@/shared/contexts/CartContext";
 import { WishlistProvider } from "@/shared/contexts/WishlistContext";
 import { CartDrawer } from "@/shared/components/CartDrawer";
+import { WishlistDrawer } from "@/shared/components/WishlistDrawer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({
               <WishlistProvider>
                 {children}
                 <CartDrawer />
+                <WishlistDrawer />
               </WishlistProvider>
             </CartProvider>
           </QueryProvider>

@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { CheckCircle2, ChevronRight, Clock, ShieldCheck, ShoppingBag, Truck, X, Heart, Share2, Star, Zap, TrendingUp, ShoppingCart } from 'lucide-react';
 import { Header } from '@/modules/homepage/components/Header';
 import { Footer } from '@/modules/homepage/components/Footer';
+import { useWishlist } from '@/shared/contexts/WishlistContext';
 
 function formatMoney(value?: number | string | null) {
   return `৳${Number(value || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
@@ -25,7 +26,7 @@ export default function ProductDetailPage() {
   // Product State  
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [wishlist, setWishlist] = useState(false);
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [activeTab, setActiveTab] = useState<TabType>('description');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [tabExpanded, setTabExpanded] = useState<Record<TabType, boolean>>({
@@ -204,8 +205,14 @@ export default function ProductDetailPage() {
                   </span>
                 </div>
               )}
-              <button style={{ position: 'absolute', top: 16, right: 16, width: 38, height: 38, borderRadius: '50%', background: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => setWishlist(!wishlist)}>
-                <Heart size={18} fill={wishlist ? PINK : 'none'} color={wishlist ? PINK : GRAY_LIGHT} />
+              <button style={{ position: 'absolute', top: 16, right: 16, width: 38, height: 38, borderRadius: '50%', background: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => {
+                if (isInWishlist(product.id)) {
+                  removeFromWishlist(product.id);
+                } else {
+                  addToWishlist({ id: product.id, name: product.name, price: Number(product.price || 0), image: images[0] || undefined, slug: product.slug });
+                }
+              }}>
+                <Heart size={18} fill={isInWishlist(product.id) ? PINK : 'none'} color={isInWishlist(product.id) ? PINK : GRAY_LIGHT} />
               </button>
               {/* Dot indicators */}
               <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6 }}>
