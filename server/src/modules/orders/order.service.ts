@@ -73,6 +73,9 @@ export class OrderService {
     const created = await prisma.customer.create({
       data: {
         userId: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone || null,
         defaultAddress: user.address || null,
       },
       select: { id: true },

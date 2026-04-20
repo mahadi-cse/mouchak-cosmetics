@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
 export const updateCustomerSchema = z.object({
+  firstName: z.string().trim().min(1).max(80).optional(),
+  lastName: z.string().trim().min(1).max(80).optional(),
+  phone: z.string().trim().max(30).optional(),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
   defaultAddress: z.string().optional(),

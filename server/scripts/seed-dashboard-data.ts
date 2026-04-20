@@ -46,10 +46,16 @@ async function ensureCustomers() {
     const customer = await prisma.customer.upsert({
       where: { userId: user.id },
       update: {
+        firstName: seed.firstName,
+        lastName: seed.lastName,
+        phone: seed.phone,
         city: seed.city,
       },
       create: {
         userId: user.id,
+        firstName: seed.firstName,
+        lastName: seed.lastName,
+        phone: seed.phone,
         city: seed.city,
         country: 'Bangladesh',
         defaultAddress: `${seed.city} Main Road`,

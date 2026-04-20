@@ -184,6 +184,9 @@ model Customer {
   id              Int       @id @default(autoincrement())
   userId          Int       @unique
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String
+  lastName        String
+  phone           String?
   dateOfBirth     DateTime?
   gender          String?
   defaultAddress  String?

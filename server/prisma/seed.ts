@@ -5,6 +5,19 @@ import { generateSlug } from '../src/shared/utils/slug';
 async function main() {
   console.log('🌱 Seeding database...');
 
+  // Create a default warehouse branch for inventory
+  const defaultBranch = await prisma.branch.upsert({
+    where: { branchCode: 'MAIN-WH' },
+    update: {},
+    create: {
+      name: 'Main Warehouse',
+      branchCode: 'MAIN-WH',
+      branchType: 'WAREHOUSE',
+      address: 'Dhaka, Bangladesh',
+      isActive: true,
+    },
+  });
+
   // Create categories
   const categories = await Promise.all([
     prisma.category.create({
@@ -206,6 +219,7 @@ async function main() {
       prisma.inventory.create({
         data: {
           productId: product.id,
+          warehouseId: defaultBranch.id,
           quantity: Math.floor(Math.random() * 100) + 20,
           reservedQty: 0,
           lowStockThreshold: 10,

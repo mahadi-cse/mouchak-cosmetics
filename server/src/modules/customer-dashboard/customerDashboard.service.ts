@@ -68,7 +68,7 @@ class CustomerDashboardService {
 
     return {
       customerId: customer.id,
-      customerName: `${customer.user.firstName} ${customer.user.lastName}`.trim(),
+      customerName: `${customer.firstName} ${customer.lastName}`.trim(),
       totalOrders,
       activeOrders,
       trackableOrders,
@@ -87,10 +87,10 @@ class CustomerDashboardService {
       id: customer.id,
       userId: customer.userId,
       email: customer.user.email,
-      firstName: customer.user.firstName,
-      lastName: customer.user.lastName,
-      phone: customer.user.phone,
-      address: customer.user.address,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      phone: customer.phone,
+      address: customer.defaultAddress,
       dateOfBirth: customer.dateOfBirth,
       gender: customer.gender,
       defaultAddress: customer.defaultAddress,
@@ -111,13 +111,12 @@ class CustomerDashboardService {
   async updateProfile(userId: number, data: UpdateMyProfileInput) {
     const customer = await this.getCustomerByUserId(userId);
 
-    const userUpdateData: Prisma.UserUpdateInput = {};
     const customerUpdateData: Prisma.CustomerUpdateInput = {};
 
-    if (data.firstName !== undefined) userUpdateData.firstName = data.firstName;
-    if (data.lastName !== undefined) userUpdateData.lastName = data.lastName;
-    if (data.phone !== undefined) userUpdateData.phone = data.phone || null;
-    if (data.address !== undefined) userUpdateData.address = data.address || null;
+    if (data.firstName !== undefined) customerUpdateData.firstName = data.firstName;
+    if (data.lastName !== undefined) customerUpdateData.lastName = data.lastName;
+    if (data.phone !== undefined) customerUpdateData.phone = data.phone || null;
+    if (data.address !== undefined) customerUpdateData.defaultAddress = data.address || null;
 
     if (data.dateOfBirth !== undefined) {
       customerUpdateData.dateOfBirth = this.normalizeOptionalDate(data.dateOfBirth);
@@ -128,21 +127,12 @@ class CustomerDashboardService {
     if (data.postalCode !== undefined) customerUpdateData.postalCode = data.postalCode || null;
     if (data.country !== undefined) customerUpdateData.country = data.country || 'Bangladesh';
 
-    await prisma.$transaction(async (tx) => {
-      if (Object.keys(userUpdateData).length > 0) {
-        await tx.user.update({
-          where: { id: userId },
-          data: userUpdateData,
-        });
-      }
-
-      if (Object.keys(customerUpdateData).length > 0) {
-        await tx.customer.update({
-          where: { id: customer.id },
-          data: customerUpdateData,
-        });
-      }
-    });
+    if (Object.keys(customerUpdateData).length > 0) {
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: customerUpdateData,
+      });
+    }
 
     return this.getProfile(userId);
   }

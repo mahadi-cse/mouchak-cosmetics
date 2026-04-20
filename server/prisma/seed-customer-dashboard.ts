@@ -95,6 +95,9 @@ async function main() {
   const customer = await prisma.customer.upsert({
     where: { userId: user.id },
     update: {
+      firstName: 'Nusrat',
+      lastName: 'Jahan',
+      phone: '+8801711001100',
       dateOfBirth: new Date('1997-09-12'),
       gender: 'Female',
       defaultAddress: 'Road 11, Dhanmondi, Dhaka',
@@ -106,6 +109,9 @@ async function main() {
     },
     create: {
       userId: user.id,
+      firstName: 'Nusrat',
+      lastName: 'Jahan',
+      phone: '+8801711001100',
       dateOfBirth: new Date('1997-09-12'),
       gender: 'Female',
       defaultAddress: 'Road 11, Dhanmondi, Dhaka',

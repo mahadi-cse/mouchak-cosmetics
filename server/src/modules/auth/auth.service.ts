@@ -181,6 +181,9 @@ export class AuthService {
 
     const customerType = await this.getCustomerUserType();
     const hashedPassword = await hashPassword(input.password);
+    const firstName = input.firstName.trim();
+    const lastName = input.lastName.trim();
+    const phone = input.phone?.trim() || null;
 
     const createdUser = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -188,9 +191,9 @@ export class AuthService {
           email,
           password: hashedPassword,
           userTypeId: customerType.id,
-          firstName: input.firstName.trim(),
-          lastName: input.lastName.trim(),
-          phone: input.phone?.trim() || null,
+          firstName,
+          lastName,
+          phone,
           isActive: true,
         },
       });
@@ -198,6 +201,9 @@ export class AuthService {
       await tx.customer.create({
         data: {
           userId: user.id,
+          firstName,
+          lastName,
+          phone,
         },
       });
 
@@ -216,7 +222,7 @@ export class AuthService {
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
-      include: { userType: true },
+      include: { userType: true, customer: true },
     });
 
     if (existingUser && !existingUser.isActive) {
@@ -254,10 +260,21 @@ export class AuthService {
           },
         });
 
+    // Store personal details on the Customer record
+    const customerFirstName = existingUser?.customer?.firstName || firstName;
+    const customerLastName = existingUser?.customer?.lastName || lastName;
+
     await prisma.customer.upsert({
       where: { userId: user.id },
-      update: {},
-      create: { userId: user.id },
+      update: {
+        firstName: customerFirstName,
+        lastName: customerLastName,
+      },
+      create: {
+        userId: user.id,
+        firstName,
+        lastName,
+      },
     });
 
     const customerRole = assertRoleCode(USER_TYPE_CODES.CUSTOMER);
@@ -388,6 +405,14 @@ export class AuthService {
         lastName: true,
         phone: true,
         userType: true,
+        customer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+          },
+        },
         userRoles: {
           include: {
             role: true,
@@ -417,10 +442,59 @@ export class AuthService {
       throw new UnauthorizedError('User not found', 'USER_NOT_FOUND');
     }
 
+    // For customer users, prefer the Customer table fields
+    if (profile.customer) {
+      return {
+        ...profile,
+        firstName: profile.customer.firstName,
+        lastName: profile.customer.lastName,
+        phone: profile.customer.phone,
+      };
+    }
+
     return profile;
   }
 
   async updateProfile(userId: number, data: { firstName?: string; lastName?: string; phone?: string; address?: string }) {
+    // Check if this user is a customer
+    const customer = await prisma.customer.findUnique({ where: { userId } });
+
+    if (customer) {
+      // Customer users: update personal details on the Customer table
+      const updatedCustomer = await prisma.customer.update({
+        where: { userId },
+        data: {
+          ...(data.firstName !== undefined && { firstName: data.firstName }),
+          ...(data.lastName !== undefined && { lastName: data.lastName }),
+          ...(data.phone !== undefined && { phone: data.phone }),
+          ...(data.address !== undefined && { defaultAddress: data.address }),
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          defaultAddress: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return {
+        id: updatedCustomer.user.id,
+        email: updatedCustomer.user.email,
+        firstName: updatedCustomer.firstName,
+        lastName: updatedCustomer.lastName,
+        phone: updatedCustomer.phone,
+        address: updatedCustomer.defaultAddress,
+      };
+    }
+
+    // Non-customer (staff) users: update on User table as before
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {

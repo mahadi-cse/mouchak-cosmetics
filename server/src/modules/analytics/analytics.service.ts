@@ -474,7 +474,7 @@ export class AnalyticsService {
 
     const orders = await prisma.order.findMany({
       where,
-      include: { items: true, payment: true, customer: { include: { user: true } } },
+      include: { items: true, payment: true, customer: true },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
@@ -482,7 +482,7 @@ export class AnalyticsService {
     return orders.map(order => ({
       orderNumber: order.orderNumber,
       date: order.createdAt,
-      customer: order.customer?.user.firstName + ' ' + order.customer?.user.lastName || 'N/A',
+      customer: order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'N/A',
       status: order.status,
       paymentStatus: order.payment?.status,
       total: order.total,

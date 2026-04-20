@@ -16,13 +16,11 @@ export class CustomerService {
     const where: any = {};
 
     if (search) {
-      where.user = {
-        OR: [
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-        ],
-      };
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+      ];
     }
 
     if (segment) {
@@ -95,6 +93,9 @@ export class CustomerService {
     return await prisma.customer.update({
       where: { id: customerId },
       data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
         gender: data.gender,
         defaultAddress: data.defaultAddress,
@@ -193,7 +194,7 @@ export class CustomerService {
 
     return {
       customerId: customer.id,
-      customerName: customer.user.firstName + ' ' + customer.user.lastName,
+      customerName: customer.firstName + ' ' + customer.lastName,
       totalOrders,
       totalSpent: customer.totalSpent,
       avgOrderValue,

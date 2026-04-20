@@ -87,6 +87,25 @@ const contentByNav: Record<CustomerNavId, { title: string; subtitle: string }> =
   },
 };
 
+const TRACKING_STEPS: Array<{ status: DashboardOrderStatus; label: string; icon: string }> = [
+  { status: 'PENDING',    label: 'Order Placed',   icon: '🛒' },
+  { status: 'CONFIRMED',  label: 'Confirmed',      icon: '✅' },
+  { status: 'PROCESSING', label: 'Processing',     icon: '⚙️' },
+  { status: 'SHIPPED',    label: 'Shipped',        icon: '🚚' },
+  { status: 'DELIVERED',  label: 'Delivered',      icon: '📦' },
+];
+
+const STATUS_ORDER: DashboardOrderStatus[] = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+
+const getStepState = (stepStatus: DashboardOrderStatus, orderStatus: DashboardOrderStatus): 'done' | 'active' | 'upcoming' => {
+  if (orderStatus === 'CANCELLED' || orderStatus === 'REFUNDED') return 'upcoming';
+  const stepIdx = STATUS_ORDER.indexOf(stepStatus);
+  const orderIdx = STATUS_ORDER.indexOf(orderStatus);
+  if (stepIdx < orderIdx) return 'done';
+  if (stepIdx === orderIdx) return 'active';
+  return 'upcoming';
+};
+
 const money = (value?: number | string | null) => {
   if (value === null || value === undefined) return '৳0';
   return `৳${Number(value).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
@@ -809,31 +828,61 @@ export default function CustomerDashboardClient() {
                 </span>
               </div>
 
-              <div className="mt-5 space-y-4">
-                {trackingQuery.data.trackingEvents.map((event, index) => (
-                  <div key={event.id} className="relative pl-8">
-                    {index < trackingQuery.data.trackingEvents.length - 1 ? (
-                      <div
-                        className="absolute left-[7px] top-5 h-[calc(100%+8px)] w-px"
-                        style={{ background: DESIGN.border }}
-                      />
-                    ) : null}
-                    <div
-                      className="absolute left-0 top-1 h-4 w-4 rounded-full border-2"
-                      style={{ borderColor: DESIGN.primary, background: DESIGN.softPink }}
-                    />
-                    <p className="text-sm font-semibold" style={{ color: DESIGN.fg }}>
-                      {event.title}
-                    </p>
-                    <p className="text-xs" style={{ color: DESIGN.mutedFg }}>
-                      {event.description || 'Status updated'}
-                    </p>
-                    <p className="text-xs" style={{ color: DESIGN.subtleFg }}>
-                      {toDateLabel(event.createdAt)}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              {/* Status stepper */}
+              {trackingQuery.data.status !== 'CANCELLED' && trackingQuery.data.status !== 'REFUNDED' ? (
+                <div className="mt-6 flex items-center gap-0">
+                  {TRACKING_STEPS.map((step, idx) => {
+                    const state = getStepState(step.status, trackingQuery.data!.status);
+                    return (
+                      <React.Fragment key={step.status}>
+                        <div className="flex flex-col items-center gap-1.5 min-w-0">
+                          <div
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-base transition-all"
+                            style={{
+                              background: state === 'done' ? DESIGN.primary : state === 'active' ? DESIGN.softPink : '#f3f4f6',
+                              border: `2px solid ${state === 'upcoming' ? '#e5e7eb' : DESIGN.primary}`,
+                              fontSize: 16,
+                            }}
+                          >
+                            {state === 'done' ? '✓' : step.icon}
+                          </div>
+                          <p className="text-center text-[10px] font-semibold leading-tight" style={{ color: state === 'upcoming' ? DESIGN.subtleFg : DESIGN.primary, maxWidth: 56 }}>
+                            {step.label}
+                          </p>
+                        </div>
+                        {idx < TRACKING_STEPS.length - 1 && (
+                          <div
+                            className="h-0.5 flex-1 mx-1"
+                            style={{ background: getStepState(TRACKING_STEPS[idx + 1].status, trackingQuery.data!.status) !== 'upcoming' ? DESIGN.primary : '#e5e7eb' }}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: '#fef2f2', color: '#b91c1c' }}>
+                  This order has been {trackingQuery.data.status.toLowerCase()}.
+                </div>
+              )}
+
+              {/* Timeline events */}
+              {trackingQuery.data.trackingEvents.length > 0 && (
+                <div className="mt-6 space-y-4">
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: DESIGN.mutedFg }}>Timeline</p>
+                  {trackingQuery.data.trackingEvents.map((event, index) => (
+                    <div key={event.id} className="relative pl-8">
+                      {index < trackingQuery.data!.trackingEvents.length - 1 ? (
+                        <div className="absolute left-[7px] top-5 h-[calc(100%+8px)] w-px" style={{ background: DESIGN.border }} />
+                      ) : null}
+                      <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-2" style={{ borderColor: DESIGN.primary, background: DESIGN.softPink }} />
+                      <p className="text-sm font-semibold" style={{ color: DESIGN.fg }}>{event.title}</p>
+                      <p className="text-xs" style={{ color: DESIGN.mutedFg }}>{event.description || 'Status updated'}</p>
+                      <p className="text-xs" style={{ color: DESIGN.subtleFg }}>{toDateLabel(event.createdAt)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </SectionContainer>

@@ -213,25 +213,27 @@ export default function SalesView({
     <div className={`flex flex-col ${isMobile ? 'gap-3' : 'gap-3.5'}`}>
       {/* Add Sale Form Card */}
       <Card className="border border-pink-100 shadow-sm">
-        <SecHead title="Add New Sale" sub="Record a manual sales transaction" />
         
         <div className="px-3.5 py-3.5 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold" style={{ color: Theme.mutedFg }}>
-              Branch
-            </label>
-            <select
-              value={saleBranchId}
-              onChange={(e) => setSaleBranchId(e.target.value)}
-              className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
-              style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
-            >
-              {activeBranches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+          {/* Header + Branch selector on same row */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>Add New Sale</div>
+              <div className="text-[12px]" style={{ color: Theme.mutedFg }}>Record a manual sales transaction</div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="text-xs font-semibold whitespace-nowrap" style={{ color: Theme.mutedFg }}>Branch</label>
+              <select
+                value={saleBranchId}
+                onChange={(e) => setSaleBranchId(e.target.value)}
+                className="rounded-lg border px-3 py-2 text-sm font-semibold outline-none"
+                style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
+              >
+                {activeBranches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Search Row */}
@@ -331,24 +333,29 @@ export default function SalesView({
                           <div className="text-[10px] mb-1 font-semibold uppercase tracking-wide" style={{ color: Theme.mutedFg }}>
                             Qty
                           </div>
-                          <div className="inline-flex items-center rounded-full border border-gray-200 bg-white">
+                          <div className="inline-flex items-center rounded-lg border bg-white overflow-hidden" style={{ borderColor: Theme.border }}>
                             <button
-                              className="w-8 h-8 text-sm font-bold text-gray-600"
+                              className="w-10 h-10 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              style={{ color: Theme.fg }}
                               onClick={() => updateLineItem(idx, { qty: item.qty - 1 })}
                               disabled={item.qty <= 1}
                             >
                               −
                             </button>
+                            <span className="w-px h-5 bg-gray-200" />
                             <input
                               type="number"
                               min={1}
                               max={maxQty}
                               value={item.qty}
                               onChange={(e) => updateLineItem(idx, { qty: Number(e.target.value) || 1 })}
-                              className="w-12 text-center text-sm outline-none bg-transparent"
+                              className="w-14 text-center text-sm font-bold outline-none bg-transparent"
+                              style={{ color: Theme.fg }}
                             />
+                            <span className="w-px h-5 bg-gray-200" />
                             <button
-                              className="w-8 h-8 text-sm font-bold text-gray-600"
+                              className="w-10 h-10 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              style={{ color: Theme.fg }}
                               onClick={() => updateLineItem(idx, { qty: item.qty + 1 })}
                               disabled={item.qty >= maxQty}
                             >
@@ -389,24 +396,29 @@ export default function SalesView({
                       <div className="text-[10px]" style={{ color: Theme.mutedFg }}>{item.sku}</div>
                     </div>
                     <div className="col-span-3 flex justify-center">
-                      <div className="inline-flex items-center rounded-full border border-gray-200 bg-white">
+                      <div className="inline-flex items-center rounded-lg border bg-white overflow-hidden" style={{ borderColor: Theme.border }}>
                         <button
-                          className="w-7 h-7 text-sm font-bold text-gray-600"
+                          className="w-9 h-9 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                          style={{ color: Theme.fg }}
                           onClick={() => updateLineItem(idx, { qty: item.qty - 1 })}
                           disabled={item.qty <= 1}
                         >
                           −
                         </button>
+                        <span className="w-px h-5 bg-gray-200" />
                         <input
                           type="number"
                           min={1}
                           max={maxQty}
                           value={item.qty}
                           onChange={(e) => updateLineItem(idx, { qty: Number(e.target.value) || 1 })}
-                          className="w-12 text-center text-xs outline-none bg-transparent"
+                          className="w-11 text-center text-sm font-bold outline-none bg-transparent"
+                          style={{ color: Theme.fg }}
                         />
+                        <span className="w-px h-5 bg-gray-200" />
                         <button
-                          className="w-7 h-7 text-sm font-bold text-gray-600"
+                          className="w-9 h-9 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                          style={{ color: Theme.fg }}
                           onClick={() => updateLineItem(idx, { qty: item.qty + 1 })}
                           disabled={item.qty >= maxQty}
                         >
