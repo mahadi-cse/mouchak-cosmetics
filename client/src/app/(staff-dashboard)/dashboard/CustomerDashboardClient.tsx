@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import {
   useAddCustomerWishlistItem,
   useCustomerDashboardOrders,
@@ -17,7 +18,7 @@ import {
   type UpdateProfilePayload,
 } from '@/modules/customer-dashboard';
 
-type CustomerNavId = 'profile' | 'order' | 'wishlist' | 'order-tracking';
+type CustomerNavId = 'overview' | 'profile' | 'order' | 'wishlist' | 'order-tracking';
 
 type ProfileDraft = {
   firstName: string;
@@ -62,6 +63,7 @@ const EMPTY_PROFILE_DRAFT: ProfileDraft = {
 };
 
 const CUSTOMER_NAV_ITEMS: Array<{ id: CustomerNavId; label: string; icon: string }> = [
+  { id: 'overview', label: 'Overview', icon: '🏠' },
   { id: 'profile', label: 'Profile', icon: '👤' },
   { id: 'order', label: 'Orders', icon: '🧾' },
   { id: 'wishlist', label: 'Wishlist', icon: '💖' },
@@ -69,6 +71,10 @@ const CUSTOMER_NAV_ITEMS: Array<{ id: CustomerNavId; label: string; icon: string
 ];
 
 const contentByNav: Record<CustomerNavId, { title: string; subtitle: string }> = {
+  overview: {
+    title: 'Overview',
+    subtitle: 'A snapshot of your account activity and recent orders.',
+  },
   profile: {
     title: 'Profile',
     subtitle: 'Manage your personal information and preferences.',
@@ -286,8 +292,8 @@ export default function CustomerDashboardClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabParam = searchParams?.get('tab') as CustomerNavId | null;
-  const validTabs: CustomerNavId[] = ['profile', 'order', 'wishlist', 'order-tracking'];
-  const initialTab: CustomerNavId = tabParam && validTabs.includes(tabParam) ? tabParam : 'profile';
+  const validTabs: CustomerNavId[] = ['overview', 'profile', 'order', 'wishlist', 'order-tracking'];
+  const initialTab: CustomerNavId = tabParam && validTabs.includes(tabParam) ? tabParam : 'overview';
 
   const [activeNav, setActiveNav] = React.useState<CustomerNavId>(initialTab);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -298,6 +304,22 @@ export default function CustomerDashboardClient() {
   const [profileNotice, setProfileNotice] = React.useState<string>('');
   const [wishlistNotice, setWishlistNotice] = React.useState<string>('');
   const [profileDirty, setProfileDirty] = React.useState(false);
+  const [profileOpen, setProfileOpen] = React.useState(false);
+  const profileRef = React.useRef<HTMLDivElement>(null);
+
+  const { data: session } = useSession();
+
+  // Close profile dropdown on outside click
+  React.useEffect(() => {
+    if (!profileOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [profileOpen]);
 
   const handleNavChange = (id: CustomerNavId) => {
     setActiveNav(id);
@@ -417,6 +439,237 @@ export default function CustomerDashboardClient() {
 
     setWishlistNotice('');
     addWishlistMutation.mutate({ productId });
+  };
+
+  const renderOverviewSection = () => {
+    const isLoading = summaryQuery.isLoading || profileQuery.isLoading;
+
+    if (isLoading) {
+      return (
+        <div className="space-y-4">
+          {/* Greeting skeleton */}
+          <div className="h-24 animate-pulse rounded-2xl" style={{ background: DESIGN.softPink }} />
+          {/* Stats skeleton */}
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-24 animate-pulse rounded-2xl border" style={{ borderColor: DESIGN.border, background: '#fff' }} />
+            ))}
+          </div>
+          <div className="h-48 animate-pulse rounded-2xl border" style={{ borderColor: DESIGN.border, background: '#fff' }} />
+        </div>
+      );
+    }
+
+    const s = summaryQuery.data;
+    const p = profileQuery.data;
+
+    const stats: Array<{ label: string; value: string; icon: string; accent: string }> = [
+      {
+        label: 'Total Orders',
+        value: String(s?.totalOrders ?? 0),
+        icon: '🧾',
+        accent: DESIGN.primary,
+      },
+      {
+        label: 'Active Orders',
+        value: String(s?.activeOrders ?? 0),
+        icon: '⚡',
+        accent: DESIGN.info,
+      },
+      {
+        label: 'Wishlist',
+        value: String(s?.wishlistCount ?? 0),
+        icon: '💖',
+        accent: '#e11d48',
+      },
+      {
+        label: 'Loyalty Points',
+        value: (s?.loyaltyPoints ?? 0).toLocaleString(),
+        icon: '⭐',
+        accent: DESIGN.warning,
+      },
+    ];
+
+    const latestOrder = s?.latestOrder;
+    const firstName = p?.firstName || s?.customerName?.split(' ')[0] || 'there';
+    const segment = p?.segment || s?.segment;
+
+    return (
+      <div className="space-y-4">
+        {/* Greeting banner */}
+        <div
+          className="relative overflow-hidden rounded-2xl px-6 py-5"
+          style={{
+            background: `linear-gradient(135deg, ${DESIGN.primary} 0%, ${DESIGN.primaryDark} 100%)`,
+            boxShadow: '0 8px 32px rgba(233,30,140,0.22)',
+          }}
+        >
+          {/* decorative circles */}
+          <div
+            className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full opacity-20"
+            style={{ background: '#fff' }}
+          />
+          <div
+            className="pointer-events-none absolute -bottom-6 right-16 h-20 w-20 rounded-full opacity-10"
+            style={{ background: '#fff' }}
+          />
+
+          <div className="relative flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-black text-white" style={{ letterSpacing: '-0.02em' }}>
+                Welcome back, {firstName} 👋
+              </p>
+              <p className="mt-0.5 text-sm text-white/75">
+                {money(s?.totalSpent ?? 0)} spent across {s?.totalOrders ?? 0} orders
+              </p>
+            </div>
+            {segment && (
+              <span
+                className="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest"
+                style={{ background: 'rgba(255,255,255,0.18)', color: '#fff' }}
+              >
+                {segment}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl border bg-white px-4 py-4 transition-all duration-300 hover:-translate-y-0.5"
+              style={{
+                borderColor: DESIGN.border,
+                boxShadow: '0 2px 8px rgba(233,30,140,0.04)',
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: DESIGN.subtleFg }}>
+                  {stat.label}
+                </p>
+                <span className="text-lg">{stat.icon}</span>
+              </div>
+              <p className="mt-2 text-2xl font-black" style={{ color: stat.accent, letterSpacing: '-0.03em' }}>
+                {stat.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Latest order + quick actions */}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {/* Latest order */}
+          <SectionContainer>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: DESIGN.mutedFg }}>
+              Latest Order
+            </p>
+            {latestOrder ? (
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-bold" style={{ color: DESIGN.fg }}>
+                      {latestOrder.orderNumber}
+                    </p>
+                    <p className="text-xs" style={{ color: DESIGN.mutedFg }}>
+                      Placed on {toDateLabel(latestOrder.createdAt)}
+                    </p>
+                  </div>
+                  <span
+                    className="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                    style={orderStatusStyle(latestOrder.status)}
+                  >
+                    {latestOrder.status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: DESIGN.softPink }}>
+                  <p className="text-sm font-semibold" style={{ color: DESIGN.mutedFg }}>Order Total</p>
+                  <p className="text-lg font-black" style={{ color: DESIGN.primary }}>{money(latestOrder.total)}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setTrackingOrderId(latestOrder.id);
+                      handleNavChange('order-tracking');
+                    }}
+                    className="flex-1 rounded-xl py-2 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5"
+                    style={{ background: DESIGN.primary, boxShadow: '0 6px 16px rgba(233,30,140,0.22)' }}
+                  >
+                    Track Order
+                  </button>
+                  <button
+                    onClick={() => handleNavChange('order')}
+                    className="flex-1 rounded-xl border py-2 text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5"
+                    style={{ borderColor: DESIGN.border, color: DESIGN.primary }}
+                  >
+                    All Orders
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <EmptyState message="No orders placed yet. Start shopping!" />
+            )}
+          </SectionContainer>
+
+          {/* Quick actions */}
+          <SectionContainer>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: DESIGN.mutedFg }}>
+              Quick Actions
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'My Orders', icon: '🧾', nav: 'order' as CustomerNavId },
+                { label: 'Wishlist', icon: '💖', nav: 'wishlist' as CustomerNavId },
+                { label: 'Track Order', icon: '📦', nav: 'order-tracking' as CustomerNavId },
+                { label: 'Edit Profile', icon: '✏️', nav: 'profile' as CustomerNavId },
+              ].map((action) => (
+                <button
+                  key={action.nav}
+                  onClick={() => handleNavChange(action.nav)}
+                  className="flex flex-col items-center gap-2 rounded-2xl border py-4 text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5"
+                  style={{
+                    borderColor: DESIGN.border,
+                    color: DESIGN.fg,
+                    background: '#fff',
+                    boxShadow: '0 2px 8px rgba(233,30,140,0.04)',
+                  }}
+                >
+                  <span className="text-2xl">{action.icon}</span>
+                  <span style={{ color: DESIGN.mutedFg, fontSize: 12 }}>{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </SectionContainer>
+        </div>
+
+        {/* Account summary strip */}
+        {p && (
+          <SectionContainer>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: DESIGN.mutedFg }}>
+              Account Summary
+            </p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">
+              {[
+                { label: 'Email', value: p.email },
+                { label: 'Phone', value: p.phone || '—' },
+                { label: 'City', value: p.city || '—' },
+                { label: 'Member Since', value: toDateLabel(p.createdAt) },
+              ].map((row) => (
+                <div key={row.label}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: DESIGN.subtleFg }}>
+                    {row.label}
+                  </p>
+                  <p className="mt-0.5 truncate text-sm font-semibold" style={{ color: DESIGN.fg }}>
+                    {row.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </SectionContainer>
+        )}
+      </div>
+    );
   };
 
   const renderProfileSection = () => {
@@ -892,6 +1145,8 @@ export default function CustomerDashboardClient() {
 
   const renderActiveSection = () => {
     switch (activeNav) {
+      case 'overview':
+        return renderOverviewSection();
       case 'profile':
         return renderProfileSection();
       case 'order':
@@ -1055,11 +1310,110 @@ export default function CustomerDashboardClient() {
               </p>
             </div>
           </div>
-          <div
-            className="rounded-full px-3 py-1 text-xs font-semibold"
-            style={{ background: DESIGN.softPink, color: DESIGN.primary }}
-          >
-            Active
+
+          {/* Profile dropdown */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen((o) => !o)}
+              className="flex items-center gap-2 rounded-full px-1.5 py-1 transition-all hover:shadow-md"
+              style={{
+                background: DESIGN.softPink,
+                border: `1px solid ${DESIGN.border}`,
+                cursor: 'pointer',
+              }}
+              title="Account"
+            >
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-extrabold text-white"
+                style={{ background: DESIGN.primary }}
+              >
+                {session?.user?.name?.charAt(0)?.toUpperCase() ||
+                  profileQuery.data?.firstName?.charAt(0)?.toUpperCase() ||
+                  'U'}
+              </div>
+              <span className="hidden pr-1 text-[13px] font-bold md:block" style={{ color: DESIGN.fg }}>
+                {session?.user?.name || profileQuery.data?.firstName || 'Account'}
+              </span>
+            </button>
+
+            {profileOpen && (
+              <div
+                className="absolute right-0 top-full z-50 mt-3 w-64 overflow-hidden rounded-2xl shadow-2xl"
+                style={{ background: DESIGN.card, border: `1px solid ${DESIGN.border}` }}
+              >
+                {/* User header */}
+                <div
+                  className="border-b px-6 py-5 text-center"
+                  style={{
+                    borderColor: DESIGN.border,
+                    background: `linear-gradient(180deg, ${DESIGN.softPink} 0%, transparent 100%)`,
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <div
+                      className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black text-white shadow-lg"
+                      style={{
+                        background: `linear-gradient(135deg, ${DESIGN.primary} 0%, ${DESIGN.primaryDark} 100%)`,
+                        border: `3px solid ${DESIGN.card}`,
+                      }}
+                    >
+                      {session?.user?.name?.charAt(0)?.toUpperCase() ||
+                        profileQuery.data?.firstName?.charAt(0)?.toUpperCase() ||
+                        'U'}
+                    </div>
+                    <div>
+                      <p className="text-[15px] font-bold" style={{ color: DESIGN.fg }}>
+                        {profileQuery.data
+                          ? `${profileQuery.data.firstName} ${profileQuery.data.lastName}`.trim()
+                          : session?.user?.name || 'Customer'}
+                      </p>
+                      <p className="text-[11px]" style={{ color: DESIGN.mutedFg }}>
+                        {profileQuery.data?.email || session?.user?.email || ''}
+                      </p>
+                      {(profileQuery.data?.segment || summaryQuery.data?.segment) && (
+                        <span
+                          className="mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+                          style={{ background: DESIGN.softPink, color: DESIGN.primary }}
+                        >
+                          {profileQuery.data?.segment || summaryQuery.data?.segment}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 px-5 py-4">
+                  <button
+                    onClick={() => {
+                      handleNavChange('profile');
+                      setProfileOpen(false);
+                    }}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[12px] font-bold transition-all hover:-translate-y-0.5"
+                    style={{
+                      background: DESIGN.softPink,
+                      color: DESIGN.primary,
+                      border: `1px solid ${DESIGN.border}`,
+                    }}
+                  >
+                    <span>👤</span>
+                    <span>Profile</span>
+                  </button>
+                  <button
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[12px] font-bold transition-all hover:-translate-y-0.5"
+                    style={{
+                      background: '#fff1f2',
+                      color: '#e11d48',
+                      border: '1px solid #ffe4e6',
+                    }}
+                  >
+                    <span>🚪</span>
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

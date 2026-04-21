@@ -6,7 +6,7 @@ import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { User, LogOut } from 'lucide-react';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
@@ -248,6 +248,7 @@ export default function DashboardLayout({
 }: DashboardLayoutProps) {
   const { isMobile } = useResponsive();
   const { data: session } = useSession();
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const pathSection = pathname.split('/')[2] || 'overview';
@@ -264,6 +265,7 @@ export default function DashboardLayout({
   const [navItems, setNavItems] = useState(NAV);
   
   useEffect(() => {
+    if (!session?.accessToken) return;
     import('@/shared/lib/apiClient').then(({ apiClient }) => {
       apiClient.get('/auth/profile').then(res => {
         const data = res.data.data;
@@ -280,7 +282,7 @@ export default function DashboardLayout({
         console.error("Failed to load nav modules", err);
       });
     });
-  }, []);
+  }, [session?.accessToken]);
 
   const lowCount = products.filter((p) => p.status !== 'active').length;
   const settingsLabel = SETTINGS_ITEMS.find((i) => i.id === settingsTab)?.label || '';
@@ -326,7 +328,7 @@ export default function DashboardLayout({
     const target = id === 'settings' && tab ? `${path}?tab=${encodeURIComponent(tab)}` : path;
     setActiveNav(id);
     if (id === 'settings' && tab) setSettingsTab(tab);
-    window.history.pushState({}, '', target);
+    router.push(target);
     setSidebarOpen(false);
     if (id !== 'settings') setSettingsOpen(false);
     if (id === 'settings') setSettingsOpen(true);

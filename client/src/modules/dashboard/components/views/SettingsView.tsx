@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, Btn, Badge } from '../Primitives';
-import { SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
+import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
 import {
   useListCategories,
   useCreateCategory,
@@ -21,8 +21,10 @@ import {
 } from '@/modules/products/queries';
 import { useListBranches } from '@/modules/branches/queries';
 import { toast } from 'react-hot-toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { homepageAPI, useHomepageStats, useSiteSettings } from '@/modules/homepage';
+import { useSession } from 'next-auth/react';
+import apiClient from '@/shared/lib/apiClient';
 
 interface SettingsViewProps {
   products: any[];
@@ -31,6 +33,52 @@ interface SettingsViewProps {
 }
 
 type StaffStatus = 'active' | 'inactive';
+
+// ─── Staff / User management types ───────────────────────────────────────────
+
+interface StaffUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  typeId?: number;
+  userType?: { id: number; name: string };
+  isActive: boolean;
+  createdAt: string;
+  userModules?: Array<{ module: { id: number; code: string; name: string; icon?: string } }>;
+}
+
+interface StaffUserForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  typeId: string;
+  isActive: boolean;
+  moduleCodes: string[];
+}
+
+interface AvailableModule {
+  id: number;
+  code: string;
+  name: string;
+  icon?: string;
+}
+
+const EMPTY_STAFF_FORM: StaffUserForm = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  password: '',
+  typeId: '',
+  isActive: true,
+  moduleCodes: [],
+};
+
+// ─── Legacy local-only types (kept for promotions/settings) ──────────────────
 
 interface StaffMember {
   id: number;
@@ -197,6 +245,9 @@ const categoryEmojis: any = {
 export default function SettingsView({ products: _products, tab, setTab }: SettingsViewProps) {
   const { isMobile } = useResponsive();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const isAdmin = true; // Staff dashboard is already protected by middleware; role-based UI gating can be added once role values are confirmed
+
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [filterBranchId, setFilterBranchId] = useState('');
@@ -239,8 +290,179 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const updateProductStatus = useUpdateProductStatus();
-  const updateSiteSettingsMutation = useMutation({
-    mutationFn: (data: Partial<{ storeName: string }>) => homepageAPI.updateSettings(data),
+
+  // ─── Staff / User management ───────────────────────────────────────────────
+  // These endpoints are pending backend implementation.
+  // Set enabled: false until /auth/users and /auth/user-types are available.
+  const { data: staffUsers = [], isLoading: isLoadingStaff, refetch: refetchStaff } = useQuery<StaffUser[]>({
+    queryKey: ['auth', 'users'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get('/auth/users', { params: { limit: 200 } });
+        const raw: any[] = res.data?.data ?? res.data ?? [];
+        return raw.filter((u: any) => {
+          const typeName = (u.userType?.name || '').toLowerCase();
+          return typeName !== 'customer' && typeName !== 'guest';
+        });
+      } catch {
+        return [];
+      }
+    },
+    enabled: false,
+    staleTime: 2 * 60 * 1000,
+    retry: false,
+  });
+
+  const { data: userTypes = [] } = useQuery<Array<{ id: number; name: string; code?: string }>>({
+    queryKey: ['auth', 'user-types'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get('/auth/user-types');
+        return res.data?.data ?? res.data ?? [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: false,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+
+  // Static module list derived from NAV + SETTINGS_ITEMS — no API needed
+  const availableModules: AvailableModule[] = React.useMemo(() => [
+    ...NAV.map((n, i) => ({ id: i + 1, code: n.id, name: n.label, icon: n.icon })),
+    ...SETTINGS_ITEMS.map((s, i) => ({
+      id: NAV.length + i + 1,
+      code: `settings:${s.id}`,
+      name: `Settings › ${s.label}`,
+      icon: s.icon,
+    })),
+  ], []);
+
+  const createUserMutation = useMutation({
+    mutationFn: (data: any) => apiClient.post('/auth/register', data).then((r) => r.data?.data ?? r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['auth', 'users'] }); },
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      apiClient.patch(`/auth/users/${id}`, data).then((r) => r.data?.data ?? r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['auth', 'users'] }); },
+  });
+
+  const updateUserModulesMutation = useMutation({
+    mutationFn: ({ id, moduleCodes }: { id: number; moduleCodes: string[] }) =>
+      apiClient.put(`/auth/users/${id}/modules`, { moduleCodes }).then((r) => r.data?.data ?? r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['auth', 'users'] }); },
+  });
+
+  const forceLogoutMutation = useMutation({
+    mutationFn: (id: number) => apiClient.post(`/auth/users/${id}/force-logout`).then((r) => r.data),
+  });
+
+  const [staffModalOpen, setStaffModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [staffForm, setStaffForm] = useState<StaffUserForm>(EMPTY_STAFF_FORM);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffFormTab, setStaffFormTab] = useState<'details' | 'modules'>('details');
+
+  const openCreateUser = () => {
+    setEditingUserId(null);
+    setStaffForm(EMPTY_STAFF_FORM);
+    setStaffFormTab('details');
+    setStaffModalOpen(true);
+  };
+
+  const openEditUser = (user: StaffUser) => {
+    setEditingUserId(user.id);
+    setStaffForm({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone || '',
+      password: '',
+      typeId: (user as any).typeId ? String((user as any).typeId) : '',
+      isActive: user.isActive,
+      moduleCodes: user.userModules?.map((um) => um.module.code) ?? [],
+    });
+    setStaffFormTab('details');
+    setStaffModalOpen(true);
+  };
+
+  const handleSaveStaffUser = async () => {
+    if (!staffForm.firstName.trim() || !staffForm.email.trim()) {
+      toast.error('First name and email are required');
+      return;
+    }
+    try {
+      if (editingUserId !== null) {
+        const payload: any = {
+          firstName: staffForm.firstName.trim(),
+          lastName: staffForm.lastName.trim(),
+          phone: staffForm.phone.trim() || undefined,
+          isActive: staffForm.isActive,
+          ...(staffForm.typeId ? { typeId: Number(staffForm.typeId) } : {}),
+        };
+        if (staffForm.password.trim()) payload.password = staffForm.password.trim();
+        await updateUserMutation.mutateAsync({ id: editingUserId, data: payload });
+        if (staffForm.moduleCodes.length > 0) {
+          await updateUserModulesMutation.mutateAsync({ id: editingUserId, moduleCodes: staffForm.moduleCodes });
+        }
+        toast.success('User updated');
+      } else {
+        if (!staffForm.password.trim()) { toast.error('Password is required for new users'); return; }
+        const created: any = await createUserMutation.mutateAsync({
+          firstName: staffForm.firstName.trim(),
+          lastName: staffForm.lastName.trim(),
+          email: staffForm.email.trim(),
+          phone: staffForm.phone.trim() || undefined,
+          password: staffForm.password.trim(),
+          isActive: staffForm.isActive,
+          ...(staffForm.typeId ? { typeId: Number(staffForm.typeId) } : {}),
+        });
+        if (staffForm.moduleCodes.length > 0 && created?.id) {
+          await updateUserModulesMutation.mutateAsync({ id: created.id, moduleCodes: staffForm.moduleCodes });
+        }
+        toast.success('User created');
+      }
+      setStaffModalOpen(false);
+    } catch {
+      toast.error('Failed to save user');
+    }
+  };
+
+  const handleToggleUserActive = async (user: StaffUser) => {
+    try {
+      await updateUserMutation.mutateAsync({ id: user.id, data: { isActive: !user.isActive } });
+      toast.success(`User ${user.isActive ? 'deactivated' : 'activated'}`);
+    } catch {
+      toast.error('Failed to update user status');
+    }
+  };
+
+  const handleForceLogout = async (user: StaffUser) => {
+    if (!window.confirm(`Force logout ${user.firstName} ${user.lastName}? Their active session will be invalidated.`)) return;
+    try {
+      await forceLogoutMutation.mutateAsync(user.id);
+      toast.success('Session invalidated');
+    } catch {
+      toast.error('Force logout not available');
+    }
+  };
+
+  const filteredStaffUsers = React.useMemo(() => {
+    const q = staffSearch.trim().toLowerCase();
+    if (!q) return staffUsers;
+    return staffUsers.filter(
+      (u) =>
+        `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (userTypes.find((t) => t.id === (u as any).typeId)?.name || '').toLowerCase().includes(q)
+    );
+  }, [staffUsers, staffSearch]);
+  // ─── End staff management ───────────────────────────────────────────────────
+
+  const updateSiteSettingsMutation = useMutation({    mutationFn: (data: Partial<{ storeName: string }>) => homepageAPI.updateSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['homepage', 'settings'] });
     },
@@ -269,9 +491,6 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const [editCat, setEditCat] = useState<number | null>(null);
   const [showAddCat, setShowAddCat] = useState(false);
   const [catForm, setCatForm] = useState({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: '' });
-  const [editingStaff, setEditingStaff] = useState<number | null>(null);
-  const [showInviteStaff, setShowInviteStaff] = useState(false);
-  const [staffForm, setStaffForm] = useState({ name: '', email: '', role: 'Staff', branch: '', status: 'active' as StaffStatus });
   const [showPromotionEditor, setShowPromotionEditor] = useState(false);
   const [editingPromotionId, setEditingPromotionId] = useState<number | null>(null);
   const [promotionForm, setPromotionForm] = useState({
@@ -1574,214 +1793,278 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     staff: (
       <div>
-        {(editingStaff !== null || showInviteStaff) && (
+        {/* ── Access guard ── */}
+        {!isAdmin ? (
           <div
-            className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${
-              isMobile ? 'items-end p-0' : 'items-center p-4'
-            }`}
-            onClick={() => {
-              setEditingStaff(null);
-              setShowInviteStaff(false);
-            }}
+            className="rounded-xl border p-6 text-center text-sm font-semibold"
+            style={{ borderColor: Theme.border, color: Theme.mutedFg }}
           >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className={`max-h-[92vh] w-full max-w-[500px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${
-                isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'
-              }`}
-            >
-              {isMobile && (
-                <div
-                  className="mx-auto mt-3 h-1 w-10 rounded"
-                  style={{ background: Theme.border }}
-                />
-              )}
+            🔒 Only system administrators can manage users and permissions.
+          </div>
+        ) : (
+          <>
+            {/* ── User modal ── */}
+            {staffModalOpen && (
               <div
-                className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5"
+                className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${isMobile ? 'items-end p-0' : 'items-center p-4'}`}
+                onClick={() => setStaffModalOpen(false)}
               >
-                <div>
-                  <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
-                    {editingStaff !== null ? 'Edit Staff Member' : 'Invite Staff Member'}
-                  </div>
-                  <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>
-                    {editingStaff !== null ? staff.find((s) => s.id === editingStaff)?.name : 'Add a new team member'}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setEditingStaff(null);
-                    setShowInviteStaff(false);
-                  }}
-                  className="cursor-pointer border-none bg-transparent text-xl leading-none"
-                  style={{ color: Theme.mutedFg }}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className={`max-h-[92vh] w-full max-w-[540px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'}`}
                 >
-                  ✕
-                </button>
-              </div>
+                  {isMobile && <div className="mx-auto mt-3 h-1 w-10 rounded" style={{ background: Theme.border }} />}
 
-              <div className="flex flex-col gap-[18px] p-6">
-                <div>
-                  <label className={labelClass}>Name</label>
-                  <input
-                    value={staffForm.name}
-                    onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
-                    className={inputClass}
-                    placeholder="Staff full name"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Email</label>
-                  <input
-                    type="email"
-                    value={staffForm.email}
-                    onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                    className={inputClass}
-                    placeholder="staff@company.com"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Role</label>
-                  <select
-                    value={staffForm.role}
-                    onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
-                    className={selectClass}
-                  >
-                    <option value="Admin">Admin</option>
-                    <option value="Staff">Staff</option>
-                    <option value="Manager">Manager</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Branch</label>
-                  <select
-                    value={staffForm.branch}
-                    onChange={(e) => setStaffForm({ ...staffForm, branch: e.target.value })}
-                    className={selectClass}
-                  >
-                    <option value="">Select Branch</option>
-                    {availableBranchNames.map((branchName) => (
-                      <option key={branchName} value={branchName}>
-                        {branchName}
-                      </option>
+                  {/* Modal header */}
+                  <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5">
+                    <div>
+                      <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
+                        {editingUserId !== null ? 'Edit User' : 'Add User'}
+                      </div>
+                      <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>
+                        {editingUserId !== null ? 'Update details, role and module access' : 'Create a new staff account'}
+                      </div>
+                    </div>
+                    <button onClick={() => setStaffModalOpen(false)} className="cursor-pointer border-none bg-transparent text-xl leading-none" style={{ color: Theme.mutedFg }}>✕</button>
+                  </div>
+
+                  {/* Tab switcher */}
+                  <div className="flex border-b border-border">
+                    {(['details', 'modules'] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setStaffFormTab(t)}
+                        className="flex-1 py-3 text-[13px] font-semibold capitalize transition"
+                        style={{
+                          color: staffFormTab === t ? Theme.primary : Theme.mutedFg,
+                          borderBottom: staffFormTab === t ? `2px solid ${Theme.primary}` : '2px solid transparent',
+                          background: 'transparent',
+                        }}
+                      >
+                        {t === 'details' ? '👤 Details' : '🧩 Module Access'}
+                      </button>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Status</label>
-                  <select
-                    value={staffForm.status}
-                    onChange={(e) =>
-                      setStaffForm({ ...staffForm, status: e.target.value as StaffStatus })
-                    }
-                    className={selectClass}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div className="flex justify-end gap-2.5 pt-2">
-                  <Btn
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingStaff(null);
-                      setShowInviteStaff(false);
-                    }}
-                  >
-                    Cancel
-                  </Btn>
-                  <Btn variant="primary" onClick={handleSaveStaffMember}>
-                    {editingStaff !== null ? 'Save Changes' : 'Invite Staff'}
-                  </Btn>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+                  </div>
 
-        <FormSection title="Staff Members">
-          <div className="mb-[14px] flex flex-col gap-2.5">
-            {staff.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3"
-              >
-                <div
-                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-sm font-extrabold"
-                  style={{ background: Theme.secondary, color: Theme.primary }}
-                >
-                  {s.name[0]}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold" style={{ color: Theme.fg }}>
-                    {s.name}
+                  <div className="p-6">
+                    {staffFormTab === 'details' ? (
+                      <div className="flex flex-col gap-4">
+                        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                          <div>
+                            <label className={labelClass}>First Name *</label>
+                            <input value={staffForm.firstName} onChange={(e) => setStaffForm({ ...staffForm, firstName: e.target.value })} className={inputClass} placeholder="First name" />
+                          </div>
+                          <div>
+                            <label className={labelClass}>Last Name</label>
+                            <input value={staffForm.lastName} onChange={(e) => setStaffForm({ ...staffForm, lastName: e.target.value })} className={inputClass} placeholder="Last name" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className={labelClass}>Email *</label>
+                          <input
+                            type="email"
+                            value={staffForm.email}
+                            onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                            className={inputClass}
+                            placeholder="user@company.com"
+                            disabled={editingUserId !== null}
+                            style={{ opacity: editingUserId !== null ? 0.6 : 1 }}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Phone</label>
+                          <input value={staffForm.phone} onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })} className={inputClass} placeholder="+880..." />
+                        </div>
+                        <div>
+                          <label className={labelClass}>{editingUserId !== null ? 'New Password (leave blank to keep)' : 'Password *'}</label>
+                          <input type="password" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })} className={inputClass} placeholder="••••••••" />
+                        </div>
+                        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                          <div>
+                            <label className={labelClass}>User Type *</label>
+                            <select
+                              value={staffForm.typeId}
+                              onChange={(e) => setStaffForm({ ...staffForm, typeId: e.target.value })}
+                              className={selectClass}
+                            >
+                              <option value="">— Select user type —</option>
+                              {userTypes.map((t) => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className={labelClass}>Status</label>
+                            <select value={staffForm.isActive ? 'active' : 'inactive'} onChange={(e) => setStaffForm({ ...staffForm, isActive: e.target.value === 'active' })} className={selectClass}>
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="mb-3 text-[13px]" style={{ color: Theme.mutedFg }}>
+                          Select which dashboard modules this user can access.
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: Theme.mutedFg }}>
+                              {staffForm.moduleCodes.length} of {availableModules.length} selected
+                            </span>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setStaffForm((p) => ({ ...p, moduleCodes: availableModules.map((m) => m.code) }))}
+                                className="text-[11px] font-semibold"
+                                style={{ color: Theme.primary, background: 'none', border: 'none', cursor: 'pointer' }}
+                              >
+                                Select All
+                              </button>
+                              <span style={{ color: Theme.border }}>·</span>
+                              <button
+                                type="button"
+                                onClick={() => setStaffForm((p) => ({ ...p, moduleCodes: [] }))}
+                                className="text-[11px] font-semibold"
+                                style={{ color: Theme.mutedFg, background: 'none', border: 'none', cursor: 'pointer' }}
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+                          {availableModules.map((mod) => {
+                            const checked = staffForm.moduleCodes.includes(mod.code);
+                            return (
+                              <label
+                                key={mod.code}
+                                className="flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-2.5 transition"
+                                style={{
+                                  borderColor: checked ? Theme.primary : Theme.border,
+                                  background: checked ? Theme.secondary : '#fff',
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => {
+                                    setStaffForm((prev) => ({
+                                      ...prev,
+                                      moduleCodes: checked
+                                        ? prev.moduleCodes.filter((c) => c !== mod.code)
+                                        : [...prev.moduleCodes, mod.code],
+                                    }));
+                                  }}
+                                  style={{ accentColor: Theme.primary }}
+                                  className="h-4 w-4 shrink-0"
+                                />
+                                <span className="text-base">{mod.icon || '📦'}</span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-[13px] font-semibold" style={{ color: Theme.fg }}>{mod.name}</div>
+                                  <div className="text-[11px]" style={{ color: Theme.mutedFg }}>{mod.code}</div>
+                                </div>
+                                {checked && <span className="text-[11px] font-bold" style={{ color: Theme.primary }}>✓</span>}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-6 flex justify-end gap-2.5">
+                      <Btn variant="ghost" onClick={() => setStaffModalOpen(false)}>Cancel</Btn>
+                      <Btn
+                        variant="primary"
+                        onClick={handleSaveStaffUser}
+                      >
+                        {(createUserMutation.isPending || updateUserMutation.isPending || updateUserModulesMutation.isPending)
+                          ? 'Saving...'
+                          : editingUserId !== null ? 'Save Changes' : 'Create User'}
+                      </Btn>
+                    </div>
                   </div>
-                  <div
-                    className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px]"
-                    style={{ color: Theme.mutedFg }}
-                  >
-                    {s.email} · {s.branch}
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <Badge
-                    label={s.role}
-                    bg={s.role === 'Admin' ? '#fef9c3' : '#f5f5f5'}
-                    color={s.role === 'Admin' ? '#854d0e' : Theme.mutedFg}
-                  />
-                  <Btn
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setStaffForm({
-                        name: s.name,
-                        email: s.email,
-                        role: s.role,
-                        branch: s.branch,
-                        status: s.status,
-                      });
-                      setShowInviteStaff(false);
-                      setEditingStaff(s.id);
-                    }}
-                  >
-                    Edit
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggleStaffStatus(s.id)}
-                  >
-                    {s.status === 'active' ? 'Deactivate' : 'Activate'}
-                  </Btn>
-                  <Btn variant="ghost" size="sm" onClick={() => handleDeleteStaff(s.id)}>
-                    Remove
-                  </Btn>
                 </div>
               </div>
-            ))}
-          </div>
-          <Btn
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setStaffForm({
-                name: '',
-                email: '',
-                role: 'Staff',
-                branch: availableBranchNames[0] || '',
-                status: 'active',
-              });
-              setEditingStaff(null);
-              setShowInviteStaff(true);
-            }}
-          >
-            + Invite Staff Member
-          </Btn>
-        </FormSection>
+            )}
+
+            {/* ── Toolbar ── */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <input
+                  value={staffSearch}
+                  onChange={(e) => setStaffSearch(e.target.value)}
+                  placeholder="Search by name, email or type…"
+                  className={inputClass}
+                  style={{ maxWidth: 280 }}
+                />
+                <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
+                  {isLoadingStaff ? 'Loading…' : `${filteredStaffUsers.length} user${filteredStaffUsers.length !== 1 ? 's' : ''}`}
+                </div>
+                <Btn variant="ghost" size="sm" onClick={() => refetchStaff()} title="Refresh user list">↻ Refresh</Btn>
+              </div>
+              <Btn variant="primary" size="sm" onClick={openCreateUser}>＋ Add User</Btn>
+            </div>
+
+            {/* ── User list ── */}
+            {isLoadingStaff ? (
+              <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>Loading users…</div>
+            ) : filteredStaffUsers.length === 0 ? (
+              <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>No staff users found.</div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {filteredStaffUsers.map((u) => {
+                  const initials = `${u.firstName[0] ?? ''}${u.lastName?.[0] ?? ''}`.toUpperCase();
+                  const typeName = userTypes.find((t) => t.id === (u as any).typeId)?.name || (u as any).userType?.name || '—';
+                  return (
+                    <div
+                      key={u.id}
+                      className="flex flex-wrap items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3 transition"
+                      style={{ opacity: u.isActive ? 1 : 0.55 }}
+                    >
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold"
+                        style={{ background: Theme.secondary, color: Theme.primary }}
+                      >
+                        {initials || '?'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold" style={{ color: Theme.fg }}>
+                            {u.firstName} {u.lastName}
+                          </span>
+                          {!u.isActive && (
+                            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-500">Inactive</span>
+                          )}
+                        </div>
+                        <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
+                          {u.email}
+                          {u.userModules && u.userModules.length > 0 && (
+                            <span className="ml-2 opacity-70">· {u.userModules.length} module{u.userModules.length !== 1 ? 's' : ''}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                        <Badge label={typeName} bg={Theme.secondary} color={Theme.primary} />
+                        <Btn variant="ghost" size="sm" onClick={() => openEditUser(u)}>Edit</Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => handleToggleUserActive(u)}>
+                          {u.isActive ? 'Deactivate' : 'Activate'}
+                        </Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => handleForceLogout(u)}>
+                          Force Logout
+                        </Btn>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </div>
     ),
 
     trending: (
       <div>
+
         <FormSection title="Trending Products on Homepage">
           <div className="mb-[14px] text-[13px]" style={{ color: Theme.mutedFg }}>
             Select products to feature in the Trending section on your storefront.

@@ -188,7 +188,7 @@ apiClient.interceptors.response.use(
     // Parse and format error
     const apiError = parseApiError(error);
 
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && error.response?.status !== 404) {
       console.error(`[API] ✗ ${error.config?.method?.toUpperCase()} ${error.config?.url}`, apiError);
     }
 

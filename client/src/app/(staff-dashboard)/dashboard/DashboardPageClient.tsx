@@ -62,10 +62,12 @@ export default function DashboardPageClient() {
   const [time, setTime] = useState(new Date());
   const [mounted, setMounted] = useState(false);
 
-  const { data: ordersData, isLoading: ordersLoading } = useListOrders({ page: 1, limit: 20 });
-  const { data: inventoryData, isLoading: inventoryLoading } = useInventorySummary({ page: 1, limit: 100 });
-  const { data: lowStockData } = useLowStockItems({ page: 1, limit: 100 });
-  const { data: manualSalesData, isLoading: manualSalesLoading } = useListManualSales({ page: 1, limit: 50 });
+  const isAuthenticated = status === 'authenticated';
+
+  const { data: ordersData, isLoading: ordersLoading } = useListOrders({ page: 1, limit: 20 }, { enabled: isAuthenticated });
+  const { data: inventoryData, isLoading: inventoryLoading } = useInventorySummary({ page: 1, limit: 100 }, { enabled: isAuthenticated });
+  const { data: lowStockData } = useLowStockItems({ page: 1, limit: 100 }, { enabled: isAuthenticated });
+  const { data: manualSalesData, isLoading: manualSalesLoading } = useListManualSales({ page: 1, limit: 50 }, { enabled: isAuthenticated });
 
   useEffect(() => {
     setMounted(true);
