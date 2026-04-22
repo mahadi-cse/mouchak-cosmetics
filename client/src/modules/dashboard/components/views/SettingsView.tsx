@@ -25,6 +25,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { homepageAPI, useHomepageStats, useSiteSettings } from '@/modules/homepage';
 import { useSession } from 'next-auth/react';
 import apiClient from '@/shared/lib/apiClient';
+import StaffFormPageClient from '@/app/(staff-dashboard)/dashboard/settings/staff/_components/StaffFormPageClient';
 
 interface SettingsViewProps {
   products: any[];
@@ -308,7 +309,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         return [];
       }
     },
-    enabled: false,
+    enabled: true,
     staleTime: 2 * 60 * 1000,
     retry: false,
   });
@@ -323,7 +324,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         return [];
       }
     },
-    enabled: false,
+    enabled: true,
     staleTime: 10 * 60 * 1000,
     retry: false,
   });
@@ -340,7 +341,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   ], []);
 
   const createUserMutation = useMutation({
-    mutationFn: (data: any) => apiClient.post('/auth/register', data).then((r) => r.data?.data ?? r.data),
+    mutationFn: (data: any) => apiClient.post('/auth/users', data).then((r) => r.data?.data ?? r.data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['auth', 'users'] }); },
   });
 
@@ -365,6 +366,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const [staffForm, setStaffForm] = useState<StaffUserForm>(EMPTY_STAFF_FORM);
   const [staffSearch, setStaffSearch] = useState('');
   const [staffFormTab, setStaffFormTab] = useState<'details' | 'modules'>('details');
+  const [staffFormView, setStaffFormView] = useState<'list' | 'new' | 'edit'>('list');
+  const [staffEditId, setStaffEditId] = useState<number | null>(null);
 
   const openCreateUser = () => {
     setEditingUserId(null);
@@ -381,7 +384,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       email: user.email,
       phone: user.phone || '',
       password: '',
-      typeId: (user as any).typeId ? String((user as any).typeId) : '',
+      typeId: user.userType?.id ? String(user.userType.id) : ((user as any).userTypeId ? String((user as any).userTypeId) : ''),
       isActive: user.isActive,
       moduleCodes: user.userModules?.map((um) => um.module.code) ?? [],
     });
@@ -405,9 +408,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         };
         if (staffForm.password.trim()) payload.password = staffForm.password.trim();
         await updateUserMutation.mutateAsync({ id: editingUserId, data: payload });
-        if (staffForm.moduleCodes.length > 0) {
-          await updateUserModulesMutation.mutateAsync({ id: editingUserId, moduleCodes: staffForm.moduleCodes });
-        }
+        await updateUserModulesMutation.mutateAsync({ id: editingUserId, moduleCodes: staffForm.moduleCodes });
         toast.success('User updated');
       } else {
         if (!staffForm.password.trim()) { toast.error('Password is required for new users'); return; }
@@ -419,10 +420,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           password: staffForm.password.trim(),
           isActive: staffForm.isActive,
           ...(staffForm.typeId ? { typeId: Number(staffForm.typeId) } : {}),
+          moduleCodes: staffForm.moduleCodes,
         });
-        if (staffForm.moduleCodes.length > 0 && created?.id) {
-          await updateUserModulesMutation.mutateAsync({ id: created.id, moduleCodes: staffForm.moduleCodes });
-        }
         toast.success('User created');
       }
       setStaffModalOpen(false);
@@ -457,7 +456,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       (u) =>
         `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
-        (userTypes.find((t) => t.id === (u as any).typeId)?.name || '').toLowerCase().includes(q)
+        (u.userType?.name || '').toLowerCase().includes(q)
     );
   }, [staffUsers, staffSearch]);
   // ─── End staff management ───────────────────────────────────────────────────
@@ -474,19 +473,12 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     },
   });
 
-  const [categories, setCategories] = useState<any[]>([]);
-  const [productsList, setProductsList] = useState<any[]>([]);
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [staff, setStaff] = useState<StaffMember[]>(STAFF_LIST);
   const [promotions, setPromotions] = useState<Promotion[]>(DEFAULT_PROMOTIONS);
 
-  React.useEffect(() => {
-    if (apiCategories) setCategories(apiCategories);
-  }, [apiCategories]);
-
-  React.useEffect(() => {
-    if (apiProducts) setProductsList(apiProducts);
-  }, [apiProducts]);
+  const categories = apiCategories;
+  const productsList = apiProducts;
 
   const [editCat, setEditCat] = useState<number | null>(null);
   const [showAddCat, setShowAddCat] = useState(false);
@@ -790,70 +782,6 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       toast.success('Logo selected. Save to apply.');
     };
     reader.readAsDataURL(file);
-  };
-
-  const handleSaveStaffMember = () => {
-    if (!staffForm.name.trim() || !staffForm.email.trim() || !staffForm.branch.trim()) {
-      toast.error('Name, email and branch are required');
-      return;
-    }
-
-    if (editingStaff !== null) {
-      setStaff((prev) =>
-        prev.map((item) =>
-          item.id === editingStaff
-            ? {
-                ...item,
-                name: staffForm.name.trim(),
-                email: staffForm.email.trim(),
-                role: staffForm.role,
-                branch: staffForm.branch,
-                status: staffForm.status,
-              }
-            : item
-        )
-      );
-      toast.success('Staff member updated');
-    } else {
-      setStaff((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          name: staffForm.name.trim(),
-          email: staffForm.email.trim(),
-          role: staffForm.role,
-          branch: staffForm.branch,
-          status: staffForm.status,
-        },
-      ]);
-      toast.success('Staff member invited');
-    }
-
-    setEditingStaff(null);
-    setShowInviteStaff(false);
-    setStaffForm({ name: '', email: '', role: 'Staff', branch: '', status: 'active' });
-    triggerSavedIndicator();
-  };
-
-  const handleToggleStaffStatus = (id: number) => {
-    setStaff((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status: item.status === 'active' ? 'inactive' : 'active',
-            }
-          : item
-      )
-    );
-    triggerSavedIndicator();
-  };
-
-  const handleDeleteStaff = (id: number) => {
-    if (!window.confirm('Remove this staff member from dashboard settings list?')) return;
-    setStaff((prev) => prev.filter((item) => item.id !== id));
-    triggerSavedIndicator();
-    toast.success('Staff member removed');
   };
 
   const openPromotionEditor = (promotion?: Promotion) => {
@@ -1793,200 +1721,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     staff: (
       <div>
-        {/* ── Access guard ── */}
         {!isAdmin ? (
-          <div
-            className="rounded-xl border p-6 text-center text-sm font-semibold"
-            style={{ borderColor: Theme.border, color: Theme.mutedFg }}
-          >
+          <div className="rounded-xl border p-6 text-center text-sm font-semibold" style={{ borderColor: Theme.border, color: Theme.mutedFg }}>
             🔒 Only system administrators can manage users and permissions.
           </div>
+        ) : staffFormView !== 'list' ? (
+          <StaffFormPageClient
+            userId={staffFormView === 'edit' ? staffEditId : null}
+            onBack={() => { setStaffFormView('list'); refetchStaff(); }}
+          />
         ) : (
           <>
-            {/* ── User modal ── */}
-            {staffModalOpen && (
-              <div
-                className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${isMobile ? 'items-end p-0' : 'items-center p-4'}`}
-                onClick={() => setStaffModalOpen(false)}
-              >
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className={`max-h-[92vh] w-full max-w-[540px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'}`}
-                >
-                  {isMobile && <div className="mx-auto mt-3 h-1 w-10 rounded" style={{ background: Theme.border }} />}
-
-                  {/* Modal header */}
-                  <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5">
-                    <div>
-                      <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
-                        {editingUserId !== null ? 'Edit User' : 'Add User'}
-                      </div>
-                      <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>
-                        {editingUserId !== null ? 'Update details, role and module access' : 'Create a new staff account'}
-                      </div>
-                    </div>
-                    <button onClick={() => setStaffModalOpen(false)} className="cursor-pointer border-none bg-transparent text-xl leading-none" style={{ color: Theme.mutedFg }}>✕</button>
-                  </div>
-
-                  {/* Tab switcher */}
-                  <div className="flex border-b border-border">
-                    {(['details', 'modules'] as const).map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => setStaffFormTab(t)}
-                        className="flex-1 py-3 text-[13px] font-semibold capitalize transition"
-                        style={{
-                          color: staffFormTab === t ? Theme.primary : Theme.mutedFg,
-                          borderBottom: staffFormTab === t ? `2px solid ${Theme.primary}` : '2px solid transparent',
-                          background: 'transparent',
-                        }}
-                      >
-                        {t === 'details' ? '👤 Details' : '🧩 Module Access'}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="p-6">
-                    {staffFormTab === 'details' ? (
-                      <div className="flex flex-col gap-4">
-                        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                          <div>
-                            <label className={labelClass}>First Name *</label>
-                            <input value={staffForm.firstName} onChange={(e) => setStaffForm({ ...staffForm, firstName: e.target.value })} className={inputClass} placeholder="First name" />
-                          </div>
-                          <div>
-                            <label className={labelClass}>Last Name</label>
-                            <input value={staffForm.lastName} onChange={(e) => setStaffForm({ ...staffForm, lastName: e.target.value })} className={inputClass} placeholder="Last name" />
-                          </div>
-                        </div>
-                        <div>
-                          <label className={labelClass}>Email *</label>
-                          <input
-                            type="email"
-                            value={staffForm.email}
-                            onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                            className={inputClass}
-                            placeholder="user@company.com"
-                            disabled={editingUserId !== null}
-                            style={{ opacity: editingUserId !== null ? 0.6 : 1 }}
-                          />
-                        </div>
-                        <div>
-                          <label className={labelClass}>Phone</label>
-                          <input value={staffForm.phone} onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })} className={inputClass} placeholder="+880..." />
-                        </div>
-                        <div>
-                          <label className={labelClass}>{editingUserId !== null ? 'New Password (leave blank to keep)' : 'Password *'}</label>
-                          <input type="password" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })} className={inputClass} placeholder="••••••••" />
-                        </div>
-                        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                          <div>
-                            <label className={labelClass}>User Type *</label>
-                            <select
-                              value={staffForm.typeId}
-                              onChange={(e) => setStaffForm({ ...staffForm, typeId: e.target.value })}
-                              className={selectClass}
-                            >
-                              <option value="">— Select user type —</option>
-                              {userTypes.map((t) => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className={labelClass}>Status</label>
-                            <select value={staffForm.isActive ? 'active' : 'inactive'} onChange={(e) => setStaffForm({ ...staffForm, isActive: e.target.value === 'active' })} className={selectClass}>
-                              <option value="active">Active</option>
-                              <option value="inactive">Inactive</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <p className="mb-3 text-[13px]" style={{ color: Theme.mutedFg }}>
-                          Select which dashboard modules this user can access.
-                        </p>
-                        <div className="flex flex-col gap-2">
-                          <div className="mb-1 flex items-center justify-between">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: Theme.mutedFg }}>
-                              {staffForm.moduleCodes.length} of {availableModules.length} selected
-                            </span>
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setStaffForm((p) => ({ ...p, moduleCodes: availableModules.map((m) => m.code) }))}
-                                className="text-[11px] font-semibold"
-                                style={{ color: Theme.primary, background: 'none', border: 'none', cursor: 'pointer' }}
-                              >
-                                Select All
-                              </button>
-                              <span style={{ color: Theme.border }}>·</span>
-                              <button
-                                type="button"
-                                onClick={() => setStaffForm((p) => ({ ...p, moduleCodes: [] }))}
-                                className="text-[11px] font-semibold"
-                                style={{ color: Theme.mutedFg, background: 'none', border: 'none', cursor: 'pointer' }}
-                              >
-                                Clear
-                              </button>
-                            </div>
-                          </div>
-                          {availableModules.map((mod) => {
-                            const checked = staffForm.moduleCodes.includes(mod.code);
-                            return (
-                              <label
-                                key={mod.code}
-                                className="flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-2.5 transition"
-                                style={{
-                                  borderColor: checked ? Theme.primary : Theme.border,
-                                  background: checked ? Theme.secondary : '#fff',
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => {
-                                    setStaffForm((prev) => ({
-                                      ...prev,
-                                      moduleCodes: checked
-                                        ? prev.moduleCodes.filter((c) => c !== mod.code)
-                                        : [...prev.moduleCodes, mod.code],
-                                    }));
-                                  }}
-                                  style={{ accentColor: Theme.primary }}
-                                  className="h-4 w-4 shrink-0"
-                                />
-                                <span className="text-base">{mod.icon || '📦'}</span>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-[13px] font-semibold" style={{ color: Theme.fg }}>{mod.name}</div>
-                                  <div className="text-[11px]" style={{ color: Theme.mutedFg }}>{mod.code}</div>
-                                </div>
-                                {checked && <span className="text-[11px] font-bold" style={{ color: Theme.primary }}>✓</span>}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-6 flex justify-end gap-2.5">
-                      <Btn variant="ghost" onClick={() => setStaffModalOpen(false)}>Cancel</Btn>
-                      <Btn
-                        variant="primary"
-                        onClick={handleSaveStaffUser}
-                      >
-                        {(createUserMutation.isPending || updateUserMutation.isPending || updateUserModulesMutation.isPending)
-                          ? 'Saving...'
-                          : editingUserId !== null ? 'Save Changes' : 'Create User'}
-                      </Btn>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Toolbar ── */}
+            {/* Toolbar */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <input
@@ -1999,12 +1745,12 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                 <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
                   {isLoadingStaff ? 'Loading…' : `${filteredStaffUsers.length} user${filteredStaffUsers.length !== 1 ? 's' : ''}`}
                 </div>
-                <Btn variant="ghost" size="sm" onClick={() => refetchStaff()} title="Refresh user list">↻ Refresh</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => refetchStaff()}>↻ Refresh</Btn>
               </div>
-              <Btn variant="primary" size="sm" onClick={openCreateUser}>＋ Add User</Btn>
+              <Btn variant="primary" size="sm" onClick={() => setStaffFormView('new')}>＋ Add User</Btn>
             </div>
 
-            {/* ── User list ── */}
+            {/* User list */}
             {isLoadingStaff ? (
               <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>Loading users…</div>
             ) : filteredStaffUsers.length === 0 ? (
@@ -2013,44 +1759,25 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               <div className="flex flex-col gap-2.5">
                 {filteredStaffUsers.map((u) => {
                   const initials = `${u.firstName[0] ?? ''}${u.lastName?.[0] ?? ''}`.toUpperCase();
-                  const typeName = userTypes.find((t) => t.id === (u as any).typeId)?.name || (u as any).userType?.name || '—';
+                  const typeName = u.userType?.name || '—';
                   return (
-                    <div
-                      key={u.id}
-                      className="flex flex-wrap items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3 transition"
-                      style={{ opacity: u.isActive ? 1 : 0.55 }}
-                    >
-                      <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold"
-                        style={{ background: Theme.secondary, color: Theme.primary }}
-                      >
-                        {initials || '?'}
-                      </div>
+                    <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3 transition" style={{ opacity: u.isActive ? 1 : 0.55 }}>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold" style={{ background: Theme.secondary, color: Theme.primary }}>{initials || '?'}</div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-bold" style={{ color: Theme.fg }}>
-                            {u.firstName} {u.lastName}
-                          </span>
-                          {!u.isActive && (
-                            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-500">Inactive</span>
-                          )}
+                          <span className="text-sm font-bold" style={{ color: Theme.fg }}>{u.firstName} {u.lastName}</span>
+                          {!u.isActive && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-500">Inactive</span>}
                         </div>
                         <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
                           {u.email}
-                          {u.userModules && u.userModules.length > 0 && (
-                            <span className="ml-2 opacity-70">· {u.userModules.length} module{u.userModules.length !== 1 ? 's' : ''}</span>
-                          )}
+                          {u.userModules && u.userModules.length > 0 && <span className="ml-2 opacity-70">· {u.userModules.length} module{u.userModules.length !== 1 ? 's' : ''}</span>}
                         </div>
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                         <Badge label={typeName} bg={Theme.secondary} color={Theme.primary} />
-                        <Btn variant="ghost" size="sm" onClick={() => openEditUser(u)}>Edit</Btn>
-                        <Btn variant="ghost" size="sm" onClick={() => handleToggleUserActive(u)}>
-                          {u.isActive ? 'Deactivate' : 'Activate'}
-                        </Btn>
-                        <Btn variant="ghost" size="sm" onClick={() => handleForceLogout(u)}>
-                          Force Logout
-                        </Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => { setStaffEditId(u.id); setStaffFormView('edit'); }}>Edit</Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => handleToggleUserActive(u)}>{u.isActive ? 'Deactivate' : 'Activate'}</Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => handleForceLogout(u)}>Force Logout</Btn>
                       </div>
                     </div>
                   );
@@ -2064,7 +1791,6 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     trending: (
       <div>
-
         <FormSection title="Trending Products on Homepage">
           <div className="mb-[14px] text-[13px]" style={{ color: Theme.mutedFg }}>
             Select products to feature in the Trending section on your storefront.
@@ -2296,6 +2022,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       )}
 
       <Card className={`${isMobile ? 'p-[18px]' : 'p-7'}`}>
+        {tab !== 'staff' && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
           <div className="text-base font-bold" style={{ color: Theme.fg }}>
             {currentLabel}
@@ -2313,6 +2040,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             </div>
           )}
         </div>
+        )}
 
         {panels[tab] || (
           <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
@@ -2320,7 +2048,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           </div>
         )}
 
-        {!['products', 'categories', 'trending', 'discounts'].includes(tab) && (
+        {!['products', 'categories', 'trending', 'discounts', 'staff'].includes(tab) && (
           <div className="mt-8 flex items-center justify-end gap-2 border-t border-border pt-6">
             <div className="flex items-center gap-2">
               {saved && (

@@ -45,7 +45,11 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
       });
 
       if (!result || result.error) {
-        setError('Invalid email or password. Please try again.');
+        if (result?.error?.includes('ACCOUNT_DEACTIVATED')) {
+          setError('Your account has been deactivated. Please contact the system administrator.');
+        } else {
+          setError('Invalid email or password. Please try again.');
+        }
         return;
       }
 

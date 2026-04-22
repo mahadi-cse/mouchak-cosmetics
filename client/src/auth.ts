@@ -228,6 +228,15 @@ const providers: Provider[] = [
       });
 
       if (!response.ok) {
+        try {
+          const errBody = await response.json();
+          const msg = errBody?.message || '';
+          if (msg.includes('deactivated') || errBody?.code === 'USER_INACTIVE') {
+            throw new Error('ACCOUNT_DEACTIVATED');
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message === 'ACCOUNT_DEACTIVATED') throw e;
+        }
         return null;
       }
 

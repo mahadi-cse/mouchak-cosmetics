@@ -11,6 +11,7 @@ export const registerSchema = z.object({
   email: z.string().trim().email().max(255),
   password: z.string().min(8).max(72),
   phone: z.string().trim().max(30).optional(),
+  typeId: z.number().int().positive().optional(),
 });
 
 export const googleSignInSchema = z.object({

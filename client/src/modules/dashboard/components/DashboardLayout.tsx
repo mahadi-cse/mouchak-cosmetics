@@ -39,6 +39,7 @@ const SidebarContent: React.FC<{
   isMobile: boolean;
   setSidebarOpen: (open: boolean) => void;
   navItems: { id: string; label: string; icon: string; badge?: string }[];
+  userModuleCodes: Set<string> | null;
 }> = ({
   activeNav,
   settingsOpen,
@@ -51,6 +52,7 @@ const SidebarContent: React.FC<{
   isMobile,
   setSidebarOpen,
   navItems,
+  userModuleCodes,
 }) => {
   const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -151,7 +153,11 @@ const SidebarContent: React.FC<{
                   className="mb-1 ml-2 border-l-2 pl-2"
                   style={{ borderLeftColor: Theme.border }}
                 >
-                  {SETTINGS_ITEMS.map((item) => {
+                  {SETTINGS_ITEMS.filter((item) => {
+                    // null means full access (SYSTEM_ADMIN)
+                    if (!userModuleCodes) return true;
+                    return userModuleCodes.has(`settings:${item.id}`);
+                  }).map((item) => {
                     const subActive = active && settingsTab === item.id;
                     return (
                       <button
@@ -262,21 +268,56 @@ export default function DashboardLayout({
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const [navItems, setNavItems] = useState(NAV);
+  const NAV_CACHE_KEY = 'mouchak.nav.modules.v1';
+
+  const [navItems, setNavItems] = useState(() => {
+    if (typeof window === 'undefined') return NAV;
+    try {
+      const cached = localStorage.getItem(NAV_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.navItems?.length > 0) return parsed.navItems;
+      }
+    } catch {}
+    return NAV;
+  });
+  const [userModuleCodes, setUserModuleCodes] = useState<Set<string> | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = localStorage.getItem(NAV_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.isAdmin) return null;
+        if (parsed.codes?.length > 0) return new Set<string>(parsed.codes);
+      }
+    } catch {}
+    return null;
+  });
   
   useEffect(() => {
     if (!session?.accessToken) return;
     import('@/shared/lib/apiClient').then(({ apiClient }) => {
       apiClient.get('/auth/profile').then(res => {
         const data = res.data.data;
-        if (data && data.userModules && data.userModules.length > 0) {
-          const dynamicNav = data.userModules.map((um: any) => ({
-            id: um.module.code,
-            label: um.module.name,
-            icon: um.module.icon || '📦',
-            badge: um.module.badge
-          }));
-          setNavItems(dynamicNav);
+        if (!data) return;
+
+        // SYSTEM_ADMIN gets everything
+        const userTypeCode = data.userType?.code;
+        if (userTypeCode === '1x101') {
+          setNavItems(NAV);
+          setUserModuleCodes(null);
+          try { localStorage.setItem(NAV_CACHE_KEY, JSON.stringify({ isAdmin: true, navItems: NAV })); } catch {}
+          return;
+        }
+
+        if (data.userModules && data.userModules.length > 0) {
+          const codes = data.userModules.map((um: any) => um.module.code as string);
+          const codeSet = new Set<string>(codes);
+          setUserModuleCodes(codeSet);
+          const filtered = NAV.filter(n => codeSet.has(n.id));
+          const finalNav = filtered.length > 0 ? filtered : NAV;
+          setNavItems(finalNav);
+          try { localStorage.setItem(NAV_CACHE_KEY, JSON.stringify({ codes, navItems: finalNav })); } catch {}
         }
       }).catch(err => {
         console.error("Failed to load nav modules", err);
@@ -291,7 +332,7 @@ export default function DashboardLayout({
       ? `Settings › ${settingsLabel}`
       : activeNav === 'profile'
         ? 'User Profile'
-        : navItems.find((n) => n.id === activeNav)?.label || activeNav;
+        : navItems.find((n: { id: string; label: string }) => n.id === activeNav)?.label || activeNav;
 
   const views: Record<string, React.ReactNode> = {
     profile: <ProfileView />,
@@ -414,6 +455,7 @@ export default function DashboardLayout({
             isMobile={isMobile}
             setSidebarOpen={setSidebarOpen}
             navItems={navItems}
+            userModuleCodes={userModuleCodes}
           />
         </aside>
       )}
@@ -444,6 +486,7 @@ export default function DashboardLayout({
               isMobile={isMobile}
               setSidebarOpen={setSidebarOpen}
               navItems={navItems}
+              userModuleCodes={userModuleCodes}
             />
           </div>
         </>
@@ -607,7 +650,20 @@ export default function DashboardLayout({
         <div
           className={`flex-1 overflow-y-auto ${isMobile ? 'px-[14px] py-4' : 'px-[26px] py-[22px]'}`}
         >
-          {views[activeNav]}
+          {(() => {
+            // userModuleCodes === null means SYSTEM_ADMIN (full access)
+            // 'profile' is always accessible
+            if (activeNav === 'profile' || !userModuleCodes) return views[activeNav];
+            if (userModuleCodes.has(activeNav)) return views[activeNav];
+            // Auto-redirect to first permitted module
+            const firstAllowed = navItems[0]?.id;
+            if (firstAllowed && firstAllowed !== activeNav) {
+              // Use setTimeout to navigate after render
+              setTimeout(() => navigate(firstAllowed), 0);
+              return null;
+            }
+            return views[activeNav];
+          })()}
         </div>
       </main>
 

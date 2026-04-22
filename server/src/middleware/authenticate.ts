@@ -2,6 +2,7 @@ import { RequestHandler } from 'express';
 import { verifyAccessToken } from '../modules/auth/auth.jwt';
 import { RoleCode, USER_TYPE_CODES } from '../shared/types/auth.types';
 import { fail } from '../shared/utils/apiResponse';
+import { prisma } from '../config/database';
 import logger from '../shared/utils/logger';
 
 type RoleAlias =
@@ -65,6 +66,16 @@ export const authMiddleware: RequestHandler = async (req, res, next) => {
       iat: payload.iat,
       exp: payload.exp,
     };
+
+    // Check if user still has active (non-revoked) refresh tokens
+    // If all tokens are revoked (force logout), reject the request
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { isActive: true },
+    });
+    if (!user || !user.isActive) {
+      return res.status(401).json(fail('User account is inactive or has been logged out', 'USER_INACTIVE'));
+    }
 
     return next();
   } catch (error) {

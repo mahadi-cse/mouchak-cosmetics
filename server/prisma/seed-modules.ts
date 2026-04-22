@@ -11,6 +11,17 @@ const MODULES = [
   { code: 'ecommerce', name: 'E-Commerce', icon: '🌐', sortOrder: 6 },
   { code: 'pos', name: 'POS', icon: '🖥️', badge: 'Soon', sortOrder: 7 },
   { code: 'settings', name: 'Settings', icon: '⚙️', sortOrder: 8 },
+  // Settings sub-modules
+  { code: 'settings:products', name: 'Settings › Products', icon: '📦', sortOrder: 10 },
+  { code: 'settings:categories', name: 'Settings › Categories', icon: '🗂️', sortOrder: 11 },
+  { code: 'settings:general', name: 'Settings › General', icon: '🏷️', sortOrder: 12 },
+  { code: 'settings:payment', name: 'Settings › Payment', icon: '💳', sortOrder: 13 },
+  { code: 'settings:shipping', name: 'Settings › Shipping', icon: '🚚', sortOrder: 14 },
+  { code: 'settings:inventory', name: 'Settings › Inventory', icon: '📦', sortOrder: 15 },
+  { code: 'settings:notifications', name: 'Settings › Notifications', icon: '🔔', sortOrder: 16 },
+  { code: 'settings:staff', name: 'Settings › Staff & Roles', icon: '👤', sortOrder: 17 },
+  { code: 'settings:trending', name: 'Settings › Trending Products', icon: '🔥', sortOrder: 18 },
+  { code: 'settings:discounts', name: 'Settings › Discount & Sales', icon: '🏷️', sortOrder: 19 },
 ];
 
 async function main() {

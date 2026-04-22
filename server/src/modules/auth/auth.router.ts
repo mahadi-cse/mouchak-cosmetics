@@ -23,4 +23,12 @@ router.get(
   authController.adminOnlyHealth
 );
 
+router.get('/user-types', authMiddleware, authController.getUserTypes);
+router.get('/users', authMiddleware, authController.getUsers);
+router.post('/users', authMiddleware, authController.createUser);
+router.patch('/users/:id', authMiddleware, authController.updateUser);
+router.put('/users/:id/modules', authMiddleware, authController.updateUserModules);
+router.put('/users/:id/branches', authMiddleware, authController.updateUserBranches);
+router.post('/users/:id/force-logout', authMiddleware, authController.forceLogout);
+
 export default router;

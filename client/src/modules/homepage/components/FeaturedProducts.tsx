@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Heart } from 'lucide-react';
 import { useHomepageFeaturedProducts, useHomepageCategories } from '@/modules/homepage';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
+import { useCart } from '@/shared/contexts/CartContext';
 import { CategoryCard } from './CategoryCard';
 import type { Category, Product } from '@/shared/types';
 
@@ -55,6 +56,7 @@ function StarRating({ rating }: { rating: number }) {
 function EnhancedProductCard({ product }: { product: Product }) {
   const [hovered, setHovered] = useState(false);
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { addToCart, setIsOpen: openCart } = useCart();
   const [imageSrc, setImageSrc] = useState(
     normalizeImage(product.images?.[0]) || PRODUCT_FALLBACK_IMAGE
   );
@@ -151,17 +153,29 @@ function EnhancedProductCard({ product }: { product: Product }) {
             />
           </button>
 
-          {/* Quick add overlay */}
-          <div
-            className="absolute bottom-0 left-0 right-0 flex items-center justify-center bg-opacity-93 py-2.5 text-center text-xs font-bold uppercase text-white transition-transform duration-300"
+          {/* Quick add to cart overlay */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              addToCart({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image: product.images?.[0],
+                slug: product.slug,
+              });
+              openCart(true);
+            }}
+            className="absolute bottom-0 left-0 right-0 flex items-center justify-center py-2.5 text-center text-xs font-bold uppercase text-white transition-transform duration-300"
             style={{
               background: 'rgba(233,30,140,0.93)',
               letterSpacing: '1px',
               transform: hovered ? 'translateY(0)' : 'translateY(100%)',
             }}
           >
-            View Details
-          </div>
+            + Add to Cart
+          </button>
         </div>
 
         {/* Card body */}

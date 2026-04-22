@@ -155,8 +155,12 @@ export class AuthService {
       include: { userType: true },
     });
 
-    if (!user || !user.isActive) {
+    if (!user) {
       throw new UnauthorizedError('Invalid email or password', 'INVALID_CREDENTIALS');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedError('Your account has been deactivated. Please contact the system administrator.', 'USER_INACTIVE');
     }
 
     if (!user.password || !user.userType || !user.userTypeId) {
@@ -179,7 +183,17 @@ export class AuthService {
       throw new ConflictError('Email is already registered', 'EMAIL_ALREADY_EXISTS');
     }
 
-    const customerType = await this.getCustomerUserType();
+    // Resolve user type: use provided typeId, otherwise fall back to customer
+    let resolvedType: { id: number; code: string };
+    if (input.typeId) {
+      const found = await prisma.userType.findUnique({ where: { id: input.typeId } });
+      if (!found) throw new ValidationError('Invalid user type', 'INVALID_USER_TYPE');
+      resolvedType = found;
+    } else {
+      resolvedType = await this.getCustomerUserType();
+    }
+
+    const isCustomer = resolvedType.code === USER_TYPE_CODES.CUSTOMER;
     const hashedPassword = await hashPassword(input.password);
     const firstName = input.firstName.trim();
     const lastName = input.lastName.trim();
@@ -190,7 +204,7 @@ export class AuthService {
         data: {
           email,
           password: hashedPassword,
-          userTypeId: customerType.id,
+          userTypeId: resolvedType.id,
           firstName,
           lastName,
           phone,
@@ -198,20 +212,17 @@ export class AuthService {
         },
       });
 
-      await tx.customer.create({
-        data: {
-          userId: user.id,
-          firstName,
-          lastName,
-          phone,
-        },
-      });
+      if (isCustomer) {
+        await tx.customer.create({
+          data: { userId: user.id, firstName, lastName, phone },
+        });
+      }
 
       return user;
     });
 
-    const customerRole = assertRoleCode(USER_TYPE_CODES.CUSTOMER);
-    return this.issueTokens(createdUser.id, customerRole, customerType.id);
+    const role = assertRoleCode(resolvedType.code);
+    return this.issueTokens(createdUser.id, role, resolvedType.id);
   }
 
   async loginWithGoogle(input: GoogleSignInInput): Promise<AuthTokenBundle> {
