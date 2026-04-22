@@ -131,8 +131,8 @@ model User {
   password       String?    @db.VarChar(255)
   userTypeId     Int?       @map("user_type_id")
   userType       UserType?  @relation(fields: [userTypeId], references: [id], onDelete: Restrict)
-  firstName      String
-  lastName       String
+  firstName      String?
+  lastName       String?
   phone          String?
   address        String?
   isActive       Boolean    @default(true)
@@ -184,8 +184,8 @@ model Customer {
   id              Int       @id @default(autoincrement())
   userId          Int       @unique
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName       String
-  lastName        String
+  firstName       String?
+  lastName        String?
   phone           String?
   dateOfBirth     DateTime?
   gender          String?
