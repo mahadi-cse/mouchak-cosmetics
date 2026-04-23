@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { User, LogOut } from 'lucide-react';
+import { useProfileQuery } from '@/modules/auth';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import OverviewView from './views/OverviewView';
@@ -254,6 +255,7 @@ export default function DashboardLayout({
 }: DashboardLayoutProps) {
   const { isMobile } = useResponsive();
   const { data: session } = useSession();
+  const { data: profileUser } = useProfileQuery();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -552,14 +554,16 @@ export default function DashboardLayout({
                 title="User Profile"
               >
                 <div 
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-extrabold"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-extrabold overflow-hidden"
                   style={{ background: Theme.primary, color: 'white' }}
                 >
-                  {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  {profileUser?.avatarUrl
+                    ? <img src={profileUser.avatarUrl} alt={profileUser.name} className="h-full w-full object-cover" />
+                    : profileUser?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 {!isMobile && (
                   <span className="text-[13px] font-bold pr-1" style={{ color: Theme.fg }}>
-                    {session?.user?.name || 'User'}
+                    {profileUser?.name || 'User'}
                   </span>
                 )}
               </button>
@@ -582,26 +586,28 @@ export default function DashboardLayout({
                   >
                     <div className="flex flex-col items-center gap-3">
                       <div
-                        className="flex h-20 w-20 items-center justify-center rounded-full text-[28px] font-black text-white shadow-lg"
+                        className="flex h-20 w-20 items-center justify-center rounded-full text-[28px] font-black text-white shadow-lg overflow-hidden"
                         style={{ 
                           background: `linear-gradient(135deg, ${Theme.primary} 0%, ${Theme.primary}dd 100%)`,
                           border: `4px solid ${Theme.card}`,
                         }}
                       >
-                        {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        {profileUser?.avatarUrl
+                          ? <img src={profileUser.avatarUrl} alt={profileUser.name} className="h-full w-full object-cover" />
+                          : profileUser?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
                       <div className="space-y-1">
                         <div
                           className="text-[16px] font-bold tracking-tight"
                           style={{ color: Theme.fg }}
                         >
-                          {session?.user?.name || 'User'}
+                          {profileUser?.name || 'User'}
                         </div>
                         <div
                           className="text-[11px] font-medium uppercase tracking-widest opacity-60"
                           style={{ color: Theme.mutedFg }}
                         >
-                          Administrator
+                          {profileUser?.role || 'Administrator'}
                         </div>
                       </div>
                     </div>
