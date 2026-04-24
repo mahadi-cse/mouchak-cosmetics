@@ -235,6 +235,11 @@ model Category {
 // PRODUCTS
 // ─────────────────────────────────────────────────────────────
 
+enum UnitType {
+  PIECE
+  WEIGHT
+}
+
 model Product {
   id              Int       @id @default(autoincrement())
   name            String
@@ -253,9 +258,15 @@ model Product {
   isActive        Boolean   @default(true)
   tags            String[]
   weight          Decimal?  @db.Decimal(8,2)
+
+  // Unit & Size support
+  unitType        UnitType  @default(PIECE)
+  unitLabel       String    @default("pc")  // e.g. "pc", "kg", "g", "ml", "L"
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  sizes           ProductSize[]
   inventories     Inventory[]
   analytics       ProductAnalytics?
   orderItems      OrderItem[]
@@ -265,6 +276,28 @@ model Product {
   skuHistory      SKUHistory[]
 
   @@map("products")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRODUCT SIZES
+// Optional sizes per product. Each size has its own image.
+// ─────────────────────────────────────────────────────────────
+
+model ProductSize {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name        String    // e.g. "S", "M", "L", "XL", "100ml", "250ml"
+  sortOrder   Int       @default(0)
+  imageUrl    String?   // Each size can have its own image
+  priceOverride Decimal? @db.Decimal(10,2) // Optional price override for this size
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([productId, name])
+  @@index([productId])
+  @@map("product_sizes")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -303,6 +336,7 @@ model ManualSaleItem {
   quantity           Int
   unitPrice          Decimal    @db.Decimal(10,2)
   lineTotal          Decimal    @db.Decimal(12,2)
+  sizeName           String?    // Snapshot of size at time of sale
   createdAt          DateTime   @default(now())
 
   @@index([manualSaleId])
@@ -356,6 +390,7 @@ model InventoryTransaction {
   batchName   String?
   manufactureDate DateTime?
   expiryDate  DateTime?
+  sizeName    String?    // Snapshot of size for this transaction
   createdAt   DateTime                  @default(now())
 
   @@map("inventory_transactions")

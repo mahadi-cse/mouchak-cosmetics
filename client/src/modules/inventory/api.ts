@@ -24,6 +24,7 @@ export interface AdjustStockRequest {
   batchName?: string;
   manufactureDate?: string;
   expiryDate?: string;
+  sizeName?: string;
 }
 
 export interface TransferStockRequest {

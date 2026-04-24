@@ -36,6 +36,7 @@ import {
 import type { Promotion as APIPromotion } from '@/modules/promotions';
 import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
+import { confirmDialog } from '@/shared/lib/confirmDialog';
 
 interface SettingsViewProps {
   products: any[];
@@ -423,7 +424,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   };
 
   const handleForceLogout = async (user: StaffUser) => {
-    if (!window.confirm(`Force logout ${user.firstName} ${user.lastName}? Their active session will be invalidated.`)) return;
+    const confirmed = await confirmDialog({
+      title: 'Force Logout?',
+      text: `Force logout ${user.firstName} ${user.lastName}? Their active session will be invalidated.`,
+      confirmButtonText: 'Yes, force logout',
+      icon: 'question',
+    });
+    if (!confirmed) return;
     try {
       await forceLogoutMutation.mutateAsync(user.id);
       toast.success('Session invalidated');
@@ -498,6 +505,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     stock: '',
     description: '',
     image: '',
+    unitType: 'PIECE' as 'PIECE' | 'WEIGHT',
+    unitLabel: 'pc',
+    sizes: [] as Array<{ name: string; imageUrl: string; priceOverride: string }>,
   });
 
   React.useEffect(() => {
@@ -618,7 +628,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   };
 
   const handleDeleteCategory = async (id: number) => {
-    if (window.confirm('Are you sure you want to PERMANENTLY delete this category? This will delete all products in this category too if not moved.')) {
+    const confirmed = await confirmDialog({
+      title: 'Delete Category?',
+      text: 'This will permanently delete this category and may affect all products in it.',
+      confirmButtonText: 'Yes, delete it',
+      icon: 'warning',
+    });
+    if (confirmed) {
       try {
         await deleteCategory.mutateAsync(id);
         toast.success('Category permanently deleted');
@@ -643,6 +659,15 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       const defaultImage = 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=800&auto=format&fit=crop';
       const images = imageUrl ? [imageUrl] : [defaultImage];
 
+      const sizesPayload = productForm.sizes
+        .filter((s) => s.name.trim())
+        .map((s, i) => ({
+          name: s.name.trim(),
+          sortOrder: i,
+          imageUrl: s.imageUrl || null,
+          priceOverride: s.priceOverride ? Number(s.priceOverride) : null,
+        }));
+
       if (editProduct) {
         await updateProduct.mutateAsync({
           id: editProduct,
@@ -655,6 +680,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             branchId: Number(productForm.branchId),
             description: productForm.description,
             images,
+            unitType: productForm.unitType,
+            unitLabel: productForm.unitLabel,
+            sizes: sizesPayload,
           } as any,
         });
         toast.success('Product updated successfully');
@@ -668,6 +696,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           branchId: Number(productForm.branchId),
           description: productForm.description,
           images,
+          unitType: productForm.unitType,
+          unitLabel: productForm.unitLabel,
+          sizes: sizesPayload,
         } as any);
         toast.success('Product created successfully');
       }
@@ -682,6 +713,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         stock: '',
         description: '',
         image: '',
+        unitType: 'PIECE',
+        unitLabel: 'pc',
+        sizes: [],
       });
       setShowAddProduct(false);
       setEditProduct(null);
@@ -700,7 +734,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   };
 
   const handleDeleteProduct = async (id: number) => {
-    if (window.confirm('Are you sure you want to PERMANENTLY delete this product? This cannot be undone.')) {
+    const confirmed = await confirmDialog({
+      title: 'Delete Product?',
+      text: 'This will permanently delete this product. This cannot be undone.',
+      confirmButtonText: 'Yes, delete it',
+      icon: 'warning',
+    });
+    if (confirmed) {
       try {
         await deleteProduct.mutateAsync(id);
         toast.success('Product permanently deleted');
@@ -738,6 +778,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       stock: '',
       description: product.description || '',
       image: product.images?.[0] || '',
+      unitType: product.unitType || 'PIECE',
+      unitLabel: product.unitLabel || 'pc',
+      sizes: (product.sizes || []).map((s: any) => ({
+        name: s.name,
+        imageUrl: s.imageUrl || '',
+        priceOverride: s.priceOverride?.toString() || '',
+      })),
     });
     setEditProduct(product.id);
     setShowAddProduct(true);
@@ -969,6 +1016,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                     stock: '',
                     description: '',
                     image: '',
+                    unitType: 'PIECE',
+                    unitLabel: 'pc',
+                    sizes: [],
                   });
                   setShowAddProduct(true);
                 }}
@@ -1098,6 +1148,106 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                 </div>
               </div>
 
+              {/* Unit Type & Label */}
+              <div className={`mt-3 grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                <div>
+                  <label className={labelClass}>Unit Type *</label>
+                  <select
+                    className={selectClass}
+                    value={productForm.unitType}
+                    onChange={(e) => {
+                      const ut = e.target.value as 'PIECE' | 'WEIGHT';
+                      setProductForm({
+                        ...productForm,
+                        unitType: ut,
+                        unitLabel: ut === 'PIECE' ? 'pc' : 'kg',
+                      });
+                    }}
+                  >
+                    <option value="PIECE">Piece (1, 2, 3…)</option>
+                    <option value="WEIGHT">Weight (kg, g, ml…)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Unit Label *</label>
+                  <input
+                    className={inputClass}
+                    value={productForm.unitLabel}
+                    onChange={(e) => setProductForm({ ...productForm, unitLabel: e.target.value })}
+                    placeholder={productForm.unitType === 'PIECE' ? 'e.g. pc, pack, box' : 'e.g. kg, g, ml, L'}
+                  />
+                </div>
+              </div>
+
+              {/* Sizes */}
+              <div className="mt-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <label className={labelClass} style={{ marginBottom: 0 }}>Sizes (optional)</label>
+                  <Btn
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setProductForm({
+                        ...productForm,
+                        sizes: [...productForm.sizes, { name: '', imageUrl: '', priceOverride: '' }],
+                      })
+                    }
+                  >
+                    ＋ Add Size
+                  </Btn>
+                </div>
+                {productForm.sizes.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {productForm.sizes.map((size, idx) => (
+                      <div
+                        key={idx}
+                        className={`grid items-end gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}
+                      >
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold text-foreground">Size Name *</label>
+                          <input
+                            className={inputClass}
+                            value={size.name}
+                            onChange={(e) => {
+                              const next = [...productForm.sizes];
+                              next[idx] = { ...next[idx], name: e.target.value };
+                              setProductForm({ ...productForm, sizes: next });
+                            }}
+                            placeholder="e.g. S, M, L, 100ml"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold text-foreground">Price Override (৳)</label>
+                          <input
+                            type="number"
+                            className={inputClass}
+                            value={size.priceOverride}
+                            onChange={(e) => {
+                              const next = [...productForm.sizes];
+                              next[idx] = { ...next[idx], priceOverride: e.target.value };
+                              setProductForm({ ...productForm, sizes: next });
+                            }}
+                            placeholder="Leave empty for default"
+                          />
+                        </div>
+                        <div>
+                          <Btn
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const next = productForm.sizes.filter((_, i) => i !== idx);
+                              setProductForm({ ...productForm, sizes: next });
+                            }}
+                          >
+                            🗑️ Remove
+                          </Btn>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="mt-3 flex gap-2">
                 <Btn
                   variant="ghost"
@@ -1154,7 +1304,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                       </span>
                     </div>
                     <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
-                      {p.category?.name} · Branch: {branches.find((b: any) => b.id === p.inventories?.[0]?.warehouseId)?.name || 'Default'} · SKU: {p.sku}
+                      {p.category?.name} · Branch: {branches.find((b: any) => b.id === p.inventories?.[0]?.warehouseId)?.name || 'Default'} · SKU: {p.sku} · {p.unitType === 'WEIGHT' ? `⚖️ ${p.unitLabel}` : `📦 ${p.unitLabel}`}{p.sizes?.length > 0 ? ` · ${p.sizes.length} size(s)` : ''}
                     </div>
                   </div>
                   <div className="flex gap-2">

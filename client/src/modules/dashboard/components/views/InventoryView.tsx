@@ -6,6 +6,7 @@ import { Card, SecHead, Btn } from '../Primitives';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { useAdjustStockMutation, useInventorySummary } from '@/modules/inventory';
 import { useListBranches } from '@/modules/branches';
+import { useListProducts } from '@/modules/products';
 import toast from 'react-hot-toast';
 
 interface InventoryViewProps {
@@ -31,6 +32,7 @@ export default function InventoryView({
   const [batchName, setBatchName] = useState('');
   const [mfgDate, setMfgDate] = useState('');
   const [expDate, setExpDate] = useState('');
+  const [formSizeName, setFormSizeName] = useState('');
   const [productQuery, setProductQuery] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +45,12 @@ export default function InventoryView({
     limit: 500,
     ...(selectedBranch ? { warehouseId: Number(selectedBranch) } : {}),
   });
+  // Fetch products with sizes/unit info for the modal
+  const { data: productsWithSizes = [] } = useListProducts({ limit: 500 } as any, {
+    queryKey: ['products', 'list', 'inventory-sizes', { limit: 500 }],
+  });
+  const getProductMeta = (productId: number) =>
+    productsWithSizes.find((p: any) => p.id === productId);
 
   const branchInventoryData = ((branchInventoryQuery as any).data?.data || []) as any[];
   const allInventoryData = ((allInventoryQuery as any).data?.data || []) as any[];
@@ -178,6 +186,7 @@ export default function InventoryView({
         type: 'ADJUSTMENT',
         warehouseId: Number(formBranchId),
         notes: formMode === 'set' ? 'Manual set stock from inventory dashboard' : 'Manual add stock from inventory dashboard',
+        ...(formSizeName ? { sizeName: formSizeName } : {}),
         ...(formMode === 'add' && quantityChange > 0
           ? {
               batchName: batchName || undefined,
@@ -191,6 +200,7 @@ export default function InventoryView({
       setBatchName('');
       setMfgDate('');
       setExpDate('');
+      setFormSizeName('');
       setModalOpen(false);
     } catch {
       toast.error('Failed to update stock');
@@ -207,6 +217,7 @@ export default function InventoryView({
     setBatchName('');
     setMfgDate('');
     setExpDate('');
+    setFormSizeName('');
     setModalOpen(true);
   };
 
@@ -718,6 +729,51 @@ export default function InventoryView({
                   </div>
                 </div>
               </div>
+
+              {/* Size selector — shown when product has sizes */}
+              {(() => {
+                const meta = formProductId ? getProductMeta(parseInt(formProductId)) : null;
+                const sizes = (meta as any)?.sizes || [];
+                if (sizes.length === 0) return null;
+                return (
+                  <div className="mt-3">
+                    <label
+                      className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
+                      style={{ color: Theme.mutedFg }}
+                    >
+                      Size *
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {sizes.map((s: any) => (
+                        <button
+                          key={s.name}
+                          type="button"
+                          onClick={() => setFormSizeName(s.name)}
+                          className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer"
+                          style={{
+                            borderColor: formSizeName === s.name ? Theme.primary : Theme.border,
+                            background: formSizeName === s.name ? Theme.primary : '#fff',
+                            color: formSizeName === s.name ? '#fff' : Theme.fg,
+                          }}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Unit info display */}
+              {(() => {
+                const meta = formProductId ? getProductMeta(parseInt(formProductId)) : null;
+                if (!meta) return null;
+                return (
+                  <div className="mt-2 text-xs" style={{ color: Theme.mutedFg }}>
+                    Unit: <span className="font-semibold">{(meta as any).unitType === 'WEIGHT' ? '⚖️' : '📦'} {(meta as any).unitLabel}</span>
+                  </div>
+                );
+              })()}
 
               {formMode === 'add' && (
                 <div className={`mt-3 grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>

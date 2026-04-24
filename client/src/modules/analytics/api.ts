@@ -70,6 +70,7 @@ export interface OverviewMetrics {
     cost: number[];
     transactions: number[];
     avgTicket: number[];
+    labels?: string[];
   };
   inventory: {
     totalProducts: number;
@@ -145,7 +146,7 @@ export const analyticsAPI = {
     return response.data.data;
   },
 
-  getOverviewMetrics: async (params?: { period?: OverviewPeriod; warehouseId?: number }) => {
+  getOverviewMetrics: async (params?: { period?: OverviewPeriod; warehouseId?: number; startDate?: string; endDate?: string }) => {
     const response = await apiClient.get<ApiResponse<OverviewMetrics>>('/analytics/overview', {
       params,
     });

@@ -8,6 +8,7 @@ import { Card, KpiCard, Btn, Badge } from '../Primitives';
 import { Product, Order } from '@/modules/dashboard/data/mockData';
 import { useListCustomers } from '@/modules/customers';
 import { useListOrders, useUpdateOrderStatusMutation } from '@/modules/orders';
+import { confirmDialog } from '@/shared/lib/confirmDialog';
 import type { Customer } from '@/shared/types';
 import type { Order as RealOrder } from '@/shared/types';
 
@@ -35,6 +36,26 @@ interface EcommerceViewProps {
 type TabType = 'orders' | 'products' | 'customers';
 type OrderFilter = 'all' | 'pending' | 'processing' | 'shipped' | 'delivered';
 type ProductFilter = 'all' | 'active' | 'low' | 'out';
+
+const TRACKING_STEPS = [
+  { status: 'PENDING',    label: 'Placed',     icon: '🛒' },
+  { status: 'CONFIRMED',  label: 'Confirmed',  icon: '✅' },
+  { status: 'PROCESSING', label: 'Processing', icon: '⚙️' },
+  { status: 'SHIPPED',    label: 'Shipped',    icon: '🚚' },
+  { status: 'DELIVERED',  label: 'Delivered',  icon: '📦' },
+];
+
+const STATUS_ORDER = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+
+const getStepState = (stepStatus: string, orderStatus: string): 'done' | 'active' | 'upcoming' => {
+  const upper = orderStatus.toUpperCase();
+  if (upper === 'CANCELLED' || upper === 'REFUNDED') return 'upcoming';
+  const stepIdx = STATUS_ORDER.indexOf(stepStatus);
+  const orderIdx = STATUS_ORDER.indexOf(upper);
+  if (stepIdx < orderIdx) return 'done';
+  if (stepIdx === orderIdx) return 'active';
+  return 'upcoming';
+};
 
 function formatDateLabel(value?: string) {
   if (!value) return 'N/A';
@@ -71,7 +92,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
   const [tab, setTab] = useState<TabType>('orders');
   const [orderSearch, setOrderSearch] = useState('');
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('all');
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [pendingStatus, setPendingStatus] = useState<Record<number, RealOrderStatus>>({});
 
   const [productSearch, setProductSearch] = useState('');
@@ -226,94 +247,163 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
             {realOrdersLoading ? (
               <div className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>Loading orders...</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[700px] border-collapse">
-                  <thead>
-                    <tr>
-                      {['Order', 'Customer', 'Items', 'Amount', 'Status', 'Date', 'Update Status'].map((h) => (
-                        <th key={h} className="whitespace-nowrap px-4 py-[11px] text-left text-[11px] font-bold uppercase tracking-[0.06em]" style={{ color: Theme.mutedFg, background: Theme.muted }}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {realOrders.filter(o => {
-                      const term = orderSearch.trim().toLowerCase();
-                      if (!term) return true;
-                      return (o.orderNumber || '').toLowerCase().includes(term) || (o.shippingName || '').toLowerCase().includes(term);
-                    }).length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                          No orders found.
-                        </td>
-                      </tr>
-                    )}
-                    {realOrders
-                      .filter(o => {
-                        const term = orderSearch.trim().toLowerCase();
-                        if (!term) return true;
-                        return (o.orderNumber || '').toLowerCase().includes(term) || (o.shippingName || '').toLowerCase().includes(term);
-                      })
-                      .map((order, i) => {
-                        const currentStatus = String(order.status).toUpperCase() as RealOrderStatus;
-                        const selected = pendingStatus[order.id] ?? currentStatus;
-                        const statusStyle = realStatusStyle(currentStatus);
-                        const isSaving = updateStatusMutation.isPending && updateStatusMutation.variables?.orderId === order.id;
+              <div className="divide-y" style={{ borderColor: Theme.border }}>
+                {realOrders.filter(o => {
+                  const term = orderSearch.trim().toLowerCase();
+                  if (!term) return true;
+                  return (o.orderNumber || '').toLowerCase().includes(term) || (o.shippingName || '').toLowerCase().includes(term);
+                }).length === 0 && (
+                  <div className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
+                    No orders found.
+                  </div>
+                )}
+                {realOrders
+                  .filter(o => {
+                    const term = orderSearch.trim().toLowerCase();
+                    if (!term) return true;
+                    return (o.orderNumber || '').toLowerCase().includes(term) || (o.shippingName || '').toLowerCase().includes(term);
+                  })
+                  .map((order) => {
+                    const currentStatus = String(order.status).toUpperCase() as RealOrderStatus;
+                    const statusStyle = realStatusStyle(currentStatus);
+                    const isExpanded = expandedOrderId === order.id;
+                    const selected = pendingStatus[order.id] ?? currentStatus;
+                    const isSaving = updateStatusMutation.isPending && updateStatusMutation.variables?.orderId === order.id;
+                    const isTerminal = currentStatus === 'DELIVERED' || currentStatus === 'CANCELLED' || currentStatus === 'REFUNDED';
 
-                        return (
-                          <tr key={order.id} style={{ background: i % 2 === 0 ? '#fff' : Theme.muted }}>
-                            <td className="px-4 py-3 text-[13px] font-bold" style={{ color: Theme.primary }}>
-                              #{order.orderNumber}
-                            </td>
-                            <td className="px-4 py-3 text-[13px]" style={{ color: Theme.fg }}>
-                              <p className="font-semibold">{order.shippingName || 'N/A'}</p>
-                              <p className="text-xs" style={{ color: Theme.mutedFg }}>{order.shippingCity || ''}</p>
-                            </td>
-                            <td className="px-4 py-3 text-[13px]" style={{ color: Theme.mutedFg }}>
-                              {order.items?.length ?? 0}
-                            </td>
-                            <td className="px-4 py-3 text-[13px] font-bold" style={{ color: Theme.fg }}>
-                              {formatCurrency(Number(order.total || 0))}
-                            </td>
-                            <td className="px-4 py-3 text-[13px]">
+                    return (
+                      <div key={order.id}>
+                        {/* Collapsed row */}
+                        <div
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50"
+                          onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[13px] font-bold" style={{ color: Theme.primary }}>#{order.orderNumber}</span>
+                              <span className="text-[13px] font-semibold" style={{ color: Theme.fg }}>{order.shippingName || 'N/A'}</span>
                               <Badge label={currentStatus} bg={statusStyle.bg} color={statusStyle.color} />
-                            </td>
-                            <td className="px-4 py-3 text-[13px]" style={{ color: Theme.mutedFg }}>
-                              {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <select
-                                  value={selected}
-                                  onChange={(e) => setPendingStatus(prev => ({ ...prev, [order.id]: e.target.value as RealOrderStatus }))}
-                                  className="rounded-lg border px-2 py-1 text-xs outline-none"
-                                  style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
-                                  disabled={isSaving || currentStatus === 'DELIVERED' || currentStatus === 'CANCELLED' || currentStatus === 'REFUNDED'}
-                                >
-                                  {REAL_ORDER_STATUSES.map(s => (
-                                    <option key={s} value={s}>{s}</option>
-                                  ))}
-                                </select>
-                                <Btn
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (selected !== currentStatus) {
-                                      updateStatusMutation.mutate({ orderId: order.id, data: { status: selected } });
-                                    }
-                                  }}
-                                  disabled={selected === currentStatus || isSaving || currentStatus === 'DELIVERED' || currentStatus === 'CANCELLED' || currentStatus === 'REFUNDED'}
-                                >
-                                  {isSaving ? '...' : 'Save'}
-                                </Btn>
+                            </div>
+                            <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
+                              {order.items?.length ?? 0} item(s) · {formatCurrency(Number(order.total || 0))} · {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                            </div>
+                          </div>
+                          <span style={{ color: Theme.mutedFg, fontSize: 14, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'none' }}>▶</span>
+                        </div>
+
+                        {/* Expanded detail — compact single-screen layout */}
+                        {isExpanded && (
+                          <div className="px-4 pb-3 pt-1" style={{ background: Theme.muted }}>
+                            <div className={`flex gap-3 ${isMobile ? 'flex-col' : ''}`}>
+                              {/* Left: stepper + status update */}
+                              <div className="flex-1 min-w-0">
+                                {/* Compact inline stepper */}
+                                {currentStatus !== 'CANCELLED' && currentStatus !== 'REFUNDED' ? (
+                                  <div className="flex items-center gap-0 mb-2">
+                                    {TRACKING_STEPS.map((step, idx) => {
+                                      const state = getStepState(step.status, currentStatus);
+                                      return (
+                                        <React.Fragment key={step.status}>
+                                          <div className="flex flex-col items-center" style={{ minWidth: 44 }}>
+                                            <div
+                                              className="flex h-6 w-6 items-center justify-center rounded-full text-[10px]"
+                                              style={{
+                                                background: state !== 'upcoming' ? Theme.primary : '#e5e7eb',
+                                                color: state !== 'upcoming' ? '#fff' : Theme.mutedFg,
+                                                fontWeight: 700,
+                                                boxShadow: state === 'active' ? `0 0 0 2px ${Theme.primary}33` : 'none',
+                                              }}
+                                            >
+                                              {step.icon}
+                                            </div>
+                                            <p className="mt-0.5 text-[8px] font-semibold text-center leading-tight" style={{ color: state !== 'upcoming' ? Theme.fg : Theme.mutedFg }}>
+                                              {step.label}
+                                            </p>
+                                          </div>
+                                          {idx < TRACKING_STEPS.length - 1 && (
+                                            <div className="h-[2px] flex-1 mx-0.5 -mt-3" style={{ background: getStepState(TRACKING_STEPS[idx + 1].status, currentStatus) !== 'upcoming' ? Theme.primary : '#e5e7eb' }} />
+                                          )}
+                                        </React.Fragment>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div className="mb-2 rounded px-2 py-1 text-[10px] font-semibold" style={{ background: '#fef2f2', color: '#b91c1c' }}>
+                                    Order {currentStatus.toLowerCase()}
+                                  </div>
+                                )}
+
+                                {/* Inline info row */}
+                                <div className="flex gap-2 text-[10px] flex-wrap" style={{ color: Theme.mutedFg }}>
+                                  <span>📍 {order.shippingName}, {order.shippingCity}</span>
+                                  <span>·</span>
+                                  <span>📞 {order.shippingPhone}</span>
+                                  {(order.customer?.user?.email || order.customer?.email) && (
+                                    <>
+                                      <span>·</span>
+                                      <span>✉️ {order.customer?.user?.email || (order.customer as any)?.email}</span>
+                                    </>
+                                  )}
+                                  <span>·</span>
+                                  <span>{(order.items || []).map((item: any) => `${item.productName || item.product?.name || 'Item'} ×${item.quantity}`).join(', ')}</span>
+                                </div>
+
+                                {/* Timeline pills */}
+                                {order.trackingEvents && order.trackingEvents.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {order.trackingEvents.map((event) => (
+                                      <span key={event.id} className="rounded bg-white border px-1.5 py-0.5 text-[9px]" style={{ borderColor: Theme.border, color: Theme.mutedFg }}>
+                                        {event.title} <span className="opacity-60">{new Date(event.createdAt).toLocaleString('en-BD', { hour: '2-digit', minute: '2-digit' })}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
+
+                              {/* Right: amount + status update */}
+                              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                <div className="text-base font-black" style={{ color: Theme.primary }}>{formatCurrency(Number(order.total || 0))}</div>
+                                {!isTerminal && (
+                                  <div className="flex items-center gap-1.5">
+                                    <select
+                                      value={selected}
+                                      onChange={(e) => setPendingStatus(prev => ({ ...prev, [order.id]: e.target.value as RealOrderStatus }))}
+                                      className="rounded border px-1.5 py-1 text-[11px] outline-none"
+                                      style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
+                                      disabled={isSaving}
+                                    >
+                                      {REAL_ORDER_STATUSES.map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                      ))}
+                                    </select>
+                                    <Btn
+                                      variant="primary"
+                                      size="sm"
+                                      onClick={async () => {
+                                        if (selected === currentStatus) return;
+                                        const confirmed = await confirmDialog({
+                                          title: 'Update Order Status?',
+                                          text: `Change #${order.orderNumber} to ${selected}?`,
+                                          confirmButtonText: 'Yes, update',
+                                          icon: 'question',
+                                        });
+                                        if (confirmed) {
+                                          updateStatusMutation.mutate({ orderId: order.id, data: { status: selected } });
+                                        }
+                                      }}
+                                      disabled={selected === currentStatus || isSaving}
+                                    >
+                                      {isSaving ? '...' : 'Update'}
+                                    </Btn>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </Card>

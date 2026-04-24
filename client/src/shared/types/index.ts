@@ -1,5 +1,5 @@
 // Product types
-export type { Category, Product, ListProductsParams } from './product';
+export type { Category, Product, ListProductsParams, ProductSize, UnitType } from './product';
 
 // Order types
 export type { Order, OrderItem, CreateOrderPayload } from './order';

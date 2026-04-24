@@ -8,6 +8,8 @@ import { Product, SellLog } from '@/modules/dashboard/data/mockData';
 import { useCreateManualSaleMutation, useListManualSales } from '@/modules/manual-sales';
 import { useInventorySummary } from '@/modules/inventory';
 import { useListBranches } from '@/modules/branches';
+import { useListProducts } from '@/modules/products';
+import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
 interface SalesViewProps {
@@ -24,6 +26,10 @@ interface SaleLineItem {
   qty: number;
   unitPrice: number;
   total: number;
+  unitType: 'PIECE' | 'WEIGHT';
+  unitLabel: string;
+  sizeName: string;
+  sizes: Array<{ name: string; imageUrl?: string | null; priceOverride?: number | null }>;
 }
 
 const SALES_BRANCH_STORAGE_KEY = 'dashboard.sales.selectedBranchId';
@@ -32,6 +38,7 @@ export default function SalesView({
   products,
 }: SalesViewProps) {
   const { isMobile } = useResponsive();
+  const { data: session } = useSession();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b) => b.active);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +63,14 @@ export default function SalesView({
   });
 
   const branchInventoryData = ((branchInventoryQuery as any).data?.data || []) as any[];
+  // Fetch products with sizes/unit info
+  const { data: productsMetaList = [] } = useListProducts(
+    { limit: 500, ...(saleBranchId ? { branchId: Number(saleBranchId) } : {}) } as any,
+    { queryKey: ['products', 'list', 'sales-meta', { branchId: saleBranchId }], enabled: !!saleBranchId }
+  );
+  const getProductMeta = (productId: number) =>
+    productsMetaList.find((p: any) => p.id === productId);
+
   const branchProducts: Product[] = branchInventoryData.map((item: any) => ({
     id: item.productId || item.product?.id,
     name: item.product?.name || 'Unknown Product',
@@ -134,6 +149,13 @@ export default function SalesView({
   }, [saleBranchId]);
 
   const handleSelectProduct = (product: Product) => {
+    const meta = getProductMeta(product.id) as any;
+    const unitType = meta?.unitType || 'PIECE';
+    const unitLabel = meta?.unitLabel || 'pc';
+    const sizes = (meta?.sizes || []).filter((s: any) => s.isActive !== false);
+    const defaultSize = sizes.length > 0 ? sizes[0].name : '';
+    const defaultQty = unitType === 'WEIGHT' ? 1 : 1;
+
     setLineItems((prev) => {
       const existing = prev.find((i) => i.productId === product.id);
       if (existing) {
@@ -150,9 +172,13 @@ export default function SalesView({
           productId: product.id,
           name: product.name,
           sku: product.sku,
-          qty: 1,
+          qty: defaultQty,
           unitPrice: Number(product.price ?? 0),
-          total: Number(product.price ?? 0),
+          total: Number(product.price ?? 0) * defaultQty,
+          unitType,
+          unitLabel,
+          sizeName: defaultSize,
+          sizes,
         },
       ];
     });
@@ -164,7 +190,7 @@ export default function SalesView({
     if (lineItems.length > 0 && !hasInvalidLine) {
       try {
         await createManualSaleMutation.mutateAsync({
-          soldBy: 'Staff',
+          soldBy: session?.user?.name || session?.user?.email || 'Staff',
           note: 'Manual Sale',
           branchId: Number(saleBranchId),
           branchName: activeBranches.find((b) => b.id === Number(saleBranchId))?.name || 'Main',
@@ -172,6 +198,7 @@ export default function SalesView({
             productId: item.productId,
             quantity: item.qty,
             unitPrice: item.unitPrice,
+            ...(item.sizeName ? { sizeName: item.sizeName } : {}),
           })),
         });
         toast.success(`Recorded ${lineItems.length} product(s), ${totalQty} qty total`);
@@ -198,7 +225,8 @@ export default function SalesView({
       prev.map((item, idx) => {
         if (idx !== index) return item;
         const maxQty = getMaxEditableQty(item.productId, index);
-        const nextQty = patch.qty !== undefined ? Math.max(1, Math.min(maxQty, patch.qty)) : item.qty;
+        const minQty = 1;
+        const nextQty = patch.qty !== undefined ? Math.max(minQty, Math.min(maxQty, patch.qty)) : item.qty;
         const nextPrice = patch.unitPrice !== undefined ? Math.max(0, patch.unitPrice) : item.unitPrice;
         return { ...item, qty: nextQty, unitPrice: nextPrice, total: nextQty * nextPrice };
       })
@@ -317,7 +345,36 @@ export default function SalesView({
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="text-sm font-semibold truncate" style={{ color: Theme.fg }}>{item.name}</div>
-                          <div className="text-[11px]" style={{ color: Theme.mutedFg }}>{item.sku}</div>
+                          <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
+                            {item.sku} · {item.unitType === 'WEIGHT' ? '⚖️' : '📦'} {item.unitLabel}
+                          </div>
+                          {item.sizes.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {item.sizes.map((s: any) => (
+                                <button
+                                  key={s.name}
+                                  type="button"
+                                  onClick={() => {
+                                    setLineItems((prev) =>
+                                      prev.map((li, i) => {
+                                        if (i !== idx) return li;
+                                        const newPrice = s.priceOverride ? Number(s.priceOverride) : li.unitPrice;
+                                        return { ...li, sizeName: s.name, unitPrice: newPrice, total: li.qty * newPrice };
+                                      })
+                                    );
+                                  }}
+                                  className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer"
+                                  style={{
+                                    borderColor: item.sizeName === s.name ? Theme.primary : Theme.border,
+                                    background: item.sizeName === s.name ? Theme.primary : '#fff',
+                                    color: item.sizeName === s.name ? '#fff' : Theme.fg,
+                                  }}
+                                >
+                                  {s.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <button
                           onClick={() => removeLineItem(idx)}
@@ -393,7 +450,36 @@ export default function SalesView({
                   <div key={`${item.productId}-${idx}`} className="grid grid-cols-12 gap-2 px-3 py-2.5 border-t border-gray-100 items-center hover:bg-gray-50">
                     <div className="col-span-4 min-w-0">
                       <div className="text-xs font-semibold truncate" style={{ color: Theme.fg }}>{item.name}</div>
-                      <div className="text-[10px]" style={{ color: Theme.mutedFg }}>{item.sku}</div>
+                      <div className="text-[10px]" style={{ color: Theme.mutedFg }}>
+                        {item.sku} · {item.unitType === 'WEIGHT' ? '⚖️' : '📦'} {item.unitLabel}
+                      </div>
+                      {item.sizes.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {item.sizes.map((s: any) => (
+                            <button
+                              key={s.name}
+                              type="button"
+                              onClick={() => {
+                                setLineItems((prev) =>
+                                  prev.map((li, i) => {
+                                    if (i !== idx) return li;
+                                    const newPrice = s.priceOverride ? Number(s.priceOverride) : li.unitPrice;
+                                    return { ...li, sizeName: s.name, unitPrice: newPrice, total: li.qty * newPrice };
+                                  })
+                                );
+                              }}
+                              className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer"
+                              style={{
+                                borderColor: item.sizeName === s.name ? Theme.primary : Theme.border,
+                                background: item.sizeName === s.name ? Theme.primary : '#fff',
+                                color: item.sizeName === s.name ? '#fff' : Theme.fg,
+                              }}
+                            >
+                              {s.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="col-span-3 flex justify-center">
                       <div className="inline-flex items-center rounded-lg border bg-white overflow-hidden" style={{ borderColor: Theme.border }}>
