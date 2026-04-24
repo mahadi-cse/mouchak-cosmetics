@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Backend for Mouchak Cosmetics e-commerce platform",
   "main": "dist/index.js",
-  "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
@@ -63,6 +62,6 @@
     "seed": "tsx prisma/seed.ts"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   }
 }
