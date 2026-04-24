@@ -19,6 +19,8 @@ import manualSaleRouter from './modules/manual-sales/manualSale.router';
 import branchRouter from './modules/branches/branch.router';
 import authRouter from './modules/auth/auth.router';
 import customerDashboardRouter from './modules/customer-dashboard/customerDashboard.router';
+import promotionRouter from './modules/promotions/promotion.router';
+import uploadRouter from './modules/uploads/upload.router';
 
 export function createApp(): Express {
   const app = express();
@@ -55,6 +57,8 @@ export function createApp(): Express {
   app.use('/api/manual-sales', manualSaleRouter);
   app.use('/api/branches', branchRouter);
   app.use('/api/customer-dashboard', customerDashboardRouter);
+  app.use('/api/promotions', promotionRouter);
+  app.use('/api/uploads', uploadRouter);
 
   // 404 handler
   app.use(notFound);

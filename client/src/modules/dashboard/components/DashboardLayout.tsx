@@ -7,7 +7,7 @@ import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { User, LogOut } from 'lucide-react';
 import { useProfileQuery } from '@/modules/auth';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
-import { usePathname, useSearchParams, useRouter } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
@@ -256,7 +256,6 @@ export default function DashboardLayout({
   const { isMobile } = useResponsive();
   const { data: session } = useSession();
   const { data: profileUser } = useProfileQuery();
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const pathSection = pathname.split('/')[2] || 'overview';
@@ -371,7 +370,9 @@ export default function DashboardLayout({
     const target = id === 'settings' && tab ? `${path}?tab=${encodeURIComponent(tab)}` : path;
     setActiveNav(id);
     if (id === 'settings' && tab) setSettingsTab(tab);
-    router.push(target);
+    // Use history.pushState to update URL without triggering Next.js page navigation
+    // This prevents the component from unmounting/remounting (screen jump)
+    window.history.pushState(null, '', target);
     setSidebarOpen(false);
     if (id !== 'settings') setSettingsOpen(false);
     if (id === 'settings') setSettingsOpen(true);

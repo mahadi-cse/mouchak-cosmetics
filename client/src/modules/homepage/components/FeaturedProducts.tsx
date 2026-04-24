@@ -238,7 +238,7 @@ const DEFAULT_FILTER_OPTIONS = ['All'];
 
 export function FeaturedProducts() {
   const [activeFilter, setActiveFilter] = useState('All');
-  const { data: products = [], isLoading, error } = useHomepageFeaturedProducts(8);
+  const { data: products = [], isLoading, error } = useHomepageFeaturedProducts(12);
   const { data: categories = [], isLoading: categoriesLoading } = useHomepageCategories();
 
   const activeCategories = useMemo(

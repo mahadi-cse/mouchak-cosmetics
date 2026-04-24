@@ -72,17 +72,25 @@ export const homepageAPI = {
     });
 
     const featuredProducts = response.data.data as Product[];
-    if (featuredProducts.length > 0) {
+    if (featuredProducts.length >= limit) {
       return featuredProducts;
     }
 
+    // Not enough featured products — fetch all active products to fill the grid
     const fallbackResponse = await apiClient.get<any>("/products", {
       params: {
         limit,
       },
     });
 
-    return fallbackResponse.data.data as Product[];
+    const allProducts = fallbackResponse.data.data as Product[];
+    // Merge: featured first, then fill with non-featured (no duplicates)
+    const featuredIds = new Set(featuredProducts.map((p) => p.id));
+    const merged = [
+      ...featuredProducts,
+      ...allProducts.filter((p) => !featuredIds.has(p.id)),
+    ];
+    return merged.slice(0, limit);
   },
 
   searchProducts: async (query: string, limit: number = 5): Promise<Product[]> => {

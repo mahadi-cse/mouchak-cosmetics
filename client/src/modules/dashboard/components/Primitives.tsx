@@ -47,6 +47,7 @@ export const Btn: React.FC<ButtonProps> = ({
 
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       className={`${baseClasses} ${variantClasses[variant]}`}

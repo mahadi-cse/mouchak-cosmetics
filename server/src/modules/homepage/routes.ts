@@ -17,9 +17,11 @@ router.get("/stats", async (req, res) => {
       return res.json({
         totalHappyCustomers: 10000,
         minFreeDeliveryAmount: 999,
+        isFreeDeliveryActive: true,
         deliveryTimeframe: "48hr",
         currentOfferText: "Spring Sale - Save up to 40%",
         currentOfferPercentage: 40,
+        isOfferActive: true,
       });
     }
 
@@ -138,7 +140,8 @@ router.put("/settings", async (req, res) => {
 
 /**
  * GET /api/homepage/slider
- * Fetch all active hero slider images
+ * Fetch all active hero slider images.
+ * Falls back to featured products when no manual slider entries exist.
  */
 router.get("/slider", async (req, res) => {
   try {
@@ -147,7 +150,33 @@ router.get("/slider", async (req, res) => {
       orderBy: { displayOrder: "asc" },
     });
 
-    res.json(sliders);
+    if (sliders.length > 0) {
+      return res.json(sliders);
+    }
+
+    // Fallback: build slider entries from featured products
+    const featured = await prisma.product.findMany({
+      where: { isFeatured: true, isActive: true },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+      include: { category: true },
+    });
+
+    const productSliders = featured.map((p: any, i: number) => ({
+      id: -(p.id),  // negative id to distinguish from real slider entries
+      title: p.name,
+      description: p.shortDescription || p.description || null,
+      imageUrl: p.images?.[0] || "",
+      imageAlt: p.name,
+      buttonText: `Shop Now · ৳${Math.round(Number(p.price))}`,
+      buttonLink: `/product/${p.slug}`,
+      displayOrder: i,
+      isActive: true,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    }));
+
+    res.json(productSliders);
   } catch (error) {
     console.error("Error fetching hero slider:", error);
     res.status(500).json({ error: "Failed to fetch hero slider" });

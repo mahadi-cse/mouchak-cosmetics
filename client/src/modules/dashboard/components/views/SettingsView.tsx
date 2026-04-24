@@ -26,6 +26,16 @@ import { homepageAPI, useHomepageStats, useSiteSettings } from '@/modules/homepa
 import { useSession } from 'next-auth/react';
 import apiClient from '@/shared/lib/apiClient';
 import StaffFormPageClient from '@/app/(staff-dashboard)/dashboard/settings/staff/_components/StaffFormPageClient';
+import {
+  usePromotions,
+  useCreatePromotion,
+  useUpdatePromotion,
+  useTogglePromotion,
+  useDeletePromotion,
+} from '@/modules/promotions';
+import type { Promotion as APIPromotion } from '@/modules/promotions';
+import ImageUploader from '@/shared/components/ImageUploader';
+import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
 
 interface SettingsViewProps {
   products: any[];
@@ -118,18 +128,8 @@ interface SettingsState {
   };
 }
 
-interface Promotion {
-  id: number;
-  label: string;
-  active: boolean;
-  pct: number;
-  ends: string;
-  banner: string;
-}
-
 const DASHBOARD_SETTINGS_KEY = 'mouchak.dashboard.settings.v1';
 const DASHBOARD_STAFF_KEY = 'mouchak.dashboard.staff.v1';
-const DASHBOARD_PROMOTIONS_KEY = 'mouchak.dashboard.promotions.v1';
 
 const DEFAULT_SETTINGS: SettingsState = {
   storeName: 'Mouchak Cosmetics',
@@ -178,25 +178,6 @@ const STAFF_LIST: StaffMember[] = [
     role: 'Staff',
     branch: 'Sylhet Outlet',
     status: 'inactive',
-  },
-];
-
-const DEFAULT_PROMOTIONS: Promotion[] = [
-  {
-    id: 1,
-    label: 'Eid Flash Sale',
-    active: true,
-    pct: 20,
-    ends: 'Apr 15',
-    banner: 'Eid Special - 20% off sitewide!',
-  },
-  {
-    id: 2,
-    label: 'Skincare Week',
-    active: false,
-    pct: 15,
-    ends: 'Apr 20',
-    banner: 'Skincare Week - 15% off all skincare',
   },
 ];
 
@@ -255,6 +236,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const [productCategoryBranchId, setProductCategoryBranchId] = useState('');
   const [isHydrated, setIsHydrated] = useState(false);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const productImageRef = useRef<ImageUploaderRef>(null);
+  const categoryImageRef = useRef<ImageUploaderRef>(null);
 
   const { data: siteSettingsData } = useSiteSettings();
   const { data: homepageStatsData } = useHomepageStats();
@@ -475,7 +458,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [staff, setStaff] = useState<StaffMember[]>(STAFF_LIST);
-  const [promotions, setPromotions] = useState<Promotion[]>(DEFAULT_PROMOTIONS);
+
+  // Promotions — fully API-driven
+  const { data: promotions = [], isLoading: isLoadingPromotions } = usePromotions();
+  const createPromotionMut = useCreatePromotion();
+  const updatePromotionMut = useUpdatePromotion();
+  const togglePromotionMut = useTogglePromotion();
+  const deletePromotionMut = useDeletePromotion();
 
   const categories = apiCategories;
   const productsList = apiProducts;
@@ -495,6 +484,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editProduct, setEditProduct] = useState<number | null>(null);
+  const [trendingSearch, setTrendingSearch] = useState('');
+  const [trendingBranchId, setTrendingBranchId] = useState('');
 
   // Product Form State
   const [productForm, setProductForm] = useState({
@@ -541,13 +532,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         }
       }
 
-      const storedPromotions = window.localStorage.getItem(DASHBOARD_PROMOTIONS_KEY);
-      if (storedPromotions) {
-        const parsed = JSON.parse(storedPromotions) as Promotion[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setPromotions(parsed);
-        }
-      }
+      // Clean up legacy promotions localStorage (now API-driven)
+      window.localStorage.removeItem('mouchak.dashboard.promotions.v1');
     } catch {
       toast.error('Unable to read saved settings from browser storage');
     } finally {
@@ -568,25 +554,6 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           }
         : {}),
     }));
-
-    if (homepageStatsData) {
-      setPromotions((prev) => {
-        const homepagePromo: Promotion = {
-          id: 1,
-          label: prev.find((item) => item.id === 1)?.label || 'Homepage Offer',
-          active: Boolean(homepageStatsData.isOfferActive),
-          pct: Number(homepageStatsData.currentOfferPercentage || 0),
-          ends: prev.find((item) => item.id === 1)?.ends || '',
-          banner: homepageStatsData.currentOfferText || prev.find((item) => item.id === 1)?.banner || '',
-        };
-
-        if (prev.some((item) => item.id === 1)) {
-          return prev.map((item) => (item.id === 1 ? homepagePromo : item));
-        }
-
-        return [homepagePromo, ...prev];
-      });
-    }
   }, [homepageStatsData, siteSettingsData]);
 
   React.useEffect(() => {
@@ -599,16 +566,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     window.localStorage.setItem(DASHBOARD_STAFF_KEY, JSON.stringify(staff));
   }, [isHydrated, staff]);
 
-  React.useEffect(() => {
-    if (!isHydrated || typeof window === 'undefined') return;
-    window.localStorage.setItem(DASHBOARD_PROMOTIONS_KEY, JSON.stringify(promotions));
-  }, [isHydrated, promotions]);
-
   const handleAddCategory = async () => {
     if (!catForm.name || !catForm.branchId) {
       return toast.error('Category name and Branch are required');
     }
     try {
+      // Upload pending image if any
+      let imageUrl = catForm.imageUrl;
+      if (categoryImageRef.current?.hasPending()) {
+        const uploaded = await categoryImageRef.current.upload();
+        if (uploaded) imageUrl = uploaded;
+      }
+
       if (editCat) {
         await updateCategory.mutateAsync({
           id: editCat,
@@ -616,7 +585,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             name: catForm.name,
             description: catForm.desc,
             isActive: catForm.active,
-            imageUrl: catForm.imageUrl,
+            imageUrl,
             branchId: Number(catForm.branchId),
           } as any,
         });
@@ -626,7 +595,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           name: catForm.name,
           description: catForm.desc,
           isActive: catForm.active,
-          imageUrl: catForm.imageUrl,
+          imageUrl,
           branchId: Number(catForm.branchId),
         } as any);
         toast.success('Category created');
@@ -664,8 +633,15 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       return toast.error('Please fill all required fields, including Category and Branch');
     }
     try {
+      // Upload pending image if any
+      let imageUrl = productForm.image;
+      if (productImageRef.current?.hasPending()) {
+        const uploaded = await productImageRef.current.upload();
+        if (uploaded) imageUrl = uploaded;
+      }
+
       const defaultImage = 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=800&auto=format&fit=crop';
-      const images = productForm.image ? [productForm.image] : [defaultImage];
+      const images = imageUrl ? [imageUrl] : [defaultImage];
 
       if (editProduct) {
         await updateProduct.mutateAsync({
@@ -709,8 +685,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       });
       setShowAddProduct(false);
       setEditProduct(null);
-    } catch (error) {
-      toast.error(editProduct ? 'Failed to update product' : 'Failed to create product');
+    } catch (error: any) {
+      toast.error(error?.message || (editProduct ? 'Failed to update product' : 'Failed to create product'));
     }
   };
 
@@ -739,7 +715,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   };
 
   const activePromotion = useMemo(
-    () => promotions.find((promotion) => promotion.active) ?? null,
+    () => promotions.find((p) => p.isActive) ?? null,
     [promotions]
   );
 
@@ -784,15 +760,15 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     reader.readAsDataURL(file);
   };
 
-  const openPromotionEditor = (promotion?: Promotion) => {
+  const openPromotionEditor = (promotion?: APIPromotion) => {
     if (promotion) {
       setEditingPromotionId(promotion.id);
       setPromotionForm({
         label: promotion.label,
         pct: String(promotion.pct),
-        ends: promotion.ends,
+        ends: promotion.endsAt || '',
         banner: promotion.banner,
-        active: promotion.active,
+        active: promotion.isActive,
       });
     } else {
       setEditingPromotionId(null);
@@ -801,7 +777,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     setShowPromotionEditor(true);
   };
 
-  const handleSavePromotion = () => {
+  const handleSavePromotion = async () => {
     if (!promotionForm.label.trim() || !promotionForm.banner.trim()) {
       toast.error('Promotion label and banner text are required');
       return;
@@ -813,48 +789,35 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       return;
     }
 
-    const draftPromotion: Promotion = {
-      id: editingPromotionId ?? Date.now(),
-      label: promotionForm.label.trim(),
-      pct: Math.round(percentage),
-      ends: promotionForm.ends.trim(),
-      banner: promotionForm.banner.trim(),
-      active: promotionForm.active,
-    };
+    try {
+      const payload = {
+        label: promotionForm.label.trim(),
+        banner: promotionForm.banner.trim(),
+        pct: Math.round(percentage),
+        endsAt: promotionForm.ends.trim() || undefined,
+        isActive: promotionForm.active,
+      };
 
-    setPromotions((prev) => {
-      let next =
-        editingPromotionId !== null
-          ? prev.map((item) => (item.id === editingPromotionId ? draftPromotion : item))
-          : [...prev, draftPromotion];
-
-      if (draftPromotion.active) {
-        next = next.map((item) =>
-          item.id === draftPromotion.id ? { ...item, active: true } : { ...item, active: false }
-        );
+      if (editingPromotionId !== null) {
+        await updatePromotionMut.mutateAsync({ id: editingPromotionId, ...payload });
+      } else {
+        await createPromotionMut.mutateAsync(payload);
       }
 
-      return next;
-    });
-
-    setShowPromotionEditor(false);
-    setEditingPromotionId(null);
-    triggerSavedIndicator();
-    toast.success('Promotion saved');
+      setShowPromotionEditor(false);
+      setEditingPromotionId(null);
+      toast.success('Promotion saved');
+    } catch {
+      toast.error('Failed to save promotion');
+    }
   };
 
-  const handleTogglePromotionActive = (id: number) => {
-    setPromotions((prev) => {
-      const target = prev.find((item) => item.id === id);
-      if (!target) return prev;
-
-      const shouldActivate = !target.active;
-      return prev.map((item) => {
-        if (item.id === id) return { ...item, active: shouldActivate };
-        return shouldActivate ? { ...item, active: false } : item;
-      });
-    });
-    triggerSavedIndicator();
+  const handleTogglePromotionActive = async (id: number) => {
+    try {
+      await togglePromotionMut.mutateAsync(id);
+    } catch {
+      toast.error('Failed to toggle promotion');
+    }
   };
 
   const handleResetCurrentTab = () => {
@@ -933,6 +896,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       }
 
       if (targetTab === 'discounts') {
+        // Sync the active promotion to homepage_stats for the storefront
         await updateHomepageStatsMutation.mutateAsync({
           currentOfferText: activePromotion?.banner || '',
           currentOfferPercentage: activePromotion?.pct || 0,
@@ -1019,134 +983,136 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               className="mb-4 rounded-xl border-[1.5px] p-4"
               style={{ borderColor: Theme.primary, background: Theme.secondary }}
             >
-              <div className="mb-3 text-sm font-bold" style={{ color: Theme.primary }}>
-                {editProduct !== null ? 'Edit Product' : 'New Product'}
-              </div>
-              
-              <div className="flex flex-col gap-4">
-                <div className={`grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                  <div>
-                    <label className={labelClass}>Product Name *</label>
-                    <input
-                      placeholder="e.g. Rose Glow Serum"
-                      className={inputClass}
-                      value={productForm.name}
-                      onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>SKU *</label>
-                    <input
-                      placeholder="e.g. SKU-019"
-                      className={inputClass}
-                      value={productForm.sku}
-                      onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Category *</label>
-                    <select
-                      className={selectClass}
-                      value={productForm.categoryId}
-                      disabled={!productForm.branchId || isLoadingProductCategories}
-                      onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
-                    >
-                      <option value="">
-                        {!productForm.branchId
-                          ? 'Select Branch First'
-                          : isLoadingProductCategories
-                            ? 'Loading categories...'
-                            : 'Select Category'}
-                      </option>
-                      {productCategories.map((c: any) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                      {productForm.branchId && !isLoadingProductCategories && productCategories.length === 0 && (
-                        <option value="" disabled>
-                          No categories for selected branch
-                        </option>
-                      )}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Branch *</label>
-                    <select
-                      className={selectClass}
-                      value={productForm.branchId}
-                      onChange={(e) => {
-                        const nextBranchId = e.target.value;
-                        setProductCategoryBranchId(nextBranchId);
-                        setProductForm({ ...productForm, branchId: nextBranchId, categoryId: '' });
-                      }}
-                    >
-                      <option value="">Select Branch</option>
-                      {branches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Selling Price (৳) *</label>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      className={inputClass}
-                      value={productForm.price}
-                      onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Cost/Actual Price (৳)</label>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      className={inputClass}
-                      value={productForm.costPrice}
-                      onChange={(e) => setProductForm({ ...productForm, costPrice: e.target.value })}
-                    />
-                  </div>
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-bold" style={{ color: Theme.primary }}>
+                  {editProduct !== null ? 'Edit Product' : 'New Product'}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => { setShowAddProduct(false); setEditProduct(null); setProductCategoryBranchId(''); }}
+                  className="cursor-pointer border-none bg-transparent text-lg leading-none"
+                  style={{ color: Theme.mutedFg }}
+                >
+                  ✕
+                </button>
+              </div>
 
+              <div className={`grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
                 <div>
+                  <label className={labelClass}>Product Name *</label>
+                  <input
+                    placeholder="e.g. Rose Glow Serum"
+                    className={inputClass}
+                    value={productForm.name}
+                    onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>SKU *</label>
+                  <input
+                    placeholder="e.g. SKU-019"
+                    className={inputClass}
+                    value={productForm.sku}
+                    onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Branch *</label>
+                  <select
+                    className={selectClass}
+                    value={productForm.branchId}
+                    onChange={(e) => {
+                      const nextBranchId = e.target.value;
+                      setProductCategoryBranchId(nextBranchId);
+                      setProductForm({ ...productForm, branchId: nextBranchId, categoryId: '' });
+                    }}
+                  >
+                    <option value="">Select Branch</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Category *</label>
+                  <select
+                    className={selectClass}
+                    value={productForm.categoryId}
+                    disabled={!productForm.branchId || isLoadingProductCategories}
+                    onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
+                  >
+                    <option value="">
+                      {!productForm.branchId
+                        ? 'Select Branch First'
+                        : isLoadingProductCategories
+                          ? 'Loading categories...'
+                          : 'Select Category'}
+                    </option>
+                    {productCategories.map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Selling Price (৳) *</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    className={inputClass}
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Cost/Actual Price (৳)</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    className={inputClass}
+                    value={productForm.costPrice}
+                    onChange={(e) => setProductForm({ ...productForm, costPrice: e.target.value })}
+                  />
+                </div>
+                <div className={isMobile ? '' : 'col-span-2'}>
                   <label className={labelClass}>Description</label>
                   <textarea
                     placeholder="Product description for storefront..."
-                    className={`${inputClass} h-20 resize-y`}
+                    className={`${inputClass} h-16 resize-y`}
                     value={productForm.description}
                     onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                   />
                 </div>
-
                 <div>
-                  <label className={labelClass}>Product Image URL</label>
-                  <input
-                    placeholder="https://example.com/image.jpg"
-                    className={inputClass}
+                  <label className={labelClass}>Product Image</label>
+                  <ImageUploader
+                    ref={productImageRef}
                     value={productForm.image}
-                    onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
+                    onChange={(url) => setProductForm({ ...productForm, image: url })}
+                    folder="mouchak/products"
+                    aspect={1}
                   />
                 </div>
+              </div>
 
-                <div className="flex gap-2">
-                  <Btn
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowAddProduct(false);
-                      setEditProduct(null);
-                      setProductCategoryBranchId('');
-                    }}
-                  >
-                    Cancel
-                  </Btn>
-                  <Btn variant="primary" size="sm" onClick={handleAddProduct}>
-                    {editProduct !== null ? 'Save Changes' : 'Create Product'}
-                  </Btn>
-                </div>
+              <div className="mt-3 flex gap-2">
+                <Btn
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowAddProduct(false);
+                    setEditProduct(null);
+                    setProductCategoryBranchId('');
+                  }}
+                >
+                  Cancel
+                </Btn>
+                <Btn variant="primary" size="sm" onClick={handleAddProduct}>
+                  {editProduct !== null ? 'Save Changes' : 'Create Product'}
+                </Btn>
               </div>
             </div>
           )}
@@ -1315,12 +1281,14 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   />
                 </div>
                 <div className={`${isMobile ? '' : 'col-span-2'}`}>
-                  <label className={labelClass}>Image URL</label>
-                  <input
+                  <label className={labelClass}>Category Image</label>
+                  <ImageUploader
+                    ref={categoryImageRef}
                     value={catForm.imageUrl}
-                    onChange={(e) => setCatForm((f) => ({ ...f, imageUrl: e.target.value }))}
-                    placeholder="https://example.com/category.jpg"
-                    className={inputClass}
+                    onChange={(url) => setCatForm((f) => ({ ...f, imageUrl: url }))}
+                    folder="mouchak/categories"
+                    aspect={16 / 9}
+                    placeholder="Upload category image"
                   />
                 </div>
               </div>
@@ -1793,18 +1761,51 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       <div>
         <FormSection title="Trending Products on Homepage">
           <div className="mb-[14px] text-[13px]" style={{ color: Theme.mutedFg }}>
-            Select products to feature in the Trending section on your storefront.
+            Select products to feature in the homepage slider and trending section.
+            <span className="ml-1 font-semibold" style={{ color: Theme.primary }}>
+              {productsList.filter((p: any) => p.isFeatured).length} featured
+            </span>
+          </div>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <input
+              value={trendingSearch}
+              onChange={(e) => setTrendingSearch(e.target.value)}
+              placeholder="Search products…"
+              className={inputClass}
+              style={{ maxWidth: 240 }}
+            />
+            <select
+              className={selectClass}
+              value={trendingBranchId}
+              onChange={(e) => setTrendingBranchId(e.target.value)}
+              style={{ minWidth: 140 }}
+            >
+              <option value="">All Branches</option>
+              {branches.map((b: any) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col gap-2.5">
             {isLoadingProducts ? (
               <div className="py-4 text-center text-sm">Loading products...</div>
-            ) : productsList.length === 0 ? (
-              <div className="py-4 text-center text-sm">No products found</div>
-            ) : (
-              productsList.map((p: any) => (
+            ) : (() => {
+              const q = trendingSearch.trim().toLowerCase();
+              const filtered = productsList.filter((p: any) => {
+                if (trendingBranchId && String(p.inventories?.[0]?.warehouseId) !== trendingBranchId) return false;
+                if (q && !p.name.toLowerCase().includes(q) && !p.sku.toLowerCase().includes(q) && !(p.category?.name || '').toLowerCase().includes(q)) return false;
+                return true;
+              });
+              if (filtered.length === 0) return <div className="py-4 text-center text-sm">No products found</div>;
+              // Show featured first, then the rest
+              const sorted = [...filtered].sort((a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+              return sorted.map((p: any) => (
                 <div
                   key={p.id}
-                  className="flex items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3"
+                  className="flex items-center gap-3 rounded-[10px] border bg-white px-[14px] py-3"
+                  style={{ borderColor: p.isFeatured ? Theme.primary : Theme.border }}
                 >
                   <input
                     type="checkbox"
@@ -1816,7 +1817,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                           data: { isFeatured: e.target.checked },
                         });
                         triggerSavedIndicator();
-                        toast.success('Product updated');
+                        toast.success(e.target.checked ? 'Added to featured' : 'Removed from featured');
                       } catch {
                         toast.error('Failed to update product');
                       }
@@ -1824,32 +1825,34 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                     className="h-4 w-4 shrink-0"
                     style={{ accentColor: Theme.primary }}
                   />
+                  <div
+                    className="h-9 w-9 shrink-0 overflow-hidden rounded"
+                    style={{ background: Theme.muted }}
+                  >
+                    {p.images?.[0] ? (
+                      <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-sm">📦</span>
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
-                      {p.name}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
+                        {p.name}
+                      </span>
+                      {p.isFeatured && (
+                        <span className="rounded bg-pink-50 px-1.5 py-0.5 text-[9px] font-bold text-pink-600 border border-pink-100">
+                          Featured
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
-                      {p.category?.name} · ৳{p.price} · SKU: {p.sku}
+                      {p.category?.name} · ৳{p.price} · {branches.find((b: any) => b.id === p.inventories?.[0]?.warehouseId)?.name || 'Default'}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Btn
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setTab('products');
-                        openProductEditor(p);
-                      }}
-                    >
-                      Edit
-                    </Btn>
-                    <Btn variant="ghost" size="sm" onClick={() => handleDeleteProduct(p.id)}>
-                      🗑️
-                    </Btn>
-                  </div>
                 </div>
-              ))
-            )}
+              ));
+            })()}
           </div>
         </FormSection>
       </div>
@@ -1862,7 +1865,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${
               isMobile ? 'items-end p-0' : 'items-center p-4'
             }`}
-            onClick={() => setShowPromotionEditor(false)}
+            onClick={() => { setShowPromotionEditor(false); setEditingPromotionId(null); }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -1875,7 +1878,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   {editingPromotionId !== null ? 'Edit Promotion' : 'Create Promotion'}
                 </div>
                 <button
-                  onClick={() => setShowPromotionEditor(false)}
+                  onClick={() => { setShowPromotionEditor(false); setEditingPromotionId(null); }}
                   className="cursor-pointer border-none bg-transparent text-xl leading-none"
                   style={{ color: Theme.mutedFg }}
                 >
@@ -1935,7 +1938,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   Mark as active offer
                 </label>
                 <div className="flex justify-end gap-2 pt-2">
-                  <Btn variant="ghost" onClick={() => setShowPromotionEditor(false)}>
+                  <Btn variant="ghost" onClick={() => { setShowPromotionEditor(false); setEditingPromotionId(null); }}>
                     Cancel
                   </Btn>
                   <Btn variant="primary" onClick={handleSavePromotion}>
@@ -1949,13 +1952,15 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
         <FormSection title="Active Promotions">
           <div className="flex flex-col gap-3">
-            {promotions.map((d) => (
+            {isLoadingPromotions ? (
+              <div className="text-xs" style={{ color: Theme.mutedFg }}>Loading promotions…</div>
+            ) : promotions.map((d) => (
               <div
                 key={d.id}
                 className="rounded-xl border-[1.5px] p-4"
                 style={{
-                  borderColor: d.active ? Theme.primary : Theme.border,
-                  background: d.active ? Theme.secondary : '#fff',
+                  borderColor: d.isActive ? Theme.primary : Theme.border,
+                  background: d.isActive ? Theme.secondary : '#fff',
                 }}
               >
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -1965,19 +1970,19 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   <div className="flex items-center gap-1.5">
                     <Badge label={`${d.pct}% OFF`} bg={Theme.primary} color="#fff" />
                     <Badge
-                      label={d.active ? 'Live' : 'Paused'}
-                      bg={d.active ? '#dcfce7' : '#f5f5f5'}
-                      color={d.active ? '#166534' : Theme.mutedFg}
+                      label={d.isActive ? 'Live' : 'Paused'}
+                      bg={d.isActive ? '#dcfce7' : '#f5f5f5'}
+                      color={d.isActive ? '#166534' : Theme.mutedFg}
                     />
                   </div>
                 </div>
                 <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
                   {d.banner}
-                  {d.ends ? ` · Ends ${d.ends}` : ''}
+                  {d.endsAt ? ` · Ends ${d.endsAt}` : ''}
                 </div>
                 <div className="flex gap-2">
                   <Btn variant="ghost" size="sm" onClick={() => handleTogglePromotionActive(d.id)}>
-                    {d.active ? 'Pause' : 'Activate'}
+                    {d.isActive ? 'Pause' : 'Activate'}
                   </Btn>
                   <Btn variant="ghost" size="sm" onClick={() => openPromotionEditor(d)}>
                     Edit
@@ -1985,9 +1990,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   <Btn
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      setPromotions((prev) => prev.filter((item) => item.id !== d.id));
-                      triggerSavedIndicator();
+                    onClick={async () => {
+                      try {
+                        await deletePromotionMut.mutateAsync(d.id);
+                        toast.success('Promotion removed');
+                      } catch {
+                        toast.error('Failed to remove promotion');
+                      }
                     }}
                   >
                     Remove
