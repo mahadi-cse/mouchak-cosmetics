@@ -2,16 +2,18 @@ export const NAV = [
   { id: 'overview', label: 'Overview', icon: '◈' },
   { id: 'sales', label: 'Sales', icon: '💰' },
   { id: 'inventory', label: 'Inventory', icon: '📦' },
-  { id: 'branches', label: 'Branches', icon: '🏪' },
-  { id: 'analytics', label: 'Analytics', icon: '📊' },
   { id: 'ecommerce', label: 'E-Commerce', icon: '🌐' },
+  { id: 'analytics', label: 'Analytics', icon: '📊' },
+  { id: 'products', label: 'Products', icon: '📦' },
+  { id: 'categories', label: 'Categories', icon: '🗂️' },
+  { id: 'branches', label: 'Branches', icon: '🏪' },
+  { id: 'suppliers', label: 'Suppliers', icon: '🏭' },
+  { id: 'returns', label: 'Returns', icon: '↩' },
   { id: 'pos', label: 'POS', icon: '🖥️', badge: 'Soon' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
 export const SETTINGS_ITEMS = [
-  { id: 'products', label: 'Products', icon: '📦' },
-  { id: 'categories', label: 'Categories', icon: '🗂️' },
   { id: 'general', label: 'General', icon: '🏷️' },
   { id: 'payment', label: 'Payment', icon: '💳' },
   { id: 'shipping', label: 'Shipping', icon: '🚚' },

@@ -12,6 +12,10 @@ import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
 import SalesView from './views/SalesView';
+import ReturnsView from './views/ReturnsView';
+import SuppliersView from './views/SuppliersView';
+import ProductsView from './views/ProductsView';
+import CategoriesView from './views/CategoriesView';
 import AnalyticsView from './views/AnalyticsView';
 import BranchesView from './views/BranchesView';
 import SettingsView from './views/SettingsView';
@@ -69,7 +73,7 @@ const SidebarContent: React.FC<{
   <>
     {/* Logo */}
     <div
-      className="shrink-0 px-5 pb-4 pt-5"
+      className="shrink-0 px-5 pb-2 pt-2"
       style={{ borderBottom: `1px solid ${Theme.border}` }}
     >
       <div
@@ -94,7 +98,7 @@ const SidebarContent: React.FC<{
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
             }}
-            className="mt-0.5"
+            className="mt-0.1"
           >
             Cosmetics · Control Centre
           </div>
@@ -127,7 +131,7 @@ const SidebarContent: React.FC<{
                   navigate('settings');
                   setSettingsOpen(!settingsOpen);
                 }}
-                className="flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] border-0 px-3 py-[11px] text-left text-[13px] transition-all duration-150"
+                className="flex w-full cursor-pointer items-center gap-[5px] rounded-[10px] border-0 px-3 py-[1px] text-left text-[13px] transition-all duration-150"
                 style={{
                   background: active ? Theme.secondary : 'transparent',
                   color: active ? Theme.primary : Theme.mutedFg,
@@ -338,6 +342,8 @@ export default function DashboardLayout({
   const views: Record<string, React.ReactNode> = {
     profile: <ProfileView />,
     overview: <OverviewView products={products} orders={orders} onQuickSale={() => setModal(true)} />,
+    products: <ProductsView />,
+    categories: <CategoriesView />,
     sales: (
       <SalesView
         products={products}
@@ -347,6 +353,8 @@ export default function DashboardLayout({
       />
     ),
     ecommerce: <EcommerceView products={products} orders={orders} />,
+    returns: <ReturnsView />,
+    suppliers: <SuppliersView />,
     inventory: (
       <InventoryView
         products={products}

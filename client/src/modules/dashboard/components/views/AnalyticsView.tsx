@@ -121,27 +121,14 @@ export default function AnalyticsView() {
   );
 
   return (
-    <div className="flex flex-col gap-[18px]">
-      <div
-        className={`flex justify-between gap-3 ${isMobile ? 'flex-col items-start' : 'flex-row items-center'}`}
-      >
-        <div>
-          <div
-            className={`font-extrabold ${isMobile ? 'text-[18px]' : 'text-[22px]'}`}
-            style={{ color: Theme.fg }}
-          >
-            Analytics
-          </div>
-          <div className="mt-0.5 text-[13px]" style={{ color: Theme.mutedFg }}>
-            Revenue, cost & trends
-          </div>
-        </div>
-
+    <div className="flex flex-col gap-3">
+      <div className={`flex items-center justify-between gap-3 ${isMobile ? 'flex-wrap' : ''}`}>
+        <div className="text-[20px] font-extrabold shrink-0" style={{ color: Theme.fg }}>Analytics</div>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={branch}
             onChange={(e) => setBranch(e.target.value)}
-            className="cursor-pointer rounded-[9px] bg-white px-3 py-2 text-sm outline-none"
+            className="cursor-pointer rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold outline-none"
             style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
           >
             <option value="">All Branches</option>
@@ -149,13 +136,12 @@ export default function AnalyticsView() {
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </select>
-
-          <div className="flex gap-1 rounded-lg p-1" style={{ background: Theme.muted }}>
+          <div className="flex gap-0.5 rounded-lg p-0.5" style={{ background: Theme.muted }}>
             {['daily', 'weekly', 'monthly', 'custom'].map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className="cursor-pointer rounded-md border-none px-2.5 py-1.5 text-xs font-semibold uppercase"
+                className="cursor-pointer rounded-md border-none px-2 py-1 text-[11px] font-semibold uppercase"
                 style={{
                   background: period === p ? '#fff' : 'transparent',
                   color: period === p ? Theme.primary : Theme.mutedFg,
@@ -166,140 +152,25 @@ export default function AnalyticsView() {
               </button>
             ))}
           </div>
-
           {isCustom && (
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                className="rounded-lg border px-2 py-1.5 text-xs outline-none"
-                style={{ borderColor: Theme.border, color: Theme.fg }}
-              />
-              <span className="text-xs" style={{ color: Theme.mutedFg }}>to</span>
-              <input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="rounded-lg border px-2 py-1.5 text-xs outline-none"
-                style={{ borderColor: Theme.border, color: Theme.fg }}
-              />
-            </div>
+            <>
+              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)}
+                className="rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+              <span className="text-[11px]" style={{ color: Theme.mutedFg }}>→</span>
+              <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)}
+                className="rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+            </>
           )}
         </div>
       </div>
-      
-      {/* KPI Cards + Category Donut */}
-      <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-5'}`}>
-        {[
-          { label: 'Revenue', value: formatCurrency(totalSales), delta: `${salesDeltaPercent >= 0 ? '+' : ''}${salesDeltaPercent.toFixed(1)}%`, up: salesDeltaPercent >= 0, spark: revenueTrend, color: '#e91e8c', icon: '💰' },
-          { label: 'Transactions', value: `${transactions}`, delta: `${transactionDelta >= 0 ? '+' : ''}${transactionDelta}`, up: transactionDelta >= 0, spark: transactionTrend, color: '#8b5cf6', icon: '🧾' },
-          { label: 'Avg Ticket', value: formatCurrency(avgTicket), delta: `${avgTicketDelta >= 0 ? '+' : ''}${formatCurrency(Math.abs(avgTicketDelta))}`, up: avgTicketDelta >= 0, spark: avgTicketTrend, color: '#0ea5e9', icon: '🎫' },
-          { label: 'Products', value: `${overview?.inventory?.totalProducts ?? 0}`, delta: `${overview?.inventory?.lowStockCount ?? 0} low stock`, up: null as boolean | null, spark: transactionTrend, color: '#6366f1', icon: '📦' },
-          { label: 'Stock Alerts', value: `${(overview?.inventory?.lowStockCount ?? 0) + (overview?.inventory?.outOfStockCount ?? 0)}`, delta: `${overview?.inventory?.outOfStockCount ?? 0} out of stock`, up: null as boolean | null, spark: revenueTrend, color: '#ef4444', icon: '⚠️' },
-        ].map((k) => (
-          <div key={k.label} className="rounded-xl border p-3" style={{ borderColor: Theme.border, background: '#fff' }}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: Theme.mutedFg }}>{k.icon} {k.label}</span>
-              <svg width={48} height={18} viewBox="0 0 48 18">
-                {(() => {
-                  const d = k.spark;
-                  const max = Math.max(...d);
-                  const min = Math.min(...d);
-                  const pts = d.map((v, i) => `${(i / (d.length - 1)) * 48},${18 - ((v - min) / (max - min || 1)) * 14 - 2}`).join(' ');
-                  return <polyline points={pts} fill="none" stroke={k.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />;
-                })()}
-              </svg>
-            </div>
-            <div className="text-lg font-black" style={{ color: Theme.fg }}>{k.value}</div>
-            {k.up !== null ? (
-              <div className="text-[10px] font-semibold" style={{ color: k.up ? '#16a34a' : '#dc2626' }}>
-                {k.up ? '▲' : '▼'} {k.delta} vs {comparisonLabel}
-              </div>
-            ) : (
-              <div className="text-[10px] font-semibold" style={{ color: Theme.mutedFg }}>{k.delta}</div>
-            )}
-          </div>
-        ))}
-      </div>
 
-      {/* Category Donut + Quick Stats */}
-      {categoryData.length > 0 && (
-        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-          <Card className="p-4">
-            <div className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: Theme.mutedFg }}>🍩 Sales by Category</div>
-            <div className="flex items-center gap-4">
-              <div className="relative shrink-0">
-                <svg width={100} height={100} viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                  {(() => {
-                    const r = 36;
-                    const circ = 2 * Math.PI * r;
-                    const total = categoryData.reduce((s: number, c: any) => s + c.value, 0) || 1;
-                    let offset = 0;
-                    return categoryData.map((c: any, i: number) => {
-                      const dash = (c.value / total) * circ;
-                      const gap = circ - dash;
-                      const el = <circle key={i} cx={50} cy={50} r={r} fill="none" stroke={c.color} strokeWidth={18} strokeDasharray={`${dash} ${gap}`} strokeDashoffset={-offset} />;
-                      offset += dash;
-                      return el;
-                    });
-                  })()}
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[10px]" style={{ color: Theme.mutedFg }}>Total</span>
-                  <span className="text-xs font-black" style={{ color: Theme.fg }}>{formatCurrency(totalSales)}</span>
-                </div>
-              </div>
-              <div className="flex-1 space-y-1.5">
-                {categoryData.map((c: any) => (
-                  <div key={c.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
-                      <span className="text-[11px] font-semibold" style={{ color: Theme.fg }}>{c.label}</span>
-                    </div>
-                    <span className="text-[11px] font-bold" style={{ color: Theme.fg }}>{c.value}% <span style={{ color: Theme.mutedFg }}>{c.rev}</span></span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4 col-span-2">
-            <div className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: Theme.mutedFg }}>📊 Period Summary</div>
-            <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-              <div className="rounded-lg p-3" style={{ background: Theme.muted }}>
-                <div className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>Total Revenue</div>
-                <div className="text-xl font-black mt-1" style={{ color: Theme.primary }}>{formatCurrency(totalSales)}</div>
-              </div>
-              <div className="rounded-lg p-3" style={{ background: Theme.muted }}>
-                <div className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>Total Cost</div>
-                <div className="text-xl font-black mt-1" style={{ color: Theme.warning }}>{formatCurrency(trendTotals.cost)}</div>
-              </div>
-              <div className="rounded-lg p-3" style={{ background: Theme.muted }}>
-                <div className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>Net Profit</div>
-                <div className="text-xl font-black mt-1" style={{ color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' }}>{formatCurrency(trendTotals.netProfit)}</div>
-              </div>
-              <div className="rounded-lg p-3" style={{ background: Theme.muted }}>
-                <div className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>Qty Sold</div>
-                <div className="text-xl font-black mt-1" style={{ color: Theme.fg }}>{overview?.manualSales?.totalQty ?? 0}</div>
-              </div>
-              <div className="rounded-lg p-3" style={{ background: Theme.muted }}>
-                <div className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>Low Stock</div>
-                <div className="text-xl font-black mt-1" style={{ color: '#f59e0b' }}>{overview?.inventory?.lowStockCount ?? 0}</div>
-              </div>
-              <div className="rounded-lg p-3" style={{ background: Theme.muted }}>
-                <div className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>Out of Stock</div>
-                <div className="text-xl font-black mt-1" style={{ color: '#ef4444' }}>{overview?.inventory?.outOfStockCount ?? 0}</div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-      
 
+      {/* Period Summary — single line */}
+ 
       <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
         <Card>
           <SecHead title="Cost vs Revenue Trend" sub={trendSubText} />
-          <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
+          <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
             <LineChart data={trendData}>
               <CartesianGrid strokeDasharray="3 3" stroke={Theme.border} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: Theme.mutedFg }} axisLine={false} tickLine={false} />
@@ -359,25 +230,6 @@ export default function AnalyticsView() {
             </div>
           </div>
 
-          <div className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-3">
-            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
-              <span style={{ color: Theme.mutedFg }}>Revenue:</span>{' '}
-              <span className="font-bold" style={{ color: Theme.primary }}>{formatCurrency(trendTotals.revenue)}</span>
-            </div>
-            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
-              <span style={{ color: Theme.mutedFg }}>Cost:</span>{' '}
-              <span className="font-bold" style={{ color: Theme.warning }}>{formatCurrency(trendTotals.cost)}</span>
-            </div>
-            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
-              <span style={{ color: Theme.mutedFg }}>Net Profit:</span>{' '}
-              <span
-                className="font-bold"
-                style={{ color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' }}
-              >
-                {formatCurrency(trendTotals.netProfit)}
-              </span>
-            </div>
-          </div>
           {isLoading && (
             <div className="mt-2 text-center text-xs" style={{ color: Theme.mutedFg }}>
               Loading trend...
@@ -439,6 +291,24 @@ export default function AnalyticsView() {
         </Card>
       </div>
 
+      <Card className="px-3 py-2">
+        <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
+          <div className="text-[9px] font-bold uppercase tracking-wide shrink-0" style={{ color: Theme.mutedFg }}>📊</div>
+          {[
+            { label: 'Revenue', value: formatCurrency(totalSales), color: Theme.primary },
+            { label: 'Cost', value: formatCurrency(trendTotals.cost), color: Theme.warning },
+            { label: 'Profit', value: formatCurrency(trendTotals.netProfit), color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' },
+            { label: 'Qty Sold', value: `${overview?.manualSales?.totalQty ?? 0}`, color: Theme.fg },
+            { label: 'Transactions', value: `${transactions}`, color: Theme.fg },
+            { label: 'Avg Ticket', value: formatCurrency(avgTicket), color: Theme.fg },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-1.5 rounded px-2.5 py-1" style={{ background: Theme.muted }}>
+              <span className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>{s.label}</span>
+              <span className="text-sm font-black" style={{ color: s.color }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
       {/* <Card>
         <SecHead title="Daily Sales by Channel" sub="Online vs Manual · This week" />
         <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>

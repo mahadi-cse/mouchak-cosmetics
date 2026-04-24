@@ -271,6 +271,8 @@ model Product {
   analytics       ProductAnalytics?
   orderItems      OrderItem[]
   manualSaleItems ManualSaleItem[]
+  manualReturnItems ManualReturnItem[]
+  supplierTransactionItems SupplierTransactionItem[]
   wishlist        Wishlist[]
   transfers       StockTransfer[]
   skuHistory      SKUHistory[]
@@ -342,6 +344,120 @@ model ManualSaleItem {
   @@index([manualSaleId])
   @@index([productId])
   @@map("manual_sale_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MANUAL RETURNS
+// Staff warehouse returns recorded from dashboard.
+// ─────────────────────────────────────────────────────────────
+
+model ManualReturn {
+  id            Int                @id @default(autoincrement())
+  returnNumber  String             @unique
+  totalAmount   Decimal            @db.Decimal(12,2)
+  totalQty      Int
+  branchId      Int?
+  branchName    String?
+  reason        String?
+  returnedBy    String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  items         ManualReturnItem[]
+
+  @@index([createdAt])
+  @@index([branchId, createdAt])
+  @@map("manual_returns")
+}
+
+model ManualReturnItem {
+  id                  Int          @id @default(autoincrement())
+  manualReturnId      Int
+  manualReturn        ManualReturn @relation(fields: [manualReturnId], references: [id], onDelete: Cascade)
+  productId           Int
+  product             Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productNameSnapshot String
+  productSkuSnapshot  String
+  quantity            Int
+  unitPrice           Decimal      @db.Decimal(10,2)
+  lineTotal           Decimal      @db.Decimal(12,2)
+  sizeName            String?
+  createdAt           DateTime     @default(now())
+
+  @@index([manualReturnId])
+  @@index([productId])
+  @@map("manual_return_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUPPLIERS
+// ─────────────────────────────────────────────────────────────
+
+model Supplier {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String?
+  phone           String?
+  address         String?
+  rotationDays    Int?      // Product rotation period in days
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  transactions    SupplierTransaction[]
+
+  @@map("suppliers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUPPLIER TRANSACTIONS
+// Records of money/items exchanged with suppliers.
+// Does NOT affect inventory — user updates inventory separately.
+// ─────────────────────────────────────────────────────────────
+
+enum SupplierTransactionDirection {
+  DUE_TO_SUPPLIER   // We owe the supplier
+  DUE_TO_US         // Supplier owes us (refund/credit)
+}
+
+model SupplierTransaction {
+  id              Int                          @id @default(autoincrement())
+  supplierId      Int
+  supplier        Supplier                     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  branchId        Int?
+  branchName      String?
+  direction       SupplierTransactionDirection
+  totalAmount     Decimal                      @db.Decimal(12,2)
+  totalQty        Int                          @default(0)
+  transactionDate DateTime                     @default(now())
+  note            String?
+  recordedBy      String?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+
+  items           SupplierTransactionItem[]
+
+  @@index([supplierId, createdAt])
+  @@index([branchId])
+  @@map("supplier_transactions")
+}
+
+model SupplierTransactionItem {
+  id                    Int                  @id @default(autoincrement())
+  transactionId         Int
+  transaction           SupplierTransaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId             Int
+  product               Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productNameSnapshot   String
+  productSkuSnapshot    String
+  quantity              Int
+  unitPrice             Decimal              @db.Decimal(10,2)
+  lineTotal             Decimal              @db.Decimal(12,2)
+  createdAt             DateTime             @default(now())
+
+  @@index([transactionId])
+  @@index([productId])
+  @@map("supplier_transaction_items")
 }
 
 // ─────────────────────────────────────────────────────────────

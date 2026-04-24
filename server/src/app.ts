@@ -16,6 +16,8 @@ import customerRouter from './modules/customers/customer.router';
 import analyticsRouter from './modules/analytics/analytics.router';
 import homepageRouter from './modules/homepage/routes';
 import manualSaleRouter from './modules/manual-sales/manualSale.router';
+import manualReturnRouter from './modules/manual-returns/manualReturn.router';
+import supplierRouter from './modules/suppliers/supplier.router';
 import branchRouter from './modules/branches/branch.router';
 import authRouter from './modules/auth/auth.router';
 import customerDashboardRouter from './modules/customer-dashboard/customerDashboard.router';
@@ -55,6 +57,8 @@ export function createApp(): Express {
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/homepage', homepageRouter);
   app.use('/api/manual-sales', manualSaleRouter);
+  app.use('/api/manual-returns', manualReturnRouter);
+  app.use('/api/suppliers', supplierRouter);
   app.use('/api/branches', branchRouter);
   app.use('/api/customer-dashboard', customerDashboardRouter);
   app.use('/api/promotions', promotionRouter);
