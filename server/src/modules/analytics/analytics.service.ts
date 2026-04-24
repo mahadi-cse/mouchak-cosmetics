@@ -171,9 +171,35 @@ export class AnalyticsService {
     return sorted;
   }
 
-  async getOverviewMetrics(filters: { period?: OverviewPeriod; warehouseId?: number }) {
-    const period = filters.period || 'today';
-    const { currentStart, currentEnd, previousStart, previousEnd, comparisonLabel } = getPeriodRanges(period);
+  async getOverviewMetrics(filters: { period?: OverviewPeriod; warehouseId?: number; startDate?: string; endDate?: string }) {
+    let currentStart: Date;
+    let currentEnd: Date;
+    let previousStart: Date;
+    let previousEnd: Date;
+    let comparisonLabel: string;
+    let effectivePeriod: string;
+
+    if (filters.startDate && filters.endDate) {
+      // Custom date range
+      currentStart = new Date(filters.startDate);
+      currentEnd = new Date(filters.endDate);
+      // Set end to end of day
+      currentEnd.setHours(23, 59, 59, 999);
+      const durationMs = currentEnd.getTime() - currentStart.getTime();
+      previousStart = new Date(currentStart.getTime() - durationMs);
+      previousEnd = new Date(currentStart.getTime() - 1);
+      comparisonLabel = 'previous period';
+      effectivePeriod = 'custom';
+    } else {
+      const period = filters.period || 'today';
+      const ranges = getPeriodRanges(period);
+      currentStart = ranges.currentStart;
+      currentEnd = ranges.currentEnd;
+      previousStart = ranges.previousStart;
+      previousEnd = ranges.previousEnd;
+      comparisonLabel = ranges.comparisonLabel;
+      effectivePeriod = period;
+    }
 
     const manualSaleWhereCurrent: Prisma.ManualSaleWhereInput = {
       createdAt: { gte: currentStart, lte: currentEnd },
@@ -295,10 +321,11 @@ export class AnalyticsService {
     const trendBucketCount = 6;
     const trendDurationMs = Math.max(1, currentEnd.getTime() - currentStart.getTime());
     const bucketSizeMs = trendDurationMs / trendBucketCount;
-    const trendBuckets = Array.from({ length: trendBucketCount }, () => ({
+    const trendBuckets = Array.from({ length: trendBucketCount }, (_, i) => ({
       revenue: 0,
       cost: 0,
       transactions: 0,
+      startDate: new Date(currentStart.getTime() + i * bucketSizeMs).toISOString(),
     }));
 
     for (const sale of manualSalesInRange) {
@@ -388,7 +415,7 @@ export class AnalyticsService {
       .slice(0, 6);
 
     return {
-      period,
+      period: effectivePeriod,
       range: {
         startDate: currentStart.toISOString(),
         endDate: currentEnd.toISOString(),
@@ -410,6 +437,7 @@ export class AnalyticsService {
         avgTicket: trendBuckets.map((bucket) =>
           bucket.transactions > 0 ? Math.round(bucket.revenue / bucket.transactions) : 0
         ),
+        labels: trendBuckets.map((bucket) => bucket.startDate),
       },
       inventory: {
         totalProducts,

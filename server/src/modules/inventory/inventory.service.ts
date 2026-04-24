@@ -134,6 +134,7 @@ export class InventoryService {
         batchName: data.batchName,
         manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : undefined,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+        sizeName: data.sizeName || null,
       },
     });
 

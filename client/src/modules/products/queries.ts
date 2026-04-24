@@ -72,6 +72,8 @@ export const useUpdateProduct = () => {
       productAPI.updateProduct(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['homepage', 'featuredProducts'] });
+      queryClient.invalidateQueries({ queryKey: ['homepage', 'sliders'] });
     },
   });
 };

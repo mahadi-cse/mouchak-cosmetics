@@ -10,6 +10,7 @@ export const createManualSaleSchema = z.object({
       productId: z.coerce.number().int().positive(),
       quantity: z.coerce.number().int().positive(),
       unitPrice: z.coerce.number().nonnegative().optional(),
+      sizeName: z.string().optional(),
     })
   ).min(1),
 });

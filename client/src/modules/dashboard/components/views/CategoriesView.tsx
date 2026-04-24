@@ -1,0 +1,115 @@
+'use client';
+
+import React, { useRef, useState } from 'react';
+import { Theme } from '@/modules/dashboard/utils/theme';
+import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
+import { Card, Btn } from '../Primitives';
+import { useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useUpdateCategoryStatus } from '@/modules/categories/queries';
+import { useListBranches } from '@/modules/branches/queries';
+import { toast } from 'react-hot-toast';
+import ImageUploader from '@/shared/components/ImageUploader';
+import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
+import { confirmDialog } from '@/shared/lib/confirmDialog';
+
+const inputClass = 'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
+const selectClass = `${inputClass} cursor-pointer`;
+const labelClass = 'mb-1.5 block text-xs font-semibold text-foreground';
+const categoryEmojis: any = { Skincare: '🧴', Lipstick: '💄', Foundation: '🌿', Eyewear: '👁️', Fragrance: '🌸' };
+
+export default function CategoriesView() {
+  const { isMobile } = useResponsive();
+  const [filterBranchId, setFilterBranchId] = useState('');
+  const categoryImageRef = useRef<ImageUploaderRef>(null);
+
+  const { data: apiCategories = [], isLoading: isLoadingCats } = useListCategories(
+    filterBranchId ? { includeInactive: true, branchId: Number(filterBranchId) } : { includeInactive: true },
+    { queryKey: ['categories', 'list', 'settings', { branchId: filterBranchId || null, includeInactive: true }] }
+  );
+  const { data: branches = [] } = useListBranches();
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
+  const updateCategoryStatus = useUpdateCategoryStatus();
+
+  const [editCat, setEditCat] = useState<number | null>(null);
+  const [showAddCat, setShowAddCat] = useState(false);
+  const [catForm, setCatForm] = useState({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: '' });
+
+  const handleAddCategory = async () => {
+    if (!catForm.name || !catForm.branchId) return toast.error('Category name and Branch are required');
+    try {
+      let imageUrl = catForm.imageUrl;
+      if (categoryImageRef.current?.hasPending()) { const uploaded = await categoryImageRef.current.upload(); if (uploaded) imageUrl = uploaded; }
+      const payload = { name: catForm.name, description: catForm.desc, isActive: catForm.active, imageUrl, branchId: Number(catForm.branchId) } as any;
+      if (editCat) { await updateCategory.mutateAsync({ id: editCat, data: payload }); toast.success('Category updated'); }
+      else { await createCategory.mutateAsync(payload); toast.success('Category created'); }
+      setShowAddCat(false); setEditCat(null); setCatForm({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: '' });
+    } catch { toast.error('Failed to save category'); }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (await confirmDialog({ title: 'Delete Category?', text: 'This will permanently delete this category.', confirmButtonText: 'Yes, delete', icon: 'warning' })) {
+      try { await deleteCategory.mutateAsync(id); toast.success('Category deleted'); } catch { toast.error('Failed to delete'); }
+    }
+  };
+
+  const handleUpdateCategoryStatus = async (id: number, isActive: boolean) => {
+    try { await updateCategoryStatus.mutateAsync({ id, data: { isActive } }); toast.success(`Category ${isActive ? 'activated' : 'deactivated'}`); } catch { toast.error('Failed to update status'); }
+  };
+
+  const categories = apiCategories;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card className={isMobile ? 'p-[18px]' : 'p-7'}>
+        <div className="mb-[14px] flex flex-wrap items-center justify-between gap-2">
+          <div className="text-[13px]" style={{ color: Theme.mutedFg }}>{isLoadingCats ? 'Loading...' : `${categories.length} total categories`}</div>
+          <div className="flex items-center gap-2">
+            <select className={selectClass} value={filterBranchId} onChange={(e) => setFilterBranchId(e.target.value)} style={{ minWidth: 140 }}>
+              <option value="">All Branches</option>
+              {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+            <Btn variant="primary" size="sm" onClick={() => { setCatForm({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: filterBranchId }); setShowAddCat(true); }}>＋ New Category</Btn>
+          </div>
+        </div>
+
+        {(showAddCat || editCat !== null) && (
+          <div className="mb-4 rounded-xl border-[1.5px] p-4" style={{ borderColor: Theme.primary, background: Theme.secondary }}>
+            <div className="mb-3 text-sm font-bold" style={{ color: Theme.primary }}>{editCat !== null ? 'Edit Category' : 'New Category'}</div>
+            <div className={`mb-3 grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              <div><label className={labelClass}>Name *</label><input value={catForm.name} onChange={(e) => { const v = e.target.value; setCatForm(f => ({ ...f, name: v, slug: v.toLowerCase().replace(/\s+/g, '-') })); }} placeholder="e.g. Skincare" className={inputClass} /></div>
+              <div><label className={labelClass}>Slug</label><input value={catForm.slug} onChange={(e) => setCatForm(f => ({ ...f, slug: e.target.value }))} placeholder="skincare" className={inputClass} /></div>
+              <div><label className={labelClass}>Branch *</label><select className={selectClass} value={catForm.branchId} onChange={(e) => setCatForm(f => ({ ...f, branchId: e.target.value }))}><option value="">Select Branch</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+              <div className={isMobile ? '' : 'col-span-2'}><label className={labelClass}>Description</label><input value={catForm.desc} onChange={(e) => setCatForm(f => ({ ...f, desc: e.target.value }))} placeholder="Short description" className={inputClass} /></div>
+              <div className={isMobile ? '' : 'col-span-2'}><label className={labelClass}>Category Image</label><ImageUploader ref={categoryImageRef} value={catForm.imageUrl} onChange={(url) => setCatForm(f => ({ ...f, imageUrl: url }))} folder="mouchak/categories" aspect={16 / 9} placeholder="Upload category image" /></div>
+            </div>
+            <div className="mb-3"><label className="flex cursor-pointer items-center gap-2 text-[13px]"><input type="checkbox" checked={catForm.active} onChange={(e) => setCatForm(f => ({ ...f, active: e.target.checked }))} style={{ accentColor: Theme.primary }} />Active on storefront</label></div>
+            <div className="flex gap-2"><Btn variant="ghost" size="sm" onClick={() => { setShowAddCat(false); setEditCat(null); }}>Cancel</Btn><Btn variant="primary" size="sm" onClick={handleAddCategory}>{editCat !== null ? 'Save Changes' : 'Create Category'}</Btn></div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2.5">
+          {isLoadingCats ? <div className="py-4 text-center text-sm">Loading categories...</div> : categories.length === 0 ? <div className="py-4 text-center text-sm">No categories found</div> : categories.map((c) => (
+            <div key={c.id} className="flex flex-wrap items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3" style={{ opacity: c.isActive ? 1 : 0.6 }}>
+              <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-lg" style={{ background: c.isActive ? Theme.secondary : Theme.muted }}>{c.imageUrl ? <img src={c.imageUrl} alt={c.name} className="h-full w-full object-cover" /> : categoryEmojis[c.name] || '🏷️'}</div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold" style={{ color: Theme.fg }}>{c.name}</span>
+                  {!c.isActive && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-gray-500 uppercase">Inactive</span>}
+                  <span className="font-mono text-[10px]" style={{ color: Theme.mutedFg }}>/{c.slug}</span>
+                  {(c as any).branchId ? <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-medium text-blue-600 border border-blue-100">{branches.find((b: any) => b.id === (c as any).branchId)?.name || 'Branch'}</span> : <span className="rounded bg-gray-50 px-1.5 py-0.5 text-[9px] font-medium text-gray-400 border border-gray-100">Global</span>}
+                </div>
+                <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>{c.description} · {(c as any)._count?.products || 0} products</div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Btn variant="ghost" size="sm" onClick={() => { setCatForm({ name: c.name, slug: c.slug, desc: c.description || '', active: c.isActive, imageUrl: c.imageUrl || '', branchId: (c as any).branchId?.toString() || '' }); setEditCat(c.id); setShowAddCat(true); }}>Edit</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => handleUpdateCategoryStatus(c.id, !c.isActive)}>{c.isActive ? 'Deactivate' : 'Activate'}</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => handleDeleteCategory(c.id)}>🗑️</Btn>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}

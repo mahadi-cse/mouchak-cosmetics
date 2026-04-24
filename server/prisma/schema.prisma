@@ -235,6 +235,11 @@ model Category {
 // PRODUCTS
 // ─────────────────────────────────────────────────────────────
 
+enum UnitType {
+  PIECE
+  WEIGHT
+}
+
 model Product {
   id              Int       @id @default(autoincrement())
   name            String
@@ -253,18 +258,48 @@ model Product {
   isActive        Boolean   @default(true)
   tags            String[]
   weight          Decimal?  @db.Decimal(8,2)
+
+  // Unit & Size support
+  unitType        UnitType  @default(PIECE)
+  unitLabel       String    @default("pc")  // e.g. "pc", "kg", "g", "ml", "L"
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  sizes           ProductSize[]
   inventories     Inventory[]
   analytics       ProductAnalytics?
   orderItems      OrderItem[]
   manualSaleItems ManualSaleItem[]
+  manualReturnItems ManualReturnItem[]
+  supplierTransactionItems SupplierTransactionItem[]
   wishlist        Wishlist[]
   transfers       StockTransfer[]
   skuHistory      SKUHistory[]
 
   @@map("products")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRODUCT SIZES
+// Optional sizes per product. Each size has its own image.
+// ─────────────────────────────────────────────────────────────
+
+model ProductSize {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name        String    // e.g. "S", "M", "L", "XL", "100ml", "250ml"
+  sortOrder   Int       @default(0)
+  imageUrl    String?   // Each size can have its own image
+  priceOverride Decimal? @db.Decimal(10,2) // Optional price override for this size
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([productId, name])
+  @@index([productId])
+  @@map("product_sizes")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -303,11 +338,126 @@ model ManualSaleItem {
   quantity           Int
   unitPrice          Decimal    @db.Decimal(10,2)
   lineTotal          Decimal    @db.Decimal(12,2)
+  sizeName           String?    // Snapshot of size at time of sale
   createdAt          DateTime   @default(now())
 
   @@index([manualSaleId])
   @@index([productId])
   @@map("manual_sale_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MANUAL RETURNS
+// Staff warehouse returns recorded from dashboard.
+// ─────────────────────────────────────────────────────────────
+
+model ManualReturn {
+  id            Int                @id @default(autoincrement())
+  returnNumber  String             @unique
+  totalAmount   Decimal            @db.Decimal(12,2)
+  totalQty      Int
+  branchId      Int?
+  branchName    String?
+  reason        String?
+  returnedBy    String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  items         ManualReturnItem[]
+
+  @@index([createdAt])
+  @@index([branchId, createdAt])
+  @@map("manual_returns")
+}
+
+model ManualReturnItem {
+  id                  Int          @id @default(autoincrement())
+  manualReturnId      Int
+  manualReturn        ManualReturn @relation(fields: [manualReturnId], references: [id], onDelete: Cascade)
+  productId           Int
+  product             Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productNameSnapshot String
+  productSkuSnapshot  String
+  quantity            Int
+  unitPrice           Decimal      @db.Decimal(10,2)
+  lineTotal           Decimal      @db.Decimal(12,2)
+  sizeName            String?
+  createdAt           DateTime     @default(now())
+
+  @@index([manualReturnId])
+  @@index([productId])
+  @@map("manual_return_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUPPLIERS
+// ─────────────────────────────────────────────────────────────
+
+model Supplier {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String?
+  phone           String?
+  address         String?
+  rotationDays    Int?      // Product rotation period in days
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  transactions    SupplierTransaction[]
+
+  @@map("suppliers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUPPLIER TRANSACTIONS
+// Records of money/items exchanged with suppliers.
+// Does NOT affect inventory — user updates inventory separately.
+// ─────────────────────────────────────────────────────────────
+
+enum SupplierTransactionDirection {
+  DUE_TO_SUPPLIER   // We owe the supplier
+  DUE_TO_US         // Supplier owes us (refund/credit)
+}
+
+model SupplierTransaction {
+  id              Int                          @id @default(autoincrement())
+  supplierId      Int
+  supplier        Supplier                     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  branchId        Int?
+  branchName      String?
+  direction       SupplierTransactionDirection
+  totalAmount     Decimal                      @db.Decimal(12,2)
+  totalQty        Int                          @default(0)
+  transactionDate DateTime                     @default(now())
+  note            String?
+  recordedBy      String?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+
+  items           SupplierTransactionItem[]
+
+  @@index([supplierId, createdAt])
+  @@index([branchId])
+  @@map("supplier_transactions")
+}
+
+model SupplierTransactionItem {
+  id                    Int                  @id @default(autoincrement())
+  transactionId         Int
+  transaction           SupplierTransaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId             Int
+  product               Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productNameSnapshot   String
+  productSkuSnapshot    String
+  quantity              Int
+  unitPrice             Decimal              @db.Decimal(10,2)
+  lineTotal             Decimal              @db.Decimal(12,2)
+  createdAt             DateTime             @default(now())
+
+  @@index([transactionId])
+  @@index([productId])
+  @@map("supplier_transaction_items")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -356,6 +506,7 @@ model InventoryTransaction {
   batchName   String?
   manufactureDate DateTime?
   expiryDate  DateTime?
+  sizeName    String?    // Snapshot of size for this transaction
   createdAt   DateTime                  @default(now())
 
   @@map("inventory_transactions")
@@ -941,6 +1092,24 @@ model HeroSlider {
   
   @@index([displayOrder, isActive])
   @@map("hero_slider")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROMOTIONS
+// Manage discount promotions displayed on the storefront.
+// ─────────────────────────────────────────────────────────────
+
+model Promotion {
+  id            Int       @id @default(autoincrement())
+  label         String                          // e.g. "Eid Flash Sale"
+  banner        String                          // Banner text shown on homepage
+  pct           Int                             // Discount percentage (1-95)
+  endsAt        String?                         // Human-readable end label, e.g. "Apr 30"
+  isActive      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("promotions")
 }
 
 

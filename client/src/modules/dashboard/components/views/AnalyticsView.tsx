@@ -22,27 +22,60 @@ export default function AnalyticsView() {
   const activeBranches = branches.filter((b: any) => b.active);
   const [branch, setBranch] = useState('');
   const [period, setPeriod] = useState('monthly');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
 
+  const isCustom = period === 'custom';
   const overviewPeriod = period === 'daily' ? 'today' : period === 'weekly' ? 'week' : 'month';
-  const { data: overview, isLoading } = useOverviewMetrics({
-    period: overviewPeriod,
-    ...(branch ? { warehouseId: Number(branch) } : {}),
+
+  const queryParams = useMemo(() => {
+    const base: any = {};
+    if (branch) base.warehouseId = Number(branch);
+    if (isCustom && customStart && customEnd) {
+      base.startDate = customStart;
+      base.endDate = customEnd;
+    } else {
+      base.period = overviewPeriod;
+    }
+    return base;
+  }, [branch, isCustom, customStart, customEnd, overviewPeriod]);
+
+  const { data: overview, isLoading } = useOverviewMetrics(queryParams, {
+    enabled: isCustom ? !!(customStart && customEnd) : true,
   });
 
-  const trendLabels = useMemo(() => {
-    const size = Math.max(overview?.trend.revenue?.length || 0, overview?.trend.cost?.length || 0, 6);
-    const prefix = period === 'daily' ? 'H' : period === 'weekly' ? 'D' : 'W';
-    return Array.from({ length: size }, (_, i) => `${prefix}${i + 1}`);
-  }, [overview?.trend.revenue?.length, overview?.trend.cost?.length, period]);
+  const formatTrendLabel = (isoDate: string, idx: number) => {
+    const d = new Date(isoDate);
+    if (isNaN(d.getTime())) return `P${idx + 1}`;
+
+    if (period === 'daily') {
+      return d.toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+    if (period === 'weekly') {
+      return d.toLocaleDateString('en-BD', { day: '2-digit', month: 'short' });
+    }
+    if (period === 'monthly') {
+      const bucketSize = overview?.trend.labels?.length || 6;
+      const totalDays = 30;
+      const daysPerBucket = Math.ceil(totalDays / bucketSize);
+      const endDay = new Date(d);
+      endDay.setDate(endDay.getDate() + daysPerBucket - 1);
+      return `${d.getDate()}-${endDay.getDate()} ${d.toLocaleDateString('en-BD', { month: 'short' })}`;
+    }
+    // custom: show date
+    return d.toLocaleDateString('en-BD', { day: '2-digit', month: 'short' });
+  };
 
   const trendData = useMemo(() => {
-    return trendLabels.map((label, idx) => ({
-      label,
+    const labels = overview?.trend.labels || [];
+    const size = Math.max(labels.length, overview?.trend.revenue?.length || 0, 6);
+    return Array.from({ length: size }, (_, idx) => ({
+      label: labels[idx] ? formatTrendLabel(labels[idx], idx) : `P${idx + 1}`,
       revenue: overview?.trend.revenue?.[idx] || 0,
       cost: overview?.trend.cost?.[idx] || 0,
       netProfit: (overview?.trend.revenue?.[idx] || 0) - (overview?.trend.cost?.[idx] || 0),
     }));
-  }, [trendLabels, overview?.trend.revenue, overview?.trend.cost]);
+  }, [overview?.trend, period]);
 
   const trendTotals = useMemo(() => {
     return trendData.reduce(
@@ -61,30 +94,41 @@ export default function AnalyticsView() {
     ? 'Today performance'
     : period === 'weekly'
       ? 'Latest week performance'
-      : 'Latest month performance';
+      : period === 'custom'
+        ? `${customStart} to ${customEnd}`
+        : 'Latest month performance';
+
+  const comparisonLabel = overview?.range?.comparisonLabel || 'previous period';
+  const totalSales = overview?.manualSales?.totalSales || 0;
+  const transactions = overview?.manualSales?.transactions || 0;
+  const avgTicket = overview?.manualSales?.avgTicket || 0;
+  const salesDeltaPercent = overview?.manualSales?.salesDeltaPercent || 0;
+  const transactionDelta = overview?.manualSales?.transactionDelta || 0;
+  const avgTicketDelta = overview?.manualSales?.avgTicketDelta || 0;
+  const revenueTrend = overview?.trend?.revenue?.length ? overview.trend.revenue : [0, 0, 0, 0, 0, 0];
+  const transactionTrend = overview?.trend?.transactions?.length ? overview.trend.transactions : [0, 0, 0, 0, 0, 0];
+  const avgTicketTrend = overview?.trend?.avgTicket?.length ? overview.trend.avgTicket : [0, 0, 0, 0, 0, 0];
+
+  const categoryPalette = ['#e91e8c', '#8b5cf6', '#0ea5e9', '#f59e0b', '#10b981', '#f43f5e'];
+  const categoryData = useMemo(() =>
+    (overview?.salesByCategory || []).map((item: any, i: number) => ({
+      label: item.categoryName,
+      value: Math.max(1, Math.round(item.sharePercent)),
+      color: categoryPalette[i % categoryPalette.length],
+      rev: formatCurrency(item.totalRevenue),
+    })),
+    [overview?.salesByCategory]
+  );
 
   return (
-    <div className="flex flex-col gap-[18px]">
-      <div
-        className={`flex justify-between gap-3 ${isMobile ? 'flex-col items-start' : 'flex-row items-center'}`}
-      >
-        <div>
-          <div
-            className={`font-extrabold ${isMobile ? 'text-[18px]' : 'text-[22px]'}`}
-            style={{ color: Theme.fg }}
-          >
-            Analytics
-          </div>
-          <div className="mt-0.5 text-[13px]" style={{ color: Theme.mutedFg }}>
-            Revenue, cost & trends
-          </div>
-        </div>
-
+    <div className="flex flex-col gap-3">
+      <div className={`flex items-center justify-between gap-3 ${isMobile ? 'flex-wrap' : ''}`}>
+        <div className="text-[20px] font-extrabold shrink-0" style={{ color: Theme.fg }}>Analytics</div>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={branch}
             onChange={(e) => setBranch(e.target.value)}
-            className="cursor-pointer rounded-[9px] bg-white px-3 py-2 text-sm outline-none"
+            className="cursor-pointer rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold outline-none"
             style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
           >
             <option value="">All Branches</option>
@@ -92,13 +136,12 @@ export default function AnalyticsView() {
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </select>
-
-          <div className="flex gap-1 rounded-lg p-1" style={{ background: Theme.muted }}>
-            {['daily', 'weekly', 'monthly'].map((p) => (
+          <div className="flex gap-0.5 rounded-lg p-0.5" style={{ background: Theme.muted }}>
+            {['daily', 'weekly', 'monthly', 'custom'].map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className="cursor-pointer rounded-md border-none px-2.5 py-1.5 text-xs font-semibold uppercase"
+                className="cursor-pointer rounded-md border-none px-2 py-1 text-[11px] font-semibold uppercase"
                 style={{
                   background: period === p ? '#fff' : 'transparent',
                   color: period === p ? Theme.primary : Theme.mutedFg,
@@ -109,48 +152,25 @@ export default function AnalyticsView() {
               </button>
             ))}
           </div>
+          {isCustom && (
+            <>
+              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)}
+                className="rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+              <span className="text-[11px]" style={{ color: Theme.mutedFg }}>→</span>
+              <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)}
+                className="rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+            </>
+          )}
         </div>
       </div>
-      
-       {/* <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
-        <Card className="p-[14px]">
-          <div className="text-xs font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
-            💰 Revenue (MTD)
-          </div>
-          <div className="mt-1.5 text-lg font-bold" style={{ color: Theme.fg }}>৳3,12,000</div>
-          <div className="mt-0.5 text-xs font-semibold" style={{ color: Theme.success }}>▲ 33.3%</div>
-        </Card>
 
-        <Card className="p-[14px]">
-          <div className="text-xs font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
-            📈 Conversion
-          </div>
-          <div className="mt-1.5 text-lg font-bold" style={{ color: Theme.fg }}>3.8%</div>
-          <div className="mt-0.5 text-xs font-semibold" style={{ color: Theme.success }}>▲ 0.4%</div>
-        </Card>
 
-        <Card className="p-[14px]">
-          <div className="text-xs font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
-            🛒 Basket Size
-          </div>
-          <div className="mt-1.5 text-lg font-bold" style={{ color: Theme.fg }}>৳1,284</div>
-          <div className="mt-0.5 text-xs font-semibold" style={{ color: Theme.success }}>▲ 4.1%</div>
-        </Card>
-
-        <Card className="p-[14px]">
-          <div className="text-xs font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
-            ↩ Return Rate
-          </div>
-          <div className="mt-1.5 text-lg font-bold" style={{ color: Theme.fg }}>2.1%</div>
-          <div className="mt-0.5 text-xs font-semibold" style={{ color: Theme.mutedFg }}>Avg 4.5%</div>
-        </Card>
-      </div> */}
-      
-
+      {/* Period Summary — single line */}
+ 
       <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
         <Card>
           <SecHead title="Cost vs Revenue Trend" sub={trendSubText} />
-          <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
+          <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
             <LineChart data={trendData}>
               <CartesianGrid strokeDasharray="3 3" stroke={Theme.border} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: Theme.mutedFg }} axisLine={false} tickLine={false} />
@@ -210,25 +230,6 @@ export default function AnalyticsView() {
             </div>
           </div>
 
-          <div className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-3">
-            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
-              <span style={{ color: Theme.mutedFg }}>Revenue:</span>{' '}
-              <span className="font-bold" style={{ color: Theme.primary }}>{formatCurrency(trendTotals.revenue)}</span>
-            </div>
-            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
-              <span style={{ color: Theme.mutedFg }}>Cost:</span>{' '}
-              <span className="font-bold" style={{ color: Theme.warning }}>{formatCurrency(trendTotals.cost)}</span>
-            </div>
-            <div className="rounded-md px-2 py-1.5" style={{ background: Theme.muted }}>
-              <span style={{ color: Theme.mutedFg }}>Net Profit:</span>{' '}
-              <span
-                className="font-bold"
-                style={{ color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' }}
-              >
-                {formatCurrency(trendTotals.netProfit)}
-              </span>
-            </div>
-          </div>
           {isLoading && (
             <div className="mt-2 text-center text-xs" style={{ color: Theme.mutedFg }}>
               Loading trend...
@@ -290,6 +291,24 @@ export default function AnalyticsView() {
         </Card>
       </div>
 
+      <Card className="px-3 py-2">
+        <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
+          <div className="text-[9px] font-bold uppercase tracking-wide shrink-0" style={{ color: Theme.mutedFg }}>📊</div>
+          {[
+            { label: 'Revenue', value: formatCurrency(totalSales), color: Theme.primary },
+            { label: 'Cost', value: formatCurrency(trendTotals.cost), color: Theme.warning },
+            { label: 'Profit', value: formatCurrency(trendTotals.netProfit), color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' },
+            { label: 'Qty Sold', value: `${overview?.manualSales?.totalQty ?? 0}`, color: Theme.fg },
+            { label: 'Transactions', value: `${transactions}`, color: Theme.fg },
+            { label: 'Avg Ticket', value: formatCurrency(avgTicket), color: Theme.fg },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-1.5 rounded px-2.5 py-1" style={{ background: Theme.muted }}>
+              <span className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>{s.label}</span>
+              <span className="text-sm font-black" style={{ color: s.color }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
       {/* <Card>
         <SecHead title="Daily Sales by Channel" sub="Online vs Manual · This week" />
         <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>

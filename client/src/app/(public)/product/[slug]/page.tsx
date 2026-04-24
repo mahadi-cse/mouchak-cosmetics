@@ -1,6 +1,6 @@
 'use client';
 
-import { useProductBySlug } from '@/modules/products';
+import { useProductBySlug, useListProducts } from '@/modules/products';
 import { SkeletonCard, ErrorMessage, EmptyState } from '@/shared/components';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -26,6 +26,7 @@ export default function ProductDetailPage() {
   // Product State  
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [selectedSizeIndex, setSelectedSizeIndex] = useState(0);
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [activeTab, setActiveTab] = useState<TabType>('description');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
@@ -40,12 +41,42 @@ export default function ProductDetailPage() {
 
   const { data: product, isLoading, isError, error, refetch } = useProductBySlug(slug);
 
+  // Fetch similar products from the same category
+  const categorySlug = product?.category?.slug;
+  const { data: categoryProducts = [] } = useListProducts(
+    { category: categorySlug, limit: 8 },
+    {
+      enabled: !!categorySlug,
+      queryKey: ['products', 'list', 'related', categorySlug],
+      staleTime: 10 * 60 * 1000,
+    }
+  );
+  const relatedProducts = useMemo(
+    () => categoryProducts.filter((p: any) => p.slug !== slug).slice(0, 4),
+    [categoryProducts, slug]
+  );
+
   const images = useMemo(() => {
     if (!product?.images?.length) {
       return ['/placeholder.png'];
     }
     return product.images;
   }, [product]);
+
+  // Size & Unit support
+  const sizes = useMemo(() => (product?.sizes || []).filter((s: any) => s.isActive !== false), [product]);
+  const hasSizes = sizes.length > 0;
+  const selectedSize = hasSizes ? sizes[selectedSizeIndex] || sizes[0] : null;
+  const unitType = product?.unitType || 'PIECE';
+  const unitLabel = product?.unitLabel || 'pc';
+
+  // If selected size has an image, show it as the main image
+  const displayImages = useMemo(() => {
+    if (selectedSize?.imageUrl) {
+      return [selectedSize.imageUrl, ...images.filter((img: string) => img !== selectedSize.imageUrl)];
+    }
+    return images;
+  }, [images, selectedSize]);
 
   // Mock data for reviews and FAQs
   const mockReviews: MockReview[] = [
@@ -98,7 +129,8 @@ export default function ProductDetailPage() {
   const inStock = availableStock > 0;
   const safeQuantity = inStock ? Math.min(Math.max(1, quantity), maxAllowedQuantity || 1) : 1;
 
-  const price = Number(product?.price || 0);
+  const basePrice = Number(product?.price || 0);
+  const price = selectedSize?.priceOverride ? Number(selectedSize.priceOverride) : basePrice;
   const compareAtPrice = Number(product?.compareAtPrice || 0);
   const hasDiscount = compareAtPrice > price;
   const savings = hasDiscount ? compareAtPrice - price : 0;
@@ -110,12 +142,6 @@ export default function ProductDetailPage() {
     'This premium product is formulated with the finest ingredients to deliver exceptional results. Crafted with care and backed by scientific research, it offers powerful benefits for daily use.';
   const isMobile = viewportWidth < 768;
   const isTablet = viewportWidth < 1024;
-  const relatedProducts = [
-    'Rose Petal Toner',
-    'Glow Moisturizer SPF 30',
-    'Niacinamide Serum',
-    'Vitamin C Eye Cream',
-  ];
 
   const updateQuantity = (next: number) => {
     if (!inStock) {
@@ -135,7 +161,8 @@ export default function ProductDetailPage() {
       router.push(`/login?callbackUrl=${encodeURIComponent(window.location.href)}`);
       return;
     }
-    router.push(`/checkout?slug=${product.slug}&qty=${safeQuantity}`);
+    const sizeParam = selectedSize ? `&size=${encodeURIComponent(selectedSize.name)}` : '';
+    router.push(`/checkout?slug=${product.slug}&qty=${safeQuantity}${sizeParam}`);
   };
 
   if (isLoading) return <div className="container mx-auto px-4 py-8"><SkeletonCard /></div>;
@@ -194,7 +221,7 @@ export default function ProductDetailPage() {
           <div style={{ position: isTablet ? 'relative' : 'sticky', top: isTablet ? 0 : 90 }}>
             {/* Main Image */}
             <div style={{ borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 260 : 320, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.3s' }}>
-              <img src={images[activeImageIndex]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={displayImages[activeImageIndex]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               {hasDiscount && (
                 <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <span style={{ display: 'inline-block', padding: '3px 12px', borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', background: PINK, color: '#fff', border: `1.5px solid ${PINK}` }}>
@@ -216,16 +243,16 @@ export default function ProductDetailPage() {
               </button>
               {/* Dot indicators */}
               <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6 }}>
-                {images.map((_, i) => (
+                {displayImages.map((_: string, i: number) => (
                   <div key={i} onClick={() => setActiveImageIndex(i)} style={{ width: i === activeImageIndex ? 20 : 6, height: 6, borderRadius: 999, background: i === activeImageIndex ? PINK : PINK_LIGHT, transition: 'all 0.3s', cursor: 'pointer' }} />
                 ))}
               </div>
             </div>
 
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {displayImages.length > 1 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginTop: 12 }}>
-                {images.map((img, i) => (
+                {displayImages.map((img: string, i: number) => (
                   <div key={i} onClick={() => setActiveImageIndex(i)} style={{ borderRadius: 14, border: `1.5px solid ${i === activeImageIndex ? PINK : PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 60 : 72, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: 10, color: GRAY, fontWeight: 600, overflow: 'hidden' }}>
                     <img src={img} alt={`thumb ${i}`} style={{ width: '40%', height: '40%', objectFit: 'cover' }} />
                   </div>
@@ -302,9 +329,63 @@ export default function ProductDetailPage() {
               {inStock && <span style={{ fontSize: 13, color: '#f59e0b', fontWeight: 600 }}>Only {availableStock} left!</span>}
             </div>
 
+            {/* Unit Type */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>
+                {unitType === 'WEIGHT' ? '⚖️ Sold by weight' : '📦 Sold by piece'}
+              </span>
+              <span style={{ fontSize: 12, color: GRAY_LIGHT }}>({unitLabel})</span>
+            </div>
+
+            {/* Size Selector */}
+            {hasSizes && (
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 8 }}>Select Size</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {sizes.map((size: any, i: number) => (
+                    <button
+                      key={size.name}
+                      onClick={() => {
+                        setSelectedSizeIndex(i);
+                        if (size.imageUrl) setActiveImageIndex(0);
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: 12,
+                        border: `1.5px solid ${selectedSizeIndex === i ? PINK : PINK_LIGHT}`,
+                        background: selectedSizeIndex === i ? PINK_PALE : '#fff',
+                        color: selectedSizeIndex === i ? PINK : DARK,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      {size.imageUrl && (
+                        <img
+                          src={size.imageUrl}
+                          alt={size.name}
+                          style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }}
+                        />
+                      )}
+                      {size.name}
+                      {size.priceOverride && (
+                        <span style={{ fontSize: 11, color: GRAY_LIGHT }}>
+                          {formatMoney(size.priceOverride)}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: 10, marginTop: 2, background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, padding: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>Qty</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>Qty ({unitLabel})</p>
                 <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
                   <button onClick={() => updateQuantity(safeQuantity - 1)} style={{ width: 36, height: 36, fontSize: 17, fontWeight: 700, color: GRAY, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>−</button>
                   <span style={{ width: 34, textAlign: 'center', fontSize: 14, fontWeight: 700, color: DARK }}>{safeQuantity}</span>
@@ -441,36 +522,44 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Related Products - LAST for better scroll engagement */}
+        {/* Related Products from same category */}
+        {relatedProducts.length > 0 && (
         <div style={{ marginTop: isMobile ? 48 : 80, padding: isMobile ? '24px 16px' : '40px 32px', background: '#fcfcfc', borderRadius: isMobile ? 20 : 32, border: `1px solid ${PINK_LIGHT}` }}>
           <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 10 : 0, marginBottom: 32 }}>
             <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: DARK, display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ width: 6, height: 28, background: PINK, borderRadius: 3, display: 'inline-block' }} />
-              You Might Also Like
+              Similar in {product.category?.name || 'This Category'}
             </h2>
-            <Link href="/shop" style={{ color: PINK, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>View All →</Link>
+            <Link href={`/categories/${product.category?.slug || ''}`} style={{ color: PINK, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>View All →</Link>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : (isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)'), gap: isMobile ? 12 : 24 }}>
-            {relatedProducts.map((name, i) => (
-              <div key={i} style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: isMobile ? 16 : 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(233,30,140,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
-                <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg,#fdf2f8,#fce7f3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="60" height="100" viewBox="0 0 50 90" fill="none">
-                    <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6" />
-                    <rect x="10" y="10" width="30" height="70" rx="10" fill="white" fillOpacity="0.8" stroke={PINK} strokeWidth="1" />
-                  </svg>
-                </div>
-                <div style={{ padding: isMobile ? '12px' : '20px' }}>
-                  <span style={{ fontSize: 10, color: PINK, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>SKINCARE</span>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginTop: 6, marginBottom: 12, lineHeight: 1.4 }}>{name}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: DARK }}>৳ {(1200 + i * 200).toLocaleString()}</span>
-                    <button style={{ width: 32, height: 32, borderRadius: 10, background: PINK, color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: `0 4px 10px ${PINK}44` }}>+</button>
+            {relatedProducts.map((rp: any) => (
+              <Link key={rp.id} href={`/product/${rp.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: isMobile ? 16 : 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(233,30,140,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
+                  <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg,#fdf2f8,#fce7f3)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {rp.images?.[0] ? (
+                      <img src={rp.images[0]} alt={rp.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <svg width="60" height="100" viewBox="0 0 50 90" fill="none">
+                        <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6" />
+                        <rect x="10" y="10" width="30" height="70" rx="10" fill="white" fillOpacity="0.8" stroke={PINK} strokeWidth="1" />
+                      </svg>
+                    )}
+                  </div>
+                  <div style={{ padding: isMobile ? '12px' : '20px' }}>
+                    <span style={{ fontSize: 10, color: PINK, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{rp.category?.name || product.category?.name || 'Beauty'}</span>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginTop: 6, marginBottom: 12, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rp.name}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{formatMoney(rp.price)}</span>
+                      <span style={{ width: 32, height: 32, borderRadius: 10, background: PINK, color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 10px ${PINK}44` }}>+</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
+        )}
 
       </div>
 

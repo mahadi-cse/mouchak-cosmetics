@@ -44,11 +44,13 @@ export const getTopProducts: RequestHandler = asyncHandler(async (req, res) => {
 });
 
 export const getOverviewMetrics: RequestHandler = asyncHandler(async (req, res) => {
-  const { period, warehouseId } = req.query;
+  const { period, warehouseId, startDate, endDate } = req.query;
 
   const result = await analyticsService.getOverviewMetrics({
-    period: parseOverviewPeriod(period),
+    period: (startDate && endDate) ? undefined : parseOverviewPeriod(period),
     warehouseId: warehouseId ? Number(warehouseId) : undefined,
+    startDate: startDate as string | undefined,
+    endDate: endDate as string | undefined,
   });
 
   res.json(ok(result));

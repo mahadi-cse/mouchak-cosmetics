@@ -18,6 +18,17 @@ export interface ProductInventorySnapshot {
   lowStockThreshold?: number;
 }
 
+export interface ProductSize {
+  id: number;
+  name: string;
+  sortOrder: number;
+  imageUrl?: string | null;
+  priceOverride?: number | null;
+  isActive: boolean;
+}
+
+export type UnitType = 'PIECE' | 'WEIGHT';
+
 export interface Product {
   id: number;
   name: string;
@@ -36,6 +47,9 @@ export interface Product {
   isActive: boolean;
   tags: string[];
   weight?: number;
+  unitType: UnitType;
+  unitLabel: string;
+  sizes?: ProductSize[];
   inventories?: ProductInventorySnapshot[];
   createdAt: string;
   updatedAt: string;

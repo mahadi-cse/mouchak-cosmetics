@@ -55,8 +55,8 @@ export const useSliders = (
   return useQuery({
     queryKey: HOMEPAGE_QUERY_KEYS.sliders(),
     queryFn: () => homepageAPI.getSliders(),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 15 * 60 * 1000, // 15 minutes
+    staleTime: 60 * 1000, // 1 minute — slider now includes featured products
+    gcTime: 5 * 60 * 1000,
     ...options,
   });
 };
@@ -80,8 +80,8 @@ export const useHomepageFeaturedProducts = (
   return useQuery<Product[], Error>({
     queryKey: HOMEPAGE_QUERY_KEYS.featuredProducts(limit),
     queryFn: () => homepageAPI.getFeaturedProducts(limit),
-    staleTime: 10 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
+    staleTime: 60 * 1000, // 1 minute — featured products change from dashboard
+    gcTime: 5 * 60 * 1000,
     ...options,
   });
 };

@@ -10,6 +10,7 @@ import { productCategories } from "./data";
 import { useHomepageCategories, useHomepageStats, useSiteSettings, useSearchProducts } from "@/modules/homepage";
 import { useCart } from "@/shared/contexts/CartContext";
 import { useWishlist } from "@/shared/contexts/WishlistContext";
+import { useActivePromotion } from "@/modules/promotions";
 import Image from "next/image";
 
 export function Header() {
@@ -17,6 +18,7 @@ export function Header() {
   const { data: categories = [] } = useHomepageCategories();
   const { data: settings } = useSiteSettings();
   const { data: stats } = useHomepageStats();
+  const { data: activePromotion } = useActivePromotion();
   const { status } = useSession();
   const { totalItems: cartCount, setIsOpen: setCartOpen } = useCart();
   const { count: wishlistCount, setIsOpen: setWishlistOpen } = useWishlist();
@@ -95,9 +97,9 @@ export function Header() {
             <Phone size={12} /> 01700-000000
           </span>
           <div className="ml-auto flex gap-4">
-            {stats?.isOfferActive && stats?.currentOfferText && (
+            {activePromotion && (
               <span className="bg-primary text-white px-3 py-1 rounded-full text-[10px] font-semibold">
-                ✦ {stats.currentOfferText}
+                ✦ {activePromotion.pct}% OFF · {activePromotion.banner}{activePromotion.endsAt ? ` · Ends ${activePromotion.endsAt}` : ''}
               </span>
             )}
             <a href="#" className="hover:text-white transition">Track Order</a>

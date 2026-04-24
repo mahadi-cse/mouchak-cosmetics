@@ -79,7 +79,7 @@ export const useInvoiceData = (params?: AnalyticsParams, options?: any) => {
 };
 
 export const useOverviewMetrics = (
-  params?: { period?: OverviewPeriod; warehouseId?: number },
+  params?: { period?: OverviewPeriod; warehouseId?: number; startDate?: string; endDate?: string },
   options?: any
 ) => {
   return useQuery<OverviewMetrics, Error>({

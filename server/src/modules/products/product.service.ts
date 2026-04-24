@@ -42,7 +42,23 @@ export class ProductService {
         isFeatured: data.isFeatured || false,
         tags: data.tags || [],
         weight: data.weight,
+        unitType: data.unitType || 'PIECE',
+        unitLabel: data.unitLabel || 'pc',
+        ...(data.sizes && data.sizes.length > 0
+          ? {
+              sizes: {
+                create: data.sizes.map((s, i) => ({
+                  name: s.name,
+                  sortOrder: s.sortOrder ?? i,
+                  imageUrl: s.imageUrl || null,
+                  priceOverride: s.priceOverride || null,
+                  isActive: s.isActive ?? true,
+                })),
+              },
+            }
+          : {}),
       },
+      include: { sizes: { orderBy: { sortOrder: 'asc' } } },
     });
 
     const defaultBranchId = data.branchId || await this.getDefaultBranchId();
@@ -62,7 +78,7 @@ export class ProductService {
   async getProductBySlug(slug: string) {
     const product = await prisma.product.findUnique({
       where: { slug },
-      include: { category: true, inventories: true },
+      include: { category: true, inventories: true, sizes: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } } },
     });
 
     if (!product) {
@@ -120,7 +136,7 @@ export class ProductService {
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        include: { category: true, inventories: true },
+        include: { category: true, inventories: true, sizes: { orderBy: { sortOrder: 'asc' } } },
         skip,
         take,
         orderBy: { createdAt: 'desc' },
@@ -165,10 +181,31 @@ export class ProductService {
     if (data.tags !== undefined) updateData.tags = data.tags;
     if (data.weight !== undefined) updateData.weight = data.weight;
 
+    // Unit fields
+    if (data.unitType !== undefined) updateData.unitType = data.unitType;
+    if (data.unitLabel !== undefined) updateData.unitLabel = data.unitLabel;
+
+    // Handle sizes: delete-and-recreate strategy
+    if (data.sizes !== undefined) {
+      await prisma.productSize.deleteMany({ where: { productId: id } });
+      if (data.sizes.length > 0) {
+        await prisma.productSize.createMany({
+          data: data.sizes.map((s, i) => ({
+            productId: id,
+            name: s.name,
+            sortOrder: s.sortOrder ?? i,
+            imageUrl: s.imageUrl || null,
+            priceOverride: s.priceOverride || null,
+            isActive: s.isActive ?? true,
+          })),
+        });
+      }
+    }
+
     return await prisma.product.update({
       where: { id },
       data: updateData,
-      include: { category: true, inventories: true },
+      include: { category: true, inventories: true, sizes: { orderBy: { sortOrder: 'asc' } } },
     });
   }
 
@@ -253,7 +290,7 @@ export class ProductService {
     return await prisma.product.update({
       where: { id },
       data: updateData,
-      include: { category: true, inventories: true },
+      include: { category: true, inventories: true, sizes: { orderBy: { sortOrder: 'asc' } } },
     });
   }
 }

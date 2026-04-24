@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const adjustStockSchema = z.object({
   productId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().int(),
+  quantity: z.coerce.number(),
   type: z.enum(['ADJUSTMENT', 'PURCHASE', 'RETURN', 'SALE', 'POS_SALE']),
   reason: z.string().optional(),
   reference: z.string().optional(),
@@ -11,6 +11,7 @@ export const adjustStockSchema = z.object({
   batchName: z.string().optional(),
   manufactureDate: z.string().datetime().optional(),
   expiryDate: z.string().datetime().optional(),
+  sizeName: z.string().optional(),
 });
 
 export const transferStockSchema = z.object({

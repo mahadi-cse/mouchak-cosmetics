@@ -57,6 +57,7 @@ export class ManualSaleService {
           quantity: item.quantity,
           unitPrice,
           lineTotal,
+          sizeName: item.sizeName || null,
         };
       });
 
@@ -83,6 +84,7 @@ export class ManualSaleService {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               lineTotal: item.lineTotal,
+              sizeName: item.sizeName,
             })),
           },
         },

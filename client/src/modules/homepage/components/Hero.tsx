@@ -1,16 +1,19 @@
 'use client';
 
 import Image from "next/image";
+import Link from "next/link";
 import { Truck, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 
 import { heroContent } from "./data";
 import { useHomepageStats, useSliders, useSiteSettings } from "@/modules/homepage";
+import { useActivePromotion } from "@/modules/promotions";
 
 export function Hero() {
   const { data: settings } = useSiteSettings();
   const { data: stats, isLoading } = useHomepageStats();
   const { data: sliders = [], isLoading: slidersLoading } = useSliders();
+  const { data: activePromotion } = useActivePromotion();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Auto-rotate slider every 5 seconds
@@ -35,7 +38,10 @@ export function Hero() {
     { value: "48hr", label: "Delivery BD" },
   ];
 
-  const offerText = (stats?.isOfferActive) ? stats?.currentOfferText : "No Active Offer";
+  const isOfferActive = !!activePromotion;
+  const offerText = activePromotion
+    ? `${activePromotion.banner}${activePromotion.endsAt ? ` · Ends ${activePromotion.endsAt}` : ''}`
+    : "No Active Offer";
   const currentSliderImage = sliders[currentSlide] || null;
   const heroHeadline = settings?.heroHeadline || "Spring Beauty";
   const heroYear = settings?.heroYear || "2026";
@@ -58,10 +64,10 @@ export function Hero() {
         {/* Right Image Section - Slider */}
         <div className="relative order-first md:order-last bg-gradient-to-br from-rose-100 via-rose-50 to-pink-50 flex items-center justify-center overflow-hidden min-h-64 md:min-h-auto group">
           {/* Floating Label - Top Right */}
-          {stats?.isOfferActive && (
+          {isOfferActive && (
             <div className="absolute top-4 right-4 bg-white rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-lg z-20">
-              <span className="text-primary text-xs font-semibold">★</span>
-              <span className="text-[10px] font-semibold text-zinc-900">{offerText}</span>
+              <span className="text-primary text-xs font-semibold">★ {activePromotion?.pct}% OFF</span>
+              <span className="text-[10px] font-semibold text-zinc-900">{activePromotion?.banner}{activePromotion?.endsAt ? ` · Ends ${activePromotion.endsAt}` : ''}</span>
             </div>
           )}
 
@@ -171,9 +177,9 @@ export function Hero() {
             <span className="bg-zinc-900 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full tracking-widest uppercase">
               {heroContent.badgeNew}
             </span>
-            {stats?.isOfferActive && (
+            {isOfferActive && (
               <span className="bg-rose-100 text-primary text-[10px] font-bold px-2.5 py-1 rounded-full tracking-widest uppercase">
-                {heroContent.badgeOffer}
+                UP TO {activePromotion?.pct ?? 40}% OFF
               </span>
             )}
           </div>
@@ -204,12 +210,12 @@ export function Hero() {
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap gap-2 mb-4">
-            <button className="bg-primary text-white px-5 py-2 rounded-full font-medium text-xs md:text-sm transition hover:bg-primary/90 shadow-[0_4px_16px_rgba(232,54,106,0.2)]">
+            <Link href="/categories" className="bg-primary text-white px-5 py-2 rounded-full font-medium text-xs md:text-sm transition hover:bg-primary/90 shadow-[0_4px_16px_rgba(232,54,106,0.2)]">
               {heroContent.primaryCTA}
-            </button>
-            <button className="border-2 border-zinc-300 text-zinc-900 px-5 py-2 rounded-full font-medium text-xs md:text-sm transition hover:border-primary hover:text-primary">
+            </Link>
+            <Link href="/shop" className="border-2 border-zinc-300 text-zinc-900 px-5 py-2 rounded-full font-medium text-xs md:text-sm transition hover:border-primary hover:text-primary">
               {heroContent.secondaryCTA}
-            </button>
+            </Link>
           </div>
 
           {/* Delivery Note */}

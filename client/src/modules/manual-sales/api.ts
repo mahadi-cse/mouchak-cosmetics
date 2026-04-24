@@ -5,6 +5,7 @@ export interface ManualSaleItemPayload {
   productId: number;
   quantity: number;
   unitPrice?: number;
+  sizeName?: string;
 }
 
 export interface CreateManualSaleRequest {
