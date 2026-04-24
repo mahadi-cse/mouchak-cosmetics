@@ -68,7 +68,7 @@ function CartCheckoutContent() {
       // Create orders for each cart item
       const orderPromises = cartItems.map((item) =>
         ordersAPI.createCodOrder({
-          productId: item.id,
+          productId: Number(item.id),
           quantity: item.quantity,
           shippingName: form.shippingName.trim(),
           shippingPhone: form.shippingPhone.replace(/\s+/g, ''),
