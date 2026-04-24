@@ -165,7 +165,7 @@ function CartCheckoutContent() {
       <main className="flex-1 container mx-auto px-4 py-8 lg:py-12 max-w-6xl">
         <h1 className="text-2xl font-bold text-zinc-900 mb-6 px-2">Cart Checkout</h1>
         <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 lg:gap-10 items-start">
-          {/* LEFT COLUMN: Shipping Details */}
+          {/* LEFT COLUMN: Shipping Details from uat*/}
           <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden p-6 sm:p-8">
             <h3 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: DARK, borderBottom: `2px solid ${PINK_LIGHT}`, paddingBottom: 10, marginBottom: 20 }}>
               Shipping Details
