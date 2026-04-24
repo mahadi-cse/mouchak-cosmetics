@@ -172,7 +172,7 @@ const SidebarContent: React.FC<{
                           navigate('settings', item.id);
                           if (isMobile) setSidebarOpen(false);
                         }}
-                        className="flex w-full cursor-pointer items-center gap-[9px] rounded-lg border-0 px-[10px] py-[9px] text-left text-[13px] transition-colors duration-100"
+                        className="flex w-full cursor-pointer items-center gap-[9px] rounded-lg border-0 px-[10px] py-[7px] text-left text-[13px] transition-colors duration-100"
                         style={{
                           background: subActive ? `${Theme.primary}12` : 'transparent',
                           color: subActive ? Theme.primary : Theme.fg,
@@ -196,7 +196,7 @@ const SidebarContent: React.FC<{
           <button
             key={n.id}
             onClick={() => navigate(n.id)}
-            className="flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] border-0 px-3 py-[11px] text-left text-[13px] transition-all duration-150"
+            className="flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] border-0 px-3 py-[8px] text-left text-[13px] transition-all duration-150"
             style={{
               background: active ? Theme.secondary : 'transparent',
               color: active ? Theme.primary : Theme.mutedFg,

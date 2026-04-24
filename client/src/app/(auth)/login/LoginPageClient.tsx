@@ -87,7 +87,7 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
   return (
     <main className="min-h-screen bg-white px-4 py-12">
       <div className="mx-auto flex w-full max-w-5xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-lg shadow-zinc-100">
-        <section className="hidden w-1/2 bg-zinc-50 p-10 text-zinc-900 lg:flex lg:flex-col lg:justify-between relative overflow-hidden border-r border-zinc-200">
+        <section className="hidden w-1/2 bg-zinc-50 p-10 text-zinc-900 lg:flex lg:flex-col lg:justify-start lg:gap-10 relative overflow-hidden border-r border-zinc-200">
           {/* Subtle decorative elements */}
           <div className="absolute top-20 right-10 w-40 h-40 bg-zinc-100/30 rounded-full blur-3xl" />
           <div className="absolute bottom-10 left-5 w-32 h-32 bg-zinc-100/30 rounded-full blur-2xl" />
@@ -95,34 +95,34 @@ export default function LoginPageClient({ callbackUrl = '/dashboard' }: LoginPag
           <div className="relative z-10">
             <p className="text-xs uppercase tracking-[0.4em] text-zinc-500">Mouchak Cosmetics</p>
             <h1 className="mt-4 text-4xl font-semibold leading-tight text-zinc-900">
-              Manage Your
-              <span className="block text-zinc-700">Store</span>
+              Welcome to
+              <span className="block text-zinc-700">Mouchak</span>
             </h1>
             <p className="mt-4 max-w-sm text-sm text-zinc-600">
-              Access inventory, track sales, process orders, and grow your business—all in one place.
+              Your go-to destination for skincare, haircare, and beauty essentials — delivered with care.
             </p>
           </div>
 
           <div className="relative z-10 space-y-4">
             <div className="flex items-start gap-3">
-              <div className="text-2xl flex-shrink-0">📊</div>
+              <div className="text-2xl flex-shrink-0">✨</div>
               <div>
-                <p className="font-semibold text-sm text-zinc-900">Real-time Insights</p>
-                <p className="text-xs text-zinc-600">See sales, stock, and customer activity instantly</p>
+                <p className="font-semibold text-sm text-zinc-900">Discover Your Glow</p>
+                <p className="text-xs text-zinc-600">Explore curated skincare, haircare & beauty products just for you</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="text-2xl flex-shrink-0">⚡</div>
+              <div className="text-2xl flex-shrink-0">📦</div>
               <div>
-                <p className="font-semibold text-sm text-zinc-900">Fast & Reliable</p>
-                <p className="text-xs text-zinc-600">Built to keep your business running smoothly</p>
+                <p className="font-semibold text-sm text-zinc-900">Track Every Order</p>
+                <p className="text-xs text-zinc-600">Stay updated on your orders from placement to delivery</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="text-2xl flex-shrink-0">🔐</div>
+              <div className="text-2xl flex-shrink-0">💖</div>
               <div>
-                <p className="font-semibold text-sm text-zinc-900">Your Data is Safe</p>
-                <p className="text-xs text-zinc-600">Industry-grade protection for your business</p>
+                <p className="font-semibold text-sm text-zinc-900">Save Your Favourites</p>
+                <p className="text-xs text-zinc-600">Wishlist the products you love and come back anytime</p>
               </div>
             </div>
           </div>
