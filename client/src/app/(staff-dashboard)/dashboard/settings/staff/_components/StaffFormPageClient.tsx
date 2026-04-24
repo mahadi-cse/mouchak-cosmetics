@@ -46,7 +46,7 @@ export default function StaffFormPageClient({ userId, onBack }: Props) {
   const [primaryBr, setPrimaryBr] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { data: userData, isLoading } = useQuery<UserData>({
+  const { data: userData, isLoading } = useQuery<UserData | null>({
     queryKey: ['auth', 'user', userId],
     queryFn: async () => {
       const res = await apiClient.get('/auth/users', { params: { limit: 500 } });

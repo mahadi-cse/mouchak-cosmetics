@@ -338,10 +338,10 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                                   <span>📍 {order.shippingName}, {order.shippingCity}</span>
                                   <span>·</span>
                                   <span>📞 {order.shippingPhone}</span>
-                                  {(order.customer?.user?.email || order.customer?.email) && (
+                                  {(order.customer?.user?.email) && (
                                     <>
                                       <span>·</span>
-                                      <span>✉️ {order.customer?.user?.email || (order.customer as any)?.email}</span>
+                                      <span>✉️ {order.customer?.user?.email}</span>
                                     </>
                                   )}
                                   <span>·</span>

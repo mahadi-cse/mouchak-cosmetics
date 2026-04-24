@@ -69,7 +69,7 @@ function EnhancedProductCard({ product }: { product: Product }) {
   const category = product.category?.name || 'Products';
   const rating = 4.5;
   const reviews = 0;
-  const inWishlist = isInWishlist(product.id);
+  const inWishlist = isInWishlist(String(product.id));
 
   return (
     <Link href={`/product/${product.slug}`} className="block">
@@ -127,10 +127,10 @@ function EnhancedProductCard({ product }: { product: Product }) {
               e.preventDefault();
               e.stopPropagation();
               if (inWishlist) {
-                removeFromWishlist(product.id);
+                removeFromWishlist(String(product.id));
               } else {
                 addToWishlist({
-                  id: product.id,
+                  id: String(product.id),
                   name: product.name,
                   price: product.price,
                   image: product.images?.[0],
@@ -159,7 +159,7 @@ function EnhancedProductCard({ product }: { product: Product }) {
               e.preventDefault();
               e.stopPropagation();
               addToCart({
-                id: product.id,
+                id: String(product.id),
                 name: product.name,
                 price: product.price,
                 image: product.images?.[0],

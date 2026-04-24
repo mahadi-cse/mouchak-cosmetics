@@ -81,6 +81,9 @@ export default function ProductDetailPage() {
   }, [images, selectedSize]);
 
   // Mock data for reviews and FAQs
+  type MockReview = { name: string; rating: number; date: string; text: string; verified: boolean };
+  type MockFaq = { q: string; a: string };
+
   const mockReviews: MockReview[] = [
     { name: 'Tasnia R.', rating: 5, date: 'March 2025', text: 'I\'ve been using this for 6 weeks and my skin has visibly improved. Outstanding quality!', verified: true },
     { name: 'Sumaiya K.', rating: 5, date: 'February 2025', text: 'The texture is so lightweight and non-greasy. Highly recommended!', verified: true },
@@ -164,7 +167,7 @@ export default function ProductDetailPage() {
       return;
     }
     const sizeParam = selectedSize ? `&size=${encodeURIComponent(selectedSize.name)}` : '';
-    router.push(`/checkout?slug=${product.slug}&qty=${safeQuantity}${sizeParam}`);
+    router.push(`/checkout?slug=${product!.slug}&qty=${safeQuantity}${sizeParam}`);
   };
 
   if (isLoading) return <div className="container mx-auto px-4 py-8"><SkeletonCard /></div>;
@@ -235,13 +238,13 @@ export default function ProductDetailPage() {
                 </div>
               )}
               <button style={{ position: 'absolute', top: 16, right: 16, width: 38, height: 38, borderRadius: '50%', background: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => {
-                if (isInWishlist(product.id)) {
-                  removeFromWishlist(product.id);
+                if (isInWishlist(String(product.id))) {
+                  removeFromWishlist(String(product.id));
                 } else {
-                  addToWishlist({ id: product.id, name: product.name, price: Number(product.price || 0), image: images[0] || undefined, slug: product.slug });
+                  addToWishlist({ id: String(product.id), name: product.name, price: Number(product.price || 0), image: images[0] || undefined, slug: product.slug });
                 }
               }}>
-                <Heart size={18} fill={isInWishlist(product.id) ? PINK : 'none'} color={isInWishlist(product.id) ? PINK : GRAY_LIGHT} />
+                <Heart size={18} fill={isInWishlist(String(product.id)) ? PINK : 'none'} color={isInWishlist(String(product.id)) ? PINK : GRAY_LIGHT} />
               </button>
               {/* Dot indicators */}
               <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6 }}>

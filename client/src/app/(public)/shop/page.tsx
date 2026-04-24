@@ -21,7 +21,7 @@ function parsePositiveInt(value: string | null, fallback: number) {
 function ShopPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
+  const [hoveredProduct, setHoveredProduct] = useState<number | null>(null);
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
@@ -112,11 +112,11 @@ function ShopPageContent() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (isInWishlist(product.id)) {
-                        removeFromWishlist(product.id);
+                      if (isInWishlist(String(product.id))) {
+                        removeFromWishlist(String(product.id));
                       } else {
                         addToWishlist({
-                          id: product.id,
+                          id: String(product.id),
                           name: product.name,
                           price: product.price,
                           image: product.images?.[0],
@@ -126,15 +126,15 @@ function ShopPageContent() {
                     }}
                     className="absolute right-3 bottom-3 flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-200"
                     style={{
-                      background: isInWishlist(product.id) ? '#e91e8c' : 'rgba(255,255,255,0.95)',
-                      borderColor: isInWishlist(product.id) ? '#e91e8c' : '#f3c8dc',
+                      background: isInWishlist(String(product.id)) ? '#e91e8c' : 'rgba(255,255,255,0.95)',
+                      borderColor: isInWishlist(String(product.id)) ? '#e91e8c' : '#f3c8dc',
                     }}
                   >
                     <Heart
                       size={14}
                       className="transition-all"
-                      fill={isInWishlist(product.id) ? 'white' : 'none'}
-                      stroke={isInWishlist(product.id) ? 'white' : '#e91e8c'}
+                      fill={isInWishlist(String(product.id)) ? 'white' : 'none'}
+                      stroke={isInWishlist(String(product.id)) ? 'white' : '#e91e8c'}
                       strokeWidth={2}
                     />
                   </button>
@@ -154,7 +154,7 @@ function ShopPageContent() {
                         e.stopPropagation();
                         addToCart(
                           {
-                            id: product.id,
+                            id: String(product.id),
                             name: product.name,
                             price: product.price,
                             image: product.images?.[0],
