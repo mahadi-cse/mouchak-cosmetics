@@ -47,7 +47,9 @@ function DonutChart({ segments, size = 160, thickness = 28, onHover }: { segment
   // Build arc paths
   let cumAngle = -Math.PI / 2; // start at top
   const arcs = segments.map((seg, i) => {
-    const angle = (seg.value / total) * Math.PI * 2;
+    const rawAngle = (seg.value / total) * Math.PI * 2;
+    // Clamp to just under 2π so a single-segment arc still renders
+    const angle = rawAngle >= Math.PI * 2 ? Math.PI * 2 - 0.001 : rawAngle;
     const startAngle = cumAngle;
     const endAngle = cumAngle + angle;
     const midAngle = startAngle + angle / 2;
@@ -101,9 +103,7 @@ function DonutChart({ segments, size = 160, thickness = 28, onHover }: { segment
           />
         );
       })}
-      {/* Center hole label */}
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="10" fill="#9ca3af" fontWeight="600">Total</text>
-      <text x={cx} y={cy + 10} textAnchor="middle" fontSize="13" fill="#1f2937" fontWeight="800">{`৳${Math.round(total).toLocaleString()}`}</text>
+      {/* Center hole - intentionally blank */}
     </svg>
   );
 }
