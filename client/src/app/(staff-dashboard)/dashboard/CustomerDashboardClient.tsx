@@ -558,7 +558,7 @@ export default function CustomerDashboardClient() {
           ))}
         </div>
 
-        {/* Latest order + quick actions */}
+        {/* Latest order + quick actions uat */}
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {/* Latest order */}
           <SectionContainer>
