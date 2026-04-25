@@ -6,7 +6,7 @@ export const requestLogger: RequestHandler = (req, res, next) => {
 
   res.on('finish', () => {
     const duration = Date.now() - start;
-    const userId = req.user?.keycloakId || 'anonymous';
+    const userId = req.user?.id ?? 'anonymous';
 
     logger.info('HTTP Request', {
       method: req.method,

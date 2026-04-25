@@ -4,15 +4,23 @@ import 'dotenv/config';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
-  CLIENT_URL: z.string().url(),
+  CLIENT_URL: z.string(),
+  CLIENT_URL_EXTRA: z.string().optional(), // comma-separated extra allowed origins
   
   // Database
   DATABASE_URL: z.string().url(),
+
+  // Auth
+  ACCESS_TOKEN_SECRET: z.string().min(32),
+  ACCESS_TOKEN_EXPIRES_HOURS: z.coerce.number().min(2).max(4).default(3),
+  REFRESH_TOKEN_EXPIRES_DAYS: z.coerce.number().min(1).max(30).default(7),
+  REFRESH_TOKEN_COOKIE_NAME: z.string().default('mouchak_refresh_token'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
   
   // Keycloak
-  KEYCLOAK_REALM_URL: z.string().url(),
-  KEYCLOAK_CLIENT_ID: z.string(),
-  KEYCLOAK_CLIENT_SECRET: z.string(),
+  KEYCLOAK_REALM_URL: z.string().url().optional(),
+  KEYCLOAK_CLIENT_ID: z.string().optional(),
+  KEYCLOAK_CLIENT_SECRET: z.string().optional(),
   
   // SSLCommerz
   SSLCOMMERZ_STORE_ID: z.string(),

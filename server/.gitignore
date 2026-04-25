@@ -39,5 +39,5 @@ Thumbs.db
 logs/
 *.log
 
-# Uploads
-uploads/
+# Uploads (local file upload directory only, not source modules)
+/uploads/

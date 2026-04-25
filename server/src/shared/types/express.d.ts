@@ -1,4 +1,4 @@
-import { AuthUser } from './keycloak.types';
+import { AuthUser } from './auth.types';
 
 declare global {
   namespace Express {

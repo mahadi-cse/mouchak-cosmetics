@@ -1,19 +1,31 @@
 import { z } from 'zod';
 
+const productSizeSchema = z.object({
+  name: z.string().min(1, 'Size name is required'),
+  sortOrder: z.coerce.number().int().nonnegative().optional(),
+  imageUrl: z.string().optional().nullable(),
+  priceOverride: z.coerce.number().positive().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
 export const createProductSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
   description: z.string().optional(),
   shortDescription: z.string().optional(),
-  price: z.number().positive('Price must be positive'),
-  compareAtPrice: z.number().positive().optional(),
-  costPrice: z.number().positive().optional(),
+  price: z.coerce.number().positive('Price must be positive'),
+  compareAtPrice: z.coerce.number().positive().optional(),
+  costPrice: z.coerce.number().positive().optional(),
   sku: z.string().min(1, 'SKU is required'),
   barcode: z.string().optional(),
-  categoryId: z.string().uuid('Invalid category ID'),
+  categoryId: z.coerce.number().int().positive('Invalid category ID'),
   images: z.array(z.string().url()).optional(),
   isFeatured: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
-  weight: z.number().positive().optional(),
+  weight: z.coerce.number().positive().optional(),
+  branchId: z.coerce.number().int().positive().optional(),
+  unitType: z.enum(['PIECE', 'WEIGHT']).optional(),
+  unitLabel: z.string().min(1).optional(),
+  sizes: z.array(productSizeSchema).optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();

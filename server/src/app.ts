@@ -1,6 +1,7 @@
 import express, { Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { getEnv } from './config/env';
 import requestLogger from './middleware/requestLogger';
 import errorHandler from './middleware/errorHandler';
@@ -9,14 +10,47 @@ import { generalLimiter } from './middleware/rateLimiter';
 
 import productRouter from './modules/products/product.router';
 import categoryRouter from './modules/categories/category.router';
+import inventoryRouter from './modules/inventory/inventory.router';
+import orderRouter from './modules/orders/order.router';
+import customerRouter from './modules/customers/customer.router';
+import analyticsRouter from './modules/analytics/analytics.router';
+import homepageRouter from './modules/homepage/routes';
+import manualSaleRouter from './modules/manual-sales/manualSale.router';
+import manualReturnRouter from './modules/manual-returns/manualReturn.router';
+import supplierRouter from './modules/suppliers/supplier.router';
+import branchRouter from './modules/branches/branch.router';
+import authRouter from './modules/auth/auth.router';
+import customerDashboardRouter from './modules/customer-dashboard/customerDashboard.router';
+import promotionRouter from './modules/promotions/promotion.router';
+import uploadRouter from './modules/uploads/upload.router';
 
 export function createApp(): Express {
   const app = express();
   const env = getEnv();
 
+  // Build allowed origins list from env
+  const allowedOrigins = [
+    env.CLIENT_URL,
+    ...(env.CLIENT_URL_EXTRA ? env.CLIENT_URL_EXTRA.split(',').map(o => o.trim()) : []),
+  ].filter(Boolean);
+
   // Middleware stack
   app.use(helmet());
-  app.use(cors({ origin: env.CLIENT_URL }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`CORS: origin '${origin}' not allowed`));
+        }
+      },
+      credentials: true,
+    })
+  );
+  app.use(cookieParser());
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
@@ -27,9 +61,22 @@ export function createApp(): Express {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
   });
 
-  // API Routes - Public
+  // API Routes - Public & Protected
+  app.use('/api/auth', authRouter);
   app.use('/api/products', productRouter);
   app.use('/api/categories', categoryRouter);
+  app.use('/api/inventory', inventoryRouter);
+  app.use('/api/orders', orderRouter);
+  app.use('/api/customers', customerRouter);
+  app.use('/api/analytics', analyticsRouter);
+  app.use('/api/homepage', homepageRouter);
+  app.use('/api/manual-sales', manualSaleRouter);
+  app.use('/api/manual-returns', manualReturnRouter);
+  app.use('/api/suppliers', supplierRouter);
+  app.use('/api/branches', branchRouter);
+  app.use('/api/customer-dashboard', customerDashboardRouter);
+  app.use('/api/promotions', promotionRouter);
+  app.use('/api/uploads', uploadRouter);
 
   // 404 handler
   app.use(notFound);
