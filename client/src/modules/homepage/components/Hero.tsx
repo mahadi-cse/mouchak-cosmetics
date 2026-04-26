@@ -8,12 +8,14 @@ import { useState, useEffect } from "react";
 import { heroContent } from "./data";
 import { useHomepageStats, useSliders, useSiteSettings } from "@/modules/homepage";
 import { useActivePromotion } from "@/modules/promotions";
+import { useHomepageLocale } from "../locales/HomepageLocaleContext";
 
 export function Hero() {
   const { data: settings } = useSiteSettings();
   const { data: stats, isLoading } = useHomepageStats();
   const { data: sliders = [], isLoading: slidersLoading } = useSliders();
   const { data: activePromotion } = useActivePromotion();
+  const { t } = useHomepageLocale();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Auto-rotate slider every 5 seconds
@@ -29,19 +31,19 @@ export function Hero() {
 
   // Use dynamic stats if available, otherwise use default
   const displayStats = stats ? [
-    { value: `${(stats.totalHappyCustomers / 1000).toFixed(0)}K+`, label: "Happy Customers" },
-    ...(stats.isFreeDeliveryActive ? [{ value: `৳${stats.minFreeDeliveryAmount}+`, label: "Free Delivery" }] : []),
-    { value: stats.deliveryTimeframe, label: "Delivery BD" },
+    { value: `${(stats.totalHappyCustomers / 1000).toFixed(0)}K+`, label: t.hero.happyCustomers },
+    ...(stats.isFreeDeliveryActive ? [{ value: `৳${stats.minFreeDeliveryAmount}+`, label: t.hero.freeDelivery }] : []),
+    { value: stats.deliveryTimeframe, label: t.hero.deliveryBD },
   ] : [
-    { value: "10K+", label: "Happy Customers" },
-    { value: "৳999+", label: "Free Delivery" },
-    { value: "48hr", label: "Delivery BD" },
+    { value: "10K+", label: t.hero.happyCustomers },
+    { value: "৳999+", label: t.hero.freeDelivery },
+    { value: "48hr", label: t.hero.deliveryBD },
   ];
 
   const isOfferActive = !!activePromotion;
   const offerText = activePromotion
-    ? `${activePromotion.banner}${activePromotion.endsAt ? ` · Ends ${activePromotion.endsAt}` : ''}`
-    : "No Active Offer";
+    ? `${activePromotion.banner}${activePromotion.endsAt ? ` · ${t.hero.ends} ${activePromotion.endsAt}` : ''}`
+    : t.hero.noActiveOffer;
   const currentSliderImage = sliders[currentSlide] || null;
   const heroHeadline = settings?.heroHeadline || "Spring Beauty";
   const heroYear = settings?.heroYear || "2026";
@@ -66,8 +68,8 @@ export function Hero() {
           {/* Floating Label - Top Right */}
           {isOfferActive && (
             <div className="absolute top-4 right-4 bg-white rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-lg z-20">
-              <span className="text-primary text-xs font-semibold">★ {activePromotion?.pct}% OFF</span>
-              <span className="text-[10px] font-semibold text-zinc-900">{activePromotion?.banner}{activePromotion?.endsAt ? ` · Ends ${activePromotion.endsAt}` : ''}</span>
+              <span className="text-primary text-xs font-semibold">★ {activePromotion?.pct}% {t.hero.off}</span>
+              <span className="text-[10px] font-semibold text-zinc-900">{activePromotion?.banner}{activePromotion?.endsAt ? ` · ${t.hero.ends} ${activePromotion.endsAt}` : ''}</span>
             </div>
           )}
 
@@ -113,7 +115,7 @@ export function Hero() {
               <button
                 onClick={handlePrevSlide}
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 transition z-30 shadow-lg cursor-pointer hover:shadow-xl"
-                aria-label="Previous slide"
+                aria-label={t.hero.previousSlide}
               >
                 <ChevronLeft size={20} className="text-zinc-900" />
               </button>
@@ -122,7 +124,7 @@ export function Hero() {
               <button
                 onClick={handleNextSlide}
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 transition z-30 shadow-lg cursor-pointer hover:shadow-xl"
-                aria-label="Next slide"
+                aria-label={t.hero.nextSlide}
               >
                 <ChevronRight size={20} className="text-zinc-900" />
               </button>
@@ -136,7 +138,7 @@ export function Hero() {
                     className={`rounded-full transition cursor-pointer ${
                       index === currentSlide ? "bg-primary w-6 h-2" : "bg-white/50 hover:bg-white/75 w-2 h-2"
                     }`}
-                    aria-label={`Go to slide ${index + 1}`}
+                    aria-label={`${t.hero.goToSlide} ${index + 1}`}
                   />
                 ))}
               </div>
@@ -166,7 +168,7 @@ export function Hero() {
             <div className="relative w-full h-full">
               <Image
                 src={heroContent.heroImage}
-                alt={heroContent.heroImageAlt}
+                alt={t.hero.heroImageAlt}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover object-center"
@@ -180,7 +182,7 @@ export function Hero() {
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
               <circle cx="6" cy="6" r="5" fill="#4CAF50" />
             </svg>
-            <span className="text-[10px] font-semibold text-zinc-900">In Stock · Ships in 24h</span>
+            <span className="text-[10px] font-semibold text-zinc-900">{t.hero.inStock}</span>
           </div>
         </div>
 
@@ -189,11 +191,11 @@ export function Hero() {
           {/* Badges */}
           <div className="flex gap-2 mb-4">
             <span className="bg-zinc-900 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full tracking-widest uppercase">
-              {heroContent.badgeNew}
+              {t.hero.badgeNew}
             </span>
             {isOfferActive && (
               <span className="bg-rose-100 text-primary text-[10px] font-bold px-2.5 py-1 rounded-full tracking-widest uppercase">
-                UP TO {activePromotion?.pct ?? 40}% OFF
+                {t.hero.upTo} {activePromotion?.pct ?? 40}% {t.hero.off}
               </span>
             )}
           </div>
@@ -207,7 +209,7 @@ export function Hero() {
 
           {/* Description */}
           <p className="text-zinc-600 text-sm leading-relaxed max-w-md mb-4">
-            {settings?.heroDescription || heroContent.description}
+            {settings?.heroDescription || t.hero.description}
           </p>
 
           {/* Stats */}
@@ -225,10 +227,10 @@ export function Hero() {
           {/* CTA Buttons */}
           <div className="flex flex-wrap gap-2 mb-4">
             <Link href="/categories" className="bg-primary text-white px-5 py-2 rounded-full font-medium text-xs md:text-sm transition hover:bg-primary/90 shadow-[0_4px_16px_rgba(232,54,106,0.2)]">
-              {heroContent.primaryCTA}
+              {t.hero.shopNow}
             </Link>
             <Link href="/shop" className="border-2 border-zinc-300 text-zinc-900 px-5 py-2 rounded-full font-medium text-xs md:text-sm transition hover:border-primary hover:text-primary">
-              {heroContent.secondaryCTA}
+              {t.hero.viewAllProducts}
             </Link>
           </div>
 
@@ -236,7 +238,7 @@ export function Hero() {
           {stats?.isFreeDeliveryActive && (
             <div className="flex items-center gap-2 text-xs text-green-700 font-medium">
               <Truck size={14} />
-              {heroContent.deliveryNote}
+              {t.hero.deliveryNote}
             </div>
           )}
         </div>

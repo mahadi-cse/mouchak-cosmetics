@@ -8,6 +8,7 @@ import { useHomepageFeaturedProducts, useHomepageCategories } from '@/modules/ho
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { useCart } from '@/shared/contexts/CartContext';
 import { CategoryCard } from './CategoryCard';
+import { useHomepageLocale } from '../locales/HomepageLocaleContext';
 import type { Category, Product } from '@/shared/types';
 
 const PRODUCT_FALLBACK_IMAGE =
@@ -57,6 +58,7 @@ function EnhancedProductCard({ product }: { product: Product }) {
   const [hovered, setHovered] = useState(false);
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { addToCart, setIsOpen: openCart } = useCart();
+  const { t } = useHomepageLocale();
   const [imageSrc, setImageSrc] = useState(
     normalizeImage(product.images?.[0]) || PRODUCT_FALLBACK_IMAGE
   );
@@ -66,7 +68,7 @@ function EnhancedProductCard({ product }: { product: Product }) {
     : null;
   const savingsAmount = product.compareAtPrice ? Math.round(product.compareAtPrice - product.price) : 0;
 
-  const category = product.category?.name || 'Products';
+  const category = product.category?.name || t.featuredProducts.products;
   const rating = 4.5;
   const reviews = 0;
   const inWishlist = isInWishlist(String(product.id));
@@ -118,7 +120,7 @@ function EnhancedProductCard({ product }: { product: Product }) {
             className="absolute right-11 top-3 rounded-full border border-pink-200 bg-white bg-opacity-95 px-2 py-0.5 text-center text-xs font-bold text-pink-700"
             style={{ letterSpacing: '0.5px' }}
           >
-            Best Seller
+            {t.featuredProducts.bestSeller}
           </div>
 
           {/* Wishlist button */}
@@ -174,7 +176,7 @@ function EnhancedProductCard({ product }: { product: Product }) {
               transform: hovered ? 'translateY(0)' : 'translateY(100%)',
             }}
           >
-            + Add to Cart
+            {t.featuredProducts.addToCart}
           </button>
         </div>
 
@@ -224,7 +226,7 @@ function EnhancedProductCard({ product }: { product: Product }) {
               <div
                 className="inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-bold text-green-700"
               >
-                Save ৳{savingsAmount.toLocaleString()}
+                {t.featuredProducts.save} ৳{savingsAmount.toLocaleString()}
               </div>
             )}
           </div>
@@ -237,7 +239,8 @@ function EnhancedProductCard({ product }: { product: Product }) {
 const DEFAULT_FILTER_OPTIONS = ['All'];
 
 export function FeaturedProducts() {
-  const [activeFilter, setActiveFilter] = useState('All');
+  const { t } = useHomepageLocale();
+  const [activeFilter, setActiveFilter] = useState<string>(t.featuredProducts.all);
   const { data: products = [], isLoading, error } = useHomepageFeaturedProducts(12);
   const { data: categories = [], isLoading: categoriesLoading } = useHomepageCategories();
 
@@ -251,9 +254,9 @@ export function FeaturedProducts() {
   const filterOptions = useMemo(
     () => {
       const byDb = activeCategories.map((c: Category) => c.name).filter(Boolean);
-      return byDb.length > 0 ? ['All', ...byDb] : DEFAULT_FILTER_OPTIONS;
+      return byDb.length > 0 ? [t.featuredProducts.all, ...byDb] : [t.featuredProducts.all];
     },
-    [activeCategories]
+    [activeCategories, t]
   );
 
   const categoryProductCount = useMemo(() => {
@@ -314,7 +317,7 @@ export function FeaturedProducts() {
       <section className="bg-zinc-50 py-12 md:py-16">
         <div className="mx-auto max-w-6xl px-4">
           <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-            <p className="text-red-800">Failed to load featured products. Please try again later.</p>
+            <p className="text-red-800">{t.featuredProducts.failedToLoad}</p>
           </div>
         </div>
       </section>
@@ -322,7 +325,7 @@ export function FeaturedProducts() {
   }
 
   const filtered =
-    activeFilter === 'All'
+    activeFilter === t.featuredProducts.all
       ? products
       : products.filter((p: Product) => p.category?.name === activeFilter);
 
@@ -338,13 +341,13 @@ export function FeaturedProducts() {
                 className="mb-1.5 text-xs font-bold uppercase text-pink-600"
                 style={{ letterSpacing: '2.5px' }}
               >
-                ◆ HOT DEALS
+                ◆ {t.featuredProducts.hotDeals}
               </p>
               <h2
                 className="m-0 text-3xl font-black text-zinc-900"
                 style={{ letterSpacing: '-0.5px' }}
               >
-                Featured Products
+                {t.featuredProducts.title}
               </h2>
             </div>
             <Link
@@ -352,7 +355,7 @@ export function FeaturedProducts() {
               className="rounded-full border-1.5 border-pink-600 px-5 py-2 text-sm font-bold text-pink-600 transition-all duration-200 hover:bg-pink-600 hover:text-white"
               style={{ letterSpacing: '0.5px' }}
             >
-              View All →
+              {t.featuredProducts.viewAll}
             </Link>
           </div>
 
@@ -398,10 +401,10 @@ export function FeaturedProducts() {
                 e.currentTarget.style.boxShadow = '0 6px 24px rgba(233,30,140,0.3)';
               }}
             >
-              Load More Products
+              {t.featuredProducts.loadMore}
             </Link>
             <p className="mt-3 text-xs text-zinc-400">
-              Showing {filtered.length} of {products.length} products
+              {t.featuredProducts.showing} {filtered.length} {t.featuredProducts.of} {products.length} {t.featuredProducts.products}
             </p>
           </div>
         </div>
@@ -424,13 +427,13 @@ export function FeaturedProducts() {
               className="mb-1.5 text-xs font-bold uppercase text-pink-600"
               style={{ letterSpacing: '2.5px' }}
             >
-              ✦ EXPLORE
+              ✦ {t.featuredProducts.explore}
             </p>
             <h2
               className="m-0 text-3xl font-black text-zinc-900"
               style={{ letterSpacing: '-0.5px' }}
             >
-              Shop by Category
+              {t.featuredProducts.shopByCategory}
             </h2>
           </div>
           <Link
@@ -438,7 +441,7 @@ export function FeaturedProducts() {
             className="rounded-full border-1.5 border-pink-600 px-5 py-2 text-sm font-bold text-pink-600 transition-all duration-200 hover:bg-pink-600 hover:text-white"
             style={{ letterSpacing: '0.5px' }}
           >
-            All Categories →
+            {t.featuredProducts.allCategories}
           </Link>
         </div>
 
@@ -449,8 +452,8 @@ export function FeaturedProducts() {
               key={cat.id}
               id={cat.slug}
               label={cat.name}
-              description={cat.description || 'Explore collection'}
-              count={`${categoryProductCount.get(cat.id) || 0} Products`}
+              description={cat.description || t.featuredProducts.exploreCollection}
+              count={`${categoryProductCount.get(cat.id) || 0} ${t.featuredProducts.products}`}
               image={normalizeImage(cat.imageUrl) || getCategoryFallbackImage(cat.slug, cat.name)}
               fallbackImage={getCategoryFallbackImage(cat.slug, cat.name)}
             />
