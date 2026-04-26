@@ -40,8 +40,16 @@ export function HomepageLocaleProvider({
   );
 }
 
+const noop = () => {};
+
+const defaultValue: HomepageLocaleContextValue = {
+  locale: "en",
+  t: dictionaries.en,
+  setLocale: noop,
+  toggleLocale: noop,
+};
+
 export function useHomepageLocale() {
   const ctx = useContext(HomepageLocaleContext);
-  if (!ctx) throw new Error("useHomepageLocale must be used within HomepageLocaleProvider");
-  return ctx;
+  return ctx ?? defaultValue;
 }

@@ -4,11 +4,11 @@ export type Locale = "en" | "bn";
 
 // Recursively widen `as const` literal strings to `string` / `string[]`
 type DeepStringify<T> = T extends readonly string[]
-  ? string[]
+  ? readonly string[]
   : T extends string
     ? string
     : T extends object
-      ? { [K in keyof T]: DeepStringify<T[K]> }
+      ? { readonly [K in keyof T]: DeepStringify<T[K]> }
       : T;
 
 export type HomepageTranslations = DeepStringify<typeof en>;
