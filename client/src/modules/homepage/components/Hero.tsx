@@ -72,7 +72,21 @@ export function Hero() {
           )}
 
           {/* Slider Container */}
-          {sliders.length > 0 ? (
+          {slidersLoading ? (
+            <div className="relative w-full h-full bg-gradient-to-br from-rose-100 via-rose-50 to-pink-50 animate-pulse">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-white/40" />
+                <div className="h-3 w-32 bg-white/40 rounded-full" />
+                <div className="h-2 w-24 bg-white/30 rounded-full" />
+              </div>
+              {/* Skeleton slide indicators */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-30">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="w-2 h-2 rounded-full bg-white/30" />
+                ))}
+              </div>
+            </div>
+          ) : sliders.length > 0 ? (
             <>
               {/* Slider Images */}
               <div className="relative w-full h-full">
