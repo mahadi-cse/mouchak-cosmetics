@@ -5,21 +5,24 @@ import {
   Header,
   Hero,
   Newsletter,
+  HomepageLocaleProvider,
 } from "@/modules/homepage";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Header />
+    <HomepageLocaleProvider defaultLocale="en">
+      <div className="min-h-screen bg-background text-foreground">
+        <Header />
 
-      <main>
-        <Hero />
-        <Features />
-        <FeaturedProducts />
-        <Newsletter />
-      </main>
+        <main>
+          <Hero />
+          <Features />
+          <FeaturedProducts />
+          <Newsletter />
+        </main>
 
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </HomepageLocaleProvider>
   );
 }

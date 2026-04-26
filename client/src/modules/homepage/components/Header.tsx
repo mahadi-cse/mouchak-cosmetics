@@ -6,11 +6,12 @@ import { Heart, Search, ShoppingCart, User, MapPin, Mail, Phone } from "lucide-r
 import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect, useRef, type FormEvent } from "react";
 
-import { productCategories } from "./data";
 import { useHomepageCategories, useHomepageStats, useSiteSettings, useSearchProducts } from "@/modules/homepage";
 import { useCart } from "@/shared/contexts/CartContext";
 import { useWishlist } from "@/shared/contexts/WishlistContext";
 import { useActivePromotion } from "@/modules/promotions";
+import { useHomepageLocale } from "../locales/HomepageLocaleContext";
+import { LanguageToggle } from "./LanguageToggle";
 import Image from "next/image";
 
 export function Header() {
@@ -46,10 +47,11 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const { t } = useHomepageLocale();
   const storeName = settings?.storeName || "Mouchak Cosmetics";
   const [storeNameFirst, ...storeNameRest] = storeName.split(/\s+/).filter(Boolean);
   const storeNameRestText = storeNameRest.join(" ");
-  const tagline = settings?.tagline || "Clean · Cruelty-Free · Bangladesh";
+  const tagline = settings?.tagline || t.header.taglineFallback;
 
   const navCategories = categories.length
     ? categories.slice(0, 4).map((c) => ({
@@ -57,7 +59,7 @@ export function Header() {
       label: c.name,
       href: `/categories/${c.slug}`,
     }))
-    : productCategories.map((name) => ({
+    : t.header.productCategories.map((name) => ({
       key: name,
       label: name,
       href: "#",
@@ -88,7 +90,7 @@ export function Header() {
       <div className="hidden md:block bg-zinc-900 text-zinc-400 text-xs tracking-widest border-b border-zinc-800">
         <div className="mx-auto max-w-6xl px-4 py-2 flex gap-6">
           <span className="flex items-center gap-2">
-            <MapPin size={12} /> Delivery across all of Bangladesh
+            <MapPin size={12} /> {t.header.deliveryBanner}
           </span>
           <span className="flex items-center gap-2">
             <Mail size={12} /> support@mouchak.com.bd
@@ -99,11 +101,11 @@ export function Header() {
           <div className="ml-auto flex gap-4">
             {activePromotion && (
               <span className="bg-primary text-white px-3 py-1 rounded-full text-[10px] font-semibold">
-                ✦ {activePromotion.pct}% OFF · {activePromotion.banner}{activePromotion.endsAt ? ` · Ends ${activePromotion.endsAt}` : ''}
+                ✦ {activePromotion.pct}% {t.header.off} · {activePromotion.banner}{activePromotion.endsAt ? ` · ${t.header.ends} ${activePromotion.endsAt}` : ''}
               </span>
             )}
-            <a href="#" className="hover:text-white transition">Track Order</a>
-            <a href="#" className="hover:text-white transition">Store Locator</a>
+            <a href="#" className="hover:text-white transition">{t.header.trackOrder}</a>
+            <a href="#" className="hover:text-white transition">{t.header.storeLocator}</a>
           </div>
         </div>
       </div>
@@ -134,10 +136,10 @@ export function Header() {
                     setIsSearchOpen(true);
                   }}
                   onFocus={() => setIsSearchOpen(true)}
-                  placeholder="Search skincare, lipstick, perfume…"
+                  placeholder={t.header.searchPlaceholder}
                   className="w-full bg-transparent px-5 py-2.5 text-sm outline-none placeholder-zinc-500"
                 />
-                <button type="submit" className="px-4 text-zinc-600 transition hover:text-primary" aria-label="Search">
+                <button type="submit" className="px-4 text-zinc-600 transition hover:text-primary" aria-label={t.header.ariaSearch}>
                   <Search size={16} />
                 </button>
               </form>
@@ -146,7 +148,7 @@ export function Header() {
               {isSearchOpen && searchTerm && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-50">
                   {isSearching ? (
-                    <div className="p-4 text-center text-sm text-zinc-500">Searching...</div>
+                    <div className="p-4 text-center text-sm text-zinc-500">{t.header.searching}</div>
                   ) : searchResults && searchResults.length > 0 ? (
                     <div className="flex flex-col">
                       {searchResults.map((product) => (
@@ -176,11 +178,11 @@ export function Header() {
                         onClick={() => setIsSearchOpen(false)}
                         className="p-3 text-center text-sm text-primary font-medium bg-rose-50 hover:bg-rose-100 transition"
                       >
-                        View all results
+                        {t.header.viewAllResults}
                       </Link>
                     </div>
                   ) : (
-                    <div className="p-4 text-center text-sm text-zinc-500">No products found for "{searchTerm}"</div>
+                    <div className="p-4 text-center text-sm text-zinc-500">{t.header.noResults} &quot;{searchTerm}&quot;</div>
                   )}
                 </div>
               )}
@@ -189,11 +191,14 @@ export function Header() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
+            {/* Language Toggle */}
+            <LanguageToggle />
+
             {/* Wishlist */}
             <button 
               onClick={() => setWishlistOpen(true)}
               className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" 
-              aria-label="Wishlist"
+              aria-label={t.header.ariaWishlist}
             >
               <Heart size={18} />
               {wishlistCount > 0 && (
@@ -207,7 +212,7 @@ export function Header() {
             <button 
               onClick={() => setCartOpen(true)}
               className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" 
-              aria-label="Cart"
+              aria-label={t.header.ariaCart}
             >
               <ShoppingCart size={18} />
               {cartCount > 0 && (
@@ -224,7 +229,7 @@ export function Header() {
                     href="/dashboard"
                     className="hidden sm:inline-flex items-center gap-2 rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:border-primary hover:text-primary"
                   >
-                    Dashboard
+                    {t.header.dashboard}
                   </Link>
                 )}
                 <button
@@ -233,13 +238,13 @@ export function Header() {
                   className="hidden sm:flex items-center gap-2 bg-zinc-900 text-white px-5 py-2.5 rounded-full font-medium text-sm transition hover:bg-zinc-800"
                 >
                   <User size={16} />
-                  Sign Out
+                  {t.header.signOut}
                 </button>
                 <button
                   type="button"
                   onClick={handleSignOut}
                   className="sm:hidden p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary"
-                  aria-label="Sign out"
+                  aria-label={t.header.ariaSignOut}
                 >
                   <User size={18} />
                 </button>
@@ -251,12 +256,12 @@ export function Header() {
                   className="hidden sm:flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-full font-medium text-sm transition hover:bg-primary/90"
                 >
                   <User size={16} />
-                  Sign In
+                  {t.header.signIn}
                 </Link>
                 <Link
                   href="/login"
                   className="sm:hidden p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary"
-                  aria-label="Account"
+                  aria-label={t.header.ariaAccount}
                 >
                   <User size={18} />
                 </Link>
@@ -284,7 +289,7 @@ export function Header() {
             {/* Sale Link */}
             <a href="/products" className="flex items-center gap-2 px-4 py-3 text-sm text-primary font-medium whitespace-nowrap">
               <span className="w-1 h-1 rounded-full bg-current"></span>
-              Sale
+              {t.header.sale}
             </a>
           </div>
 
@@ -299,16 +304,16 @@ export function Header() {
                 {cat.label}
               </a>
             ))}
-            <a href="/products" className="text-primary font-medium whitespace-nowrap">Sale</a>
+            <a href="/products" className="text-primary font-medium whitespace-nowrap">{t.header.sale}</a>
           </div>
 
           {/* Free Delivery Badge - Prominent on Mobile */}
           <div className="flex items-center gap-1 ml-auto md:ml-auto">
             {(stats?.isFreeDeliveryActive ?? true) && (
               <>
-                <span className="bg-rose-100 text-primary px-2 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap">FREE DELIVERY</span>
+                <span className="bg-rose-100 text-primary px-2 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap">{t.header.freeDelivery}</span>
                 <span className="hidden sm:inline text-[10px] text-zinc-600 whitespace-nowrap">
-                  orders over ৳{stats?.minFreeDeliveryAmount ?? 999}
+                  {t.header.ordersOver} ৳{stats?.minFreeDeliveryAmount ?? 999}
                 </span>
               </>
             )}

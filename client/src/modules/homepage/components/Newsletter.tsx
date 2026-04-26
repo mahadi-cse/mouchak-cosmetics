@@ -1,8 +1,11 @@
-import { Gift, Mail } from "lucide-react";
+"use client";
 
-import { newsletterContent } from "./data";
+import { Gift, Mail } from "lucide-react";
+import { useHomepageLocale } from "../locales/HomepageLocaleContext";
 
 export function Newsletter() {
+  const { t } = useHomepageLocale();
+
   return (
     <section className="py-6">
       <div className="mx-auto max-w-6xl px-4">
@@ -14,10 +17,10 @@ export function Newsletter() {
             <div>
               <div className="mb-2 inline-flex items-center gap-2 text-white/85">
                 <Gift size={17} />
-                <span className="text-sm font-medium">{newsletterContent.label}</span>
+                <span className="text-sm font-medium">{t.newsletter.label}</span>
               </div>
-              <h3 className="text-2xl font-extrabold text-white">{newsletterContent.title}</h3>
-              <p className="text-sm text-white/80">{newsletterContent.description}</p>
+              <h3 className="text-2xl font-extrabold text-white">{t.newsletter.title}</h3>
+              <p className="text-sm text-white/80">{t.newsletter.description}</p>
             </div>
 
             <form className="w-full max-w-md">
@@ -27,14 +30,14 @@ export function Newsletter() {
                 </div>
                 <input
                   type="email"
-                  placeholder={newsletterContent.inputPlaceholder}
+                  placeholder={t.newsletter.inputPlaceholder}
                   className="w-full px-2 py-3 text-sm text-zinc-900 outline-none"
                 />
                 <button className="bg-zinc-900 px-5 text-sm font-bold text-white transition hover:bg-zinc-700">
-                  {newsletterContent.submitButton}
+                  {t.newsletter.submitButton}
                 </button>
               </div>
-              <p className="mt-2 text-[11px] text-white/70">{newsletterContent.privacyNote}</p>
+              <p className="mt-2 text-[11px] text-white/70">{t.newsletter.privacyNote}</p>
             </form>
           </div>
         </div>
