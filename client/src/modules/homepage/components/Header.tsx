@@ -88,7 +88,7 @@ export function Header() {
     <header className="bg-white">
       {/* Top Bar - Dark background info strip */}
       <div className="hidden md:block bg-zinc-900 text-zinc-400 text-xs tracking-widest border-b border-zinc-800">
-        <div className="mx-auto max-w-6xl px-4 py-2 flex gap-6">
+        <div className="mx-auto max-w-[1400px] px-6 sm:px-10 py-2 flex gap-6">
           <span className="flex items-center gap-2">
             <MapPin size={12} /> {t.header.deliveryBanner}
           </span>
@@ -112,7 +112,7 @@ export function Header() {
 
       {/* Main Navigation */}
       <div className="border-b border-zinc-200">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
+        <div className="mx-auto max-w-[1400px] px-6 sm:px-10 py-4 flex items-center justify-between">
           {/* Brand Logo - Serif font */}
           <div className="flex-shrink-0">
             <h1 className="text-2xl font-bold tracking-tight">
@@ -273,7 +273,7 @@ export function Header() {
 
       {/* Category Navigation */}
       <nav className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 flex items-center justify-between md:justify-start gap-1 py-2 md:py-0">
+        <div className="mx-auto max-w-[1400px] px-6 sm:px-10 flex items-center justify-between md:justify-start gap-1 py-2 md:py-0">
           {/* Categories - Hidden on Mobile, Shown on Desktop */}
           <div className="hidden md:flex items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
             {navCategories.map((cat) => (
