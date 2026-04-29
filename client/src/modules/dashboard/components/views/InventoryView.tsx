@@ -273,7 +273,7 @@ export default function InventoryView({
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 w-full lg:w-auto">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 2xl:gap-3 w-full lg:w-auto">
           {[
             { label: 'Total SKUs', val: summaryStats.totalSkus, color: '' },
             { label: 'Total units', val: summaryStats.totalUnits, color: '' },

@@ -160,7 +160,7 @@ export default function BranchesView() {
         </Card>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] 2xl:grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4 2xl:gap-5">
         {branches.map((b) => {
           const revenueShare = Math.round(
             (b.revenue / branches.reduce((a, x) => a + x.revenue, 1)) * 100

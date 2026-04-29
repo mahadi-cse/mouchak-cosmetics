@@ -183,7 +183,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
       {tab === 'orders' && (
         <>
           {/* Stat cards row */}
-          <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
+          <div className="grid grid-cols-3 gap-3 lg:grid-cols-6 2xl:gap-4">
             {[
               { label: 'Total Orders', value: realOrders.length, icon: '📦', accent: '#f0f4ff', numColor: Theme.fg },
               { label: 'Pending', value: realOrders.filter(o => String(o.status).toUpperCase() === 'PENDING').length, icon: '⏳', accent: '#fffbeb', numColor: '#b45309' },
@@ -512,7 +512,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
       {tab === 'customers' && (
         <div className="flex flex-col gap-[14px]">
           {/* Stat cards row */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:gap-4">
             {[
               { label: 'Total Customers', value: totalCustomers, icon: '👥', accent: '#fdf2f8', numColor: Theme.primary },
               { label: 'Active', value: activeCustomers, icon: '🟢', accent: '#f0fdf4', numColor: '#15803d' },

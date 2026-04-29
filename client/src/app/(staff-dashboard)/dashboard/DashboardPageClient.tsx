@@ -18,7 +18,7 @@ import { useListManualSales } from '@/modules/manual-sales';
 function DashboardSkeleton() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#f6f7fb]">
-      <aside className="hidden w-56 shrink-0 border-r border-zinc-200 bg-white p-4 md:block">
+      <aside className="hidden w-[260px] shrink-0 border-r border-zinc-200 bg-white p-4 md:block">
         <div className="mb-5 h-10 w-36 animate-pulse rounded-lg bg-zinc-100" />
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, i) => (
