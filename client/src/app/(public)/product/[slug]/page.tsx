@@ -403,127 +403,122 @@ export default function ProductDetailPage() {
               </button>
             </div>
 
-            {/* Accordion Product Details */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
-              {/* Description Accordion */}
-              <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
-                <button onClick={() => setActiveTab(activeTab === 'description' ? ('' as any) : 'description')} style={{ width: '100%', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: activeTab === 'description' ? PINK_PALE : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Product Description</span>
-                  <ChevronRight size={18} style={{ color: PINK, transform: activeTab === 'description' ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
-                </button>
-                {activeTab === 'description' && (
-                  <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
-                    <p style={{ fontSize: 14, color: GRAY, lineHeight: 1.7 }}>{descriptionContent}</p>
-                    <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Features & Benefits</p>
-                      {[
-                        { icon: '✦', title: 'Premium Quality', desc: 'Made with the finest ingredients.' },
-                        { icon: '✦', title: 'Dermatologist Tested', desc: 'Safe for all skin types.' },
-                      ].map((f, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 12, background: PINK_PALE, padding: 12, borderRadius: 12 }}>
-                          <span style={{ color: PINK, fontWeight: 700, fontSize: 16, marginTop: 2 }}>{f.icon}</span>
-                          <div>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: DARK, display: 'block', marginBottom: 2 }}>{f.title}</span>
-                            <span style={{ fontSize: 13, color: GRAY, lineHeight: 1.5 }}>{f.desc}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {/* Product Description (always visible) */}
+            <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff', marginTop: 16 }}>
+              <div style={{ padding: '16px 20px', background: PINK_PALE }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Product Description</span>
               </div>
-
-              {/* Specifications Accordion */}
-              <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
-                <button onClick={() => setActiveTab(activeTab === 'specifications' ? ('' as any) : 'specifications')} style={{ width: '100%', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: activeTab === 'specifications' ? PINK_PALE : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Specifications</span>
-                  <ChevronRight size={18} style={{ color: PINK, transform: activeTab === 'specifications' ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
-                </button>
-                {activeTab === 'specifications' && (
-                  <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
-                    <div style={{ border: `1px solid ${PINK_LIGHT}`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
-                      {[
-                        { label: 'Category', value: product.category?.name || 'Beauty' },
-                        { label: 'Shelf Life', value: '24 months' },
-                        { label: 'Storage', value: 'Keep in cool, dry place' },
-                      ].map((s, i, arr) => (
-                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '120px 1fr', padding: '12px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${PINK_LIGHT}` : 'none', background: i % 2 === 1 ? PINK_PALE : '#fff' }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>{s.label}</span>
-                          <span style={{ fontSize: 13, color: DARK }}>{s.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Reviews Accordion */}
-              <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
-                <button onClick={() => setActiveTab(activeTab === 'reviews' ? ('' as any) : 'reviews')} style={{ width: '100%', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: activeTab === 'reviews' ? PINK_PALE : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Customer Reviews (284)</span>
-                  <ChevronRight size={18} style={{ color: PINK, transform: activeTab === 'reviews' ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
-                </button>
-                {activeTab === 'reviews' && (
-                  <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-                      <div style={{ fontSize: 40, fontWeight: 800, color: DARK, lineHeight: 1 }}>4.8</div>
+              <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
+                <p style={{ fontSize: 14, color: GRAY, lineHeight: 1.7 }}>{descriptionContent}</p>
+                <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Features & Benefits</p>
+                  {[
+                    { icon: '✦', title: 'Premium Quality', desc: 'Made with the finest ingredients.' },
+                    { icon: '✦', title: 'Dermatologist Tested', desc: 'Safe for all skin types.' },
+                  ].map((f, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 12, background: PINK_PALE, padding: 12, borderRadius: 12 }}>
+                      <span style={{ color: PINK, fontWeight: 700, fontSize: 16, marginTop: 2 }}>{f.icon}</span>
                       <div>
-                        <span style={{ display: 'flex', gap: 2 }}>
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star key={s} size={16} fill="#f59e0b" color="#f59e0b" />
-                          ))}
-                        </span>
-                        <p style={{ fontSize: 12, color: GRAY_LIGHT, marginTop: 4 }}>Based on 284 reviews</p>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: DARK, display: 'block', marginBottom: 2 }}>{f.title}</span>
+                        <span style={{ fontSize: 13, color: GRAY, lineHeight: 1.5 }}>{f.desc}</span>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {mockReviews.slice(0, 3).map((r, i) => (
-                        <div key={i} style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: 12, padding: 16 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{r.name}</span>
-                              {r.verified && <span style={{ fontSize: 10, color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>Verified</span>}
-                            </div>
-                            <span style={{ fontSize: 12, color: GRAY_LIGHT }}>{r.date}</span>
-                          </div>
-                          <span style={{ display: 'flex', gap: 2, marginBottom: 8 }}>
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star key={s} size={12} fill={s <= r.rating ? '#f59e0b' : '#e5e7eb'} color={s <= r.rating ? '#f59e0b' : '#e5e7eb'} />
-                            ))}
-                          </span>
-                          <p style={{ fontSize: 13, color: GRAY, lineHeight: 1.6 }}>{r.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* FAQs Accordion */}
-              <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
-                <button onClick={() => setActiveTab(activeTab === 'faqs' ? ('' as any) : 'faqs')} style={{ width: '100%', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: activeTab === 'faqs' ? PINK_PALE : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>FAQs</span>
-                  <ChevronRight size={18} style={{ color: PINK, transform: activeTab === 'faqs' ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
-                </button>
-                {activeTab === 'faqs' && (
-                  <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {mockFaqs.slice(0, 3).map((faq, i) => (
-                        <div key={i} onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)} style={{ background: openFaqIndex === i ? PINK_PALE : '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s' }}>
-                          <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: DARK, paddingRight: 16 }}>{faq.q}</p>
-                            <span style={{ color: PINK, fontSize: 16, fontWeight: 700, transform: openFaqIndex === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }}>+</span>
-                          </div>
-                          {openFaqIndex === i && (
-                            <div style={{ padding: '0 16px 16px', fontSize: 13, color: GRAY, lineHeight: 1.6 }}>{faq.a}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             </div>
+
+            {/* TODO: Uncomment these sections when ready */}
+            {/* Specifications Accordion */}
+            {/* <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff', marginTop: 12 }}>
+              <button onClick={() => setActiveTab(activeTab === 'specifications' ? ('' as any) : 'specifications')} style={{ width: '100%', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: activeTab === 'specifications' ? PINK_PALE : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Specifications</span>
+                <ChevronRight size={18} style={{ color: PINK, transform: activeTab === 'specifications' ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+              </button>
+              {activeTab === 'specifications' && (
+                <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
+                  <div style={{ border: `1px solid ${PINK_LIGHT}`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+                    {[
+                      { label: 'Category', value: product.category?.name || 'Beauty' },
+                      { label: 'Shelf Life', value: '24 months' },
+                      { label: 'Storage', value: 'Keep in cool, dry place' },
+                    ].map((s, i, arr) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '120px 1fr', padding: '12px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${PINK_LIGHT}` : 'none', background: i % 2 === 1 ? PINK_PALE : '#fff' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>{s.label}</span>
+                        <span style={{ fontSize: 13, color: DARK }}>{s.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div> */}
+
+            {/* Reviews Accordion */}
+            {/* <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff', marginTop: 12 }}>
+              <button onClick={() => setActiveTab(activeTab === 'reviews' ? ('' as any) : 'reviews')} style={{ width: '100%', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: activeTab === 'reviews' ? PINK_PALE : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Customer Reviews (284)</span>
+                <ChevronRight size={18} style={{ color: PINK, transform: activeTab === 'reviews' ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+              </button>
+              {activeTab === 'reviews' && (
+                <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                    <div style={{ fontSize: 40, fontWeight: 800, color: DARK, lineHeight: 1 }}>4.8</div>
+                    <div>
+                      <span style={{ display: 'flex', gap: 2 }}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} size={16} fill="#f59e0b" color="#f59e0b" />
+                        ))}
+                      </span>
+                      <p style={{ fontSize: 12, color: GRAY_LIGHT, marginTop: 4 }}>Based on 284 reviews</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {mockReviews.slice(0, 3).map((r, i) => (
+                      <div key={i} style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: 12, padding: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{r.name}</span>
+                            {r.verified && <span style={{ fontSize: 10, color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>Verified</span>}
+                          </div>
+                          <span style={{ fontSize: 12, color: GRAY_LIGHT }}>{r.date}</span>
+                        </div>
+                        <span style={{ display: 'flex', gap: 2, marginBottom: 8 }}>
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star key={s} size={12} fill={s <= r.rating ? '#f59e0b' : '#e5e7eb'} color={s <= r.rating ? '#f59e0b' : '#e5e7eb'} />
+                          ))}
+                        </span>
+                        <p style={{ fontSize: 13, color: GRAY, lineHeight: 1.6 }}>{r.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div> */}
+
+            {/* FAQs Accordion */}
+            {/* <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff', marginTop: 12 }}>
+              <button onClick={() => setActiveTab(activeTab === 'faqs' ? ('' as any) : 'faqs')} style={{ width: '100%', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: activeTab === 'faqs' ? PINK_PALE : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>FAQs</span>
+                <ChevronRight size={18} style={{ color: PINK, transform: activeTab === 'faqs' ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+              </button>
+              {activeTab === 'faqs' && (
+                <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {mockFaqs.slice(0, 3).map((faq, i) => (
+                      <div key={i} onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)} style={{ background: openFaqIndex === i ? PINK_PALE : '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s' }}>
+                        <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: DARK, paddingRight: 16 }}>{faq.q}</p>
+                          <span style={{ color: PINK, fontSize: 16, fontWeight: 700, transform: openFaqIndex === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }}>+</span>
+                        </div>
+                        {openFaqIndex === i && (
+                          <div style={{ padding: '0 16px 16px', fontSize: 13, color: GRAY, lineHeight: 1.6 }}>{faq.a}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div> */}
           </div>
         </div>
 
