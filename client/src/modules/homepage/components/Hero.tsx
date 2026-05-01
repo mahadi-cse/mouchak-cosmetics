@@ -47,17 +47,18 @@ function parseStatValue(value: string): { prefix: string; num: number; suffix: s
 function useCountUp(target: number, duration: number, isActive: boolean) {
   const [count, setCount] = useState(0);
   const rafRef = useRef<number | null>(null);
-  const hasRun = useRef(false);
 
-  const animate = useCallback(() => {
-    if (hasRun.current) return;
-    hasRun.current = true;
+  useEffect(() => {
+    if (!isActive || target <= 0) {
+      if (target <= 0) setCount(0);
+      return;
+    }
 
     const start = performance.now();
     const step = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic for a smooth deceleration
+      // ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       setCount(eased * target);
 
@@ -67,15 +68,13 @@ function useCountUp(target: number, duration: number, isActive: boolean) {
         setCount(target);
       }
     };
-    rafRef.current = requestAnimationFrame(step);
-  }, [target, duration]);
 
-  useEffect(() => {
-    if (isActive) animate();
+    rafRef.current = requestAnimationFrame(step);
+
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [isActive, animate]);
+  }, [isActive, target, duration]);
 
   return count;
 }
@@ -168,16 +167,16 @@ export function Hero() {
         <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-pink-50/60 to-transparent blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-2 items-stretch gap-0 min-h-[420px] lg:min-h-[500px]">
+      <div className="relative mx-auto max-w-[1400px] flex flex-col lg:grid lg:grid-cols-2 items-stretch gap-0 h-[calc(100vh-140px)]">
         {/* Left Content */}
         <motion.div
-          className="flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-10 lg:py-14 order-last lg:order-first"
+          className="flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-4 lg:py-8 order-last lg:order-first"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
         >
           {/* Badges */}
-          <motion.div className="flex flex-wrap gap-2 mb-5" custom={0} variants={fadeUp}>
+          <motion.div className="flex flex-wrap gap-2 mb-4" custom={0} variants={fadeUp}>
             <span className="bg-zinc-900 text-white text-[10px] font-semibold px-3 py-1.5 rounded-full tracking-widest uppercase">
               {t.hero.badgeNew}
             </span>
@@ -190,7 +189,7 @@ export function Hero() {
 
           {/* Title */}
           <motion.h1
-            className="text-4xl sm:text-5xl lg:text-[3.5rem] font-light leading-[1.1] mb-2"
+            className="text-3xl sm:text-4xl lg:text-5xl font-light leading-[1.1] mb-2"
             custom={1}
             variants={fadeUp}
           >
@@ -205,7 +204,7 @@ export function Hero() {
 
           {/* Description */}
           <motion.p
-            className="text-zinc-500 text-sm sm:text-base leading-relaxed max-w-lg mb-6"
+            className="text-zinc-500 text-sm sm:text-base leading-relaxed max-w-lg mb-4"
             custom={2}
             variants={fadeUp}
           >
@@ -213,13 +212,13 @@ export function Hero() {
           </motion.p>
 
           {/* Stats */}
-          <div className="flex gap-6 sm:gap-8 mb-7">
+          <div className="flex gap-6 sm:gap-8 mb-5">
             {displayStats.map((item, i) => (
               <motion.div key={item.label} custom={i} variants={statPop} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-                <p className="text-primary text-2xl sm:text-3xl font-bold leading-none mb-1">
+                <p className="text-primary text-xl sm:text-2xl font-bold leading-none mb-1">
                   <AnimatedStat value={item.value} isLoading={isLoading} />
                 </p>
-                <p className="text-[11px] text-zinc-400 tracking-wider uppercase font-medium">
+                <p className="text-[10px] sm:text-[11px] text-zinc-400 tracking-wider uppercase font-medium">
                   {item.label}
                 </p>
               </motion.div>
@@ -227,7 +226,7 @@ export function Hero() {
           </div>
 
           {/* CTA Buttons */}
-          <motion.div className="flex flex-wrap gap-3 mb-5" custom={3} variants={fadeUp}>
+          <motion.div className="flex flex-wrap gap-3 mb-4" custom={3} variants={fadeUp}>
             <Link
               href="/categories"
               className="bg-primary text-white px-7 py-3 rounded-full font-semibold text-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_rgba(240,17,114,0.3)] hover:-translate-y-0.5 active:translate-y-0"
@@ -256,7 +255,7 @@ export function Hero() {
         </motion.div>
 
         {/* Right Image Section - Slider */}
-        <div className="relative order-first lg:order-last bg-gradient-to-br from-rose-100 via-rose-50 to-pink-50 flex items-center justify-center overflow-hidden min-h-[300px] lg:min-h-auto">
+        <div className="relative order-first lg:order-last bg-gradient-to-br from-rose-100 via-rose-50 to-pink-50 flex items-center justify-center overflow-hidden h-[45vh] lg:h-auto">
           {/* Offer Badge */}
           {isOfferActive && (
             <motion.div
