@@ -8,6 +8,7 @@ import { useAdjustStockMutation, useInventorySummary } from '@/modules/inventory
 import { useListBranches } from '@/modules/branches';
 import { useListProducts } from '@/modules/products';
 import toast from 'react-hot-toast';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 interface InventoryViewProps {
   products: any[];
@@ -21,6 +22,7 @@ export default function InventoryView({
   sellLog,
 }: InventoryViewProps) {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b) => b.active);
   const [selectedBranch, setSelectedBranch] = useState('');
@@ -62,15 +64,15 @@ export default function InventoryView({
   const normalizeInventoryRows = (rows: any[]) =>
     rows.map((item: any) => ({
       id: item.productId || item.product?.id,
-      name: item.product?.name || 'Unknown Product',
-      sku: item.product?.sku || 'N/A',
+      name: item.product?.name || t.unknownProduct,
+      sku: item.product?.sku || t.na,
       stock: item.availableQty ?? item.quantity ?? 0,
       branchId: resolveBranchId(item),
-      warehouse: item.warehouse || 'N/A',
+      warehouse: item.warehouse || t.na,
       status: 'active',
-      batchName: item.batchName || 'N/A',
-      manufactureDate: item.manufactureDate ? new Date(item.manufactureDate).toLocaleDateString() : 'N/A',
-      expiryDate: item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A',
+      batchName: item.batchName || t.na,
+      manufactureDate: item.manufactureDate ? new Date(item.manufactureDate).toLocaleDateString() : t.na,
+      expiryDate: item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : t.na,
       rawMfgDate: item.manufactureDate || '',
       rawExpDate: item.expiryDate || '',
     }));
@@ -78,15 +80,15 @@ export default function InventoryView({
   const allProducts = normalizeInventoryRows(allInventoryData);
   const branchProducts = branchInventoryData.map((item: any) => ({
     id: item.productId || item.product?.id,
-    name: item.product?.name || 'Unknown Product',
-    sku: item.product?.sku || 'N/A',
+    name: item.product?.name || t.unknownProduct,
+    sku: item.product?.sku || t.na,
     stock: item.availableQty ?? item.quantity ?? 0,
     branchId: resolveBranchId(item),
-    warehouse: item.warehouse || 'N/A',
+    warehouse: item.warehouse || t.na,
     status: 'active',
-    batchName: item.batchName || 'N/A',
-    manufactureDate: item.manufactureDate ? new Date(item.manufactureDate).toLocaleDateString() : 'N/A',
-    expiryDate: item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A',
+    batchName: item.batchName || t.na,
+    manufactureDate: item.manufactureDate ? new Date(item.manufactureDate).toLocaleDateString() : t.na,
+    expiryDate: item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : t.na,
     rawMfgDate: item.manufactureDate || '',
     rawExpDate: item.expiryDate || '',
   }));
@@ -114,9 +116,9 @@ export default function InventoryView({
   };
 
   const getStatusLabel = (stock: number) => {
-    if (stock === 0) return 'Out of stock';
-    if (stock <= 10) return 'Low';
-    return 'Healthy';
+    if (stock === 0) return t.inventory.outOfStock;
+    if (stock <= 10) return t.inventory.lowStock;
+    return t.inventory.filterHealthy;
   };
 
   const getStatusColor = (status: string) => {
@@ -156,11 +158,11 @@ export default function InventoryView({
 
   const handleFormSubmit = async () => {
     if (!formBranchId) {
-      toast.error('Please select a branch first');
+      toast.error(t.inventory.pleaseSelectBranch);
       return;
     }
     if (!formProductId) {
-      toast.error('Please search and select a product first');
+      toast.error(t.inventory.pleaseSelectProduct);
       return;
     }
 
@@ -195,7 +197,7 @@ export default function InventoryView({
             }
           : {}),
       });
-      toast.success('Stock updated successfully');
+      toast.success(t.inventory.stockUpdated);
       setFormStockValue('');
       setBatchName('');
       setMfgDate('');
@@ -203,7 +205,7 @@ export default function InventoryView({
       setFormSizeName('');
       setModalOpen(false);
     } catch {
-      toast.error('Failed to update stock');
+      toast.error(t.inventory.failedUpdate);
     }
   };
 
@@ -262,23 +264,23 @@ export default function InventoryView({
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="text-[18px] font-semibold" style={{ color: Theme.fg }}>
-            Inventory Management
+            {t.inventory.title}
           </div>
           <div className="mt-1 text-[13px]" style={{ color: Theme.mutedFg }}>
             {(selectedBranch
               ? branches.find((b) => b.id === Number(selectedBranch))?.name
-              : 'All Branches') || 'N/A'}{' '}
-            · Live stock synced from inventory API
+              : t.inventory.allBranches) || t.na}{' '}
+            · {t.inventory.synced}
           </div>
         </div>
 
         {/* Summary Stats */}
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4 2xl:gap-3 w-full lg:w-auto">
           {[
-            { label: 'Total SKUs', val: summaryStats.totalSkus, color: '' },
-            { label: 'Total units', val: summaryStats.totalUnits, color: '' },
-            { label: 'Low stock', val: summaryStats.lowStockCount, color: '#854F0B' },
-            { label: 'Out of stock', val: summaryStats.outOfStockCount, color: '#A32D2D' },
+            { label: t.inventory.totalSkus, val: summaryStats.totalSkus, color: '' },
+            { label: t.inventory.totalUnits, val: summaryStats.totalUnits, color: '' },
+            { label: t.inventory.lowStock, val: summaryStats.lowStockCount, color: '#854F0B' },
+            { label: t.inventory.outOfStock, val: summaryStats.outOfStockCount, color: '#A32D2D' },
           ].map((stat, i) => (
             <div
               key={i}
@@ -301,7 +303,7 @@ export default function InventoryView({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <input
             type="text"
-            placeholder="Search products or SKU…"
+            placeholder={t.inventory.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 min-w-[180px] rounded-lg border px-3 py-2 text-sm outline-none"
@@ -319,7 +321,7 @@ export default function InventoryView({
                 color: activeFilter === filter ? '#fff' : Theme.mutedFg,
               }}
             >
-              {filter === 'all' ? 'All' : filter === 'ok' ? 'Healthy' : filter === 'low' ? 'Low' : 'Out'}
+              {filter === 'all' ? t.inventory.filterAll : filter === 'ok' ? t.inventory.filterHealthy : filter === 'low' ? t.inventory.filterLow : t.inventory.filterOut}
             </button>
           ))}
 
@@ -329,7 +331,7 @@ export default function InventoryView({
             className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
             style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
           >
-            <option value="">All Branches</option>
+            <option value="">{t.inventory.allBranches}</option>
             {activeBranches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -338,14 +340,14 @@ export default function InventoryView({
           </select>
 
           <Btn onClick={openAddModal}>
-            + Add Stock
+            {t.inventory.addStock}
           </Btn>
         </div>
 
         {/* Table */}
         {filteredProducts.length === 0 ? (
           <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-            No products match your filter.
+            {t.inventory.noProducts}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -365,7 +367,7 @@ export default function InventoryView({
                       width: '40%',
                     }}
                   >
-                    Product
+                    {t.inventory.product}
                   </th>
                   <th
                     className='hidden md:table-cell'
@@ -381,7 +383,7 @@ export default function InventoryView({
                       width: '12%',
                     }}
                   >
-                    Stock
+                    {t.inventory.stock}
                   </th>
                   <th
                     className='hidden md:table-cell'
@@ -397,7 +399,7 @@ export default function InventoryView({
                       width: '14%',
                     }}
                   >
-                    Status
+                    {t.inventory.status}
                   </th>
                   <th
                     className='hidden lg:table-cell'
@@ -413,7 +415,7 @@ export default function InventoryView({
                       width: '14%',
                     }}
                   >
-                    Batch / Exp
+                    {t.inventory.batchExp}
                   </th>
                   <th
                     style={{
@@ -524,7 +526,7 @@ export default function InventoryView({
                             setShowProductDropdown(false);
                             setFormMode('set');
                             setFormStockValue(String(p.stock ?? 0));
-                            setBatchName(p.batchName !== 'N/A' ? p.batchName : '');
+                            setBatchName(p.batchName !== t.na ? p.batchName : '');
                             setMfgDate(p.rawMfgDate ? p.rawMfgDate.split('T')[0] : '');
                             setExpDate(p.rawExpDate ? p.rawExpDate.split('T')[0] : '');
                             setModalOpen(true);
@@ -536,7 +538,7 @@ export default function InventoryView({
                             color: Theme.fg,
                           }}
                         >
-                          Edit
+                          {t.inventory.edit}
                         </button>
                       </td>
                     </tr>
@@ -549,7 +551,7 @@ export default function InventoryView({
 
         {/* Count */}
         <div style={{ fontSize: '11px', color: Theme.mutedFg, marginTop: '10px' }}>
-          {filteredProducts.length} of {branchProducts.length} products
+          {filteredProducts.length} {t.inventory.of} {branchProducts.length} {t.inventory.products}
         </div>
       </Card>
 
@@ -567,10 +569,10 @@ export default function InventoryView({
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <div className="text-lg font-extrabold" style={{ color: Theme.fg }}>
-                    Add or Edit Stock
+                    {t.inventory.addEditStock}
                   </div>
                   <div className="mt-0.5 text-xs" style={{ color: Theme.mutedFg }}>
-                    Update inventory for a product & branch
+                    {t.inventory.updateInventory}
                   </div>
                 </div>
                 <button
@@ -588,7 +590,7 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    Search Product
+                    {t.inventory.searchProduct}
                   </label>
                   <div className="relative" ref={productSearchRef}>
                     <input
@@ -602,7 +604,7 @@ export default function InventoryView({
                         if (formBranchId) setShowProductDropdown(true);
                       }}
                       disabled={!formBranchId}
-                      placeholder={formBranchId ? 'Search by product name or SKU...' : 'Select branch first'}
+                      placeholder={formBranchId ? t.inventory.searchProductOrSku : t.inventory.selectBranchFirst}
                       className="w-full rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
                       style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
                     />
@@ -614,7 +616,7 @@ export default function InventoryView({
                       >
                         {searchableModalProducts.length === 0 ? (
                           <div className="px-3 py-2 text-xs" style={{ color: Theme.mutedFg }}>
-                            No products found for this branch.
+                            {t.inventory.noProductsForBranch}
                           </div>
                         ) : (
                           searchableModalProducts.map((p: any) => (
@@ -630,7 +632,7 @@ export default function InventoryView({
                               style={{ background: '#fff', color: Theme.fg }}
                             >
                               <div className="font-semibold">{p.name}</div>
-                              <div className="text-[11px]" style={{ color: Theme.mutedFg }}>SKU: {p.sku}</div>
+                              <div className="text-[11px]" style={{ color: Theme.mutedFg }}>{t.modal.sku}: {p.sku}</div>
                             </button>
                           ))
                         )}
@@ -643,7 +645,7 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    Select Branch
+                    {t.inventory.selectBranch}
                   </label>
                   <select
                     value={formBranchId}
@@ -657,7 +659,7 @@ export default function InventoryView({
                     className="w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
                     style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
                   >
-                    <option value="">Select Branch</option>
+                    <option value="">{t.inventory.selectBranch}</option>
                     {activeBranches.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.name}
@@ -673,7 +675,7 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    Mode
+                    {t.inventory.mode}
                   </label>
                   <div className="flex gap-1 rounded-lg p-[3px]" style={{ background: Theme.muted }}>
                     {(['set', 'add'] as const).map((mode) => (
@@ -687,7 +689,7 @@ export default function InventoryView({
                           boxShadow: formMode === mode ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                         }}
                       >
-                        {mode === 'set' ? '🔢 Set Stock' : '➕ Add to Stock'}
+                        {mode === 'set' ? `🔢 ${t.inventory.setStock}` : `➕ ${t.inventory.addToStock}`}
                       </button>
                     ))}
                   </div>
@@ -698,7 +700,7 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    {formMode === 'set' ? 'New Stock' : 'Add Quantity'}
+                    {formMode === 'set' ? t.inventory.newStock : t.inventory.addQuantity}
                   </label>
                   <input
                     type="number"
@@ -715,7 +717,7 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    Current Stock
+                    {t.inventory.currentStock}
                   </label>
                   <div
                     className="rounded-lg px-3 py-2.5 text-[13px] font-bold"
@@ -741,7 +743,7 @@ export default function InventoryView({
                       className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                       style={{ color: Theme.mutedFg }}
                     >
-                      Size *
+                      {t.inventory.size}
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {sizes.map((s: any) => (
@@ -770,7 +772,7 @@ export default function InventoryView({
                 if (!meta) return null;
                 return (
                   <div className="mt-2 text-xs" style={{ color: Theme.mutedFg }}>
-                    Unit: <span className="font-semibold">{(meta as any).unitType === 'WEIGHT' ? '⚖️' : '📦'} {(meta as any).unitLabel}</span>
+                    {t.inventory.unit} <span className="font-semibold">{(meta as any).unitType === 'WEIGHT' ? '⚖️' : '📦'} {(meta as any).unitLabel}</span>
                   </div>
                 );
               })()}
@@ -779,7 +781,7 @@ export default function InventoryView({
                 <div className={`mt-3 grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
                   <div className={isMobile ? '' : 'col-span-3'}>
                     <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]" style={{ color: Theme.mutedFg }}>
-                      Batch Name
+                      {t.inventory.batchName}
                     </label>
                     <input
                       value={batchName}
@@ -791,7 +793,7 @@ export default function InventoryView({
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]" style={{ color: Theme.mutedFg }}>
-                      Manufacture Date
+                      {t.inventory.mfgDate}
                     </label>
                     <input
                       type="date"
@@ -803,7 +805,7 @@ export default function InventoryView({
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]" style={{ color: Theme.mutedFg }}>
-                      Expire Date
+                      {t.inventory.expDate}
                     </label>
                     <input
                       type="date"
@@ -817,7 +819,7 @@ export default function InventoryView({
               )}
 
               <Btn onClick={handleFormSubmit} className="mt-3.5 w-full" disabled={adjustStockMutation.isPending}>
-                ✓ {formMode === 'set' ? 'Set Stock' : 'Add to Stock'}
+                ✓ {formMode === 'set' ? t.inventory.setStock : t.inventory.addToStock}
               </Btn>
             </Card>
           </div>
@@ -826,7 +828,7 @@ export default function InventoryView({
 
       {/* Recent Manual Sales */}
       <Card>
-        <SecHead title="📋 Recent Manual Sales" sub="Latest walk-in transactions" />
+        <SecHead title={t.inventory.recentManualSales} sub={t.inventory.latestTransactions} />
         {sellLog.slice(0, 5).map((log: any) => (
           <div
             key={log.id}
@@ -842,7 +844,7 @@ export default function InventoryView({
               </div>
             </div>
             <div className="text-right">
-              <div className="font-semibold">{log.qty} unit(s)</div>
+              <div className="font-semibold">{log.qty} {t.inventory.units}</div>
               <div className="text-xs" style={{ color: Theme.mutedFg }}>
                 ৳{log.amount}
               </div>

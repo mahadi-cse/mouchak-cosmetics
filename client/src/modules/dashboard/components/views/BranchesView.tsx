@@ -12,6 +12,7 @@ import {
   type BranchDTO,
 } from '@/modules/branches';
 import toast from 'react-hot-toast';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 type BranchFormState = {
   name: string;
@@ -39,6 +40,7 @@ const EMPTY_FORM: BranchFormState = {
 
 export default function BranchesView() {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const { data: dbBranches = [], isLoading } = useListBranches();
   const createBranchMutation = useCreateBranchMutation();
   const updateBranchMutation = useUpdateBranchMutation();
@@ -50,7 +52,7 @@ export default function BranchesView() {
   const branches = dbBranches.map((b) => ({
     ...b,
     hq: b.branchType === 'OFFICE',
-    manager: b.managerName || 'N/A',
+    manager: b.managerName || t.na,
   }));
 
   const resetForm = () => {
@@ -81,7 +83,7 @@ export default function BranchesView() {
 
   const handleSubmit = async () => {
     if (!form.name.trim() || !form.branchCode.trim()) {
-      toast.error('Branch name and code are required');
+      toast.error(t.branches.branchNameReq);
       return;
     }
     try {
@@ -92,24 +94,24 @@ export default function BranchesView() {
       };
       if (editingBranch) {
         await updateBranchMutation.mutateAsync({ id: editingBranch.id, payload });
-        toast.success('Branch updated successfully');
+        toast.success(t.branches.branchUpdated);
       } else {
         await createBranchMutation.mutateAsync(payload);
-        toast.success('Branch created successfully');
+        toast.success(t.branches.branchCreated);
       }
       setModalOpen(false);
       resetForm();
     } catch {
-      toast.error('Failed to save branch');
+      toast.error(t.branches.failedSaveBranch);
     }
   };
 
   const toggleActive = async (branch: BranchDTO) => {
     try {
       await statusMutation.mutateAsync({ id: branch.id, isActive: !branch.active });
-      toast.success(branch.active ? 'Branch deactivated' : 'Branch activated');
+      toast.success(branch.active ? t.branches.branchDeactivated : t.branches.branchActivated);
     } catch {
-      toast.error('Failed to update branch status');
+      toast.error(t.branches.failedBranchStatus);
     }
   };
 
@@ -121,33 +123,33 @@ export default function BranchesView() {
             className={`font-extrabold ${isMobile ? 'text-[18px]' : 'text-[22px]'}`}
             style={{ color: Theme.fg }}
           >
-            Branch Management
+            {t.branches.branchManagement}
           </div>
           <div className="mt-0.5 text-[13px]" style={{ color: Theme.mutedFg }}>
-            {branches.filter((b) => b.active).length} active · {branches.length} total
+            {branches.filter((b) => b.active).length} {t.branches.active} · {branches.length} {t.branches.total}
           </div>
         </div>
         <Btn variant="primary" size="sm" onClick={openCreateModal}>
-          ＋ Add Branch
+          {t.branches.addBranch}
         </Btn>
       </div>
 
       <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-        <KpiCard label="Total Branches" value={branches.length} icon="🏪" accent="#fff0f6" />
+        <KpiCard label={t.branches.totalBranches} value={branches.length} icon="🏪" accent="#fff0f6" />
         <KpiCard
-          label="Active"
+          label={t.branches.activeBranch}
           value={branches.filter((b) => b.active).length}
           icon="✅"
           accent="#dcfce7"
         />
         <KpiCard
-          label="Combined Orders"
+          label={t.branches.combinedOrders}
           value={branches.reduce((a, b) => a + b.orders, 0).toLocaleString()}
           icon="📦"
           accent="#dbeafe"
         />
         <KpiCard
-          label="Combined Revenue"
+          label={t.branches.combinedRevenue}
           value={formatCurrency(branches.reduce((a, b) => a + b.revenue, 0))}
           icon="💰"
           accent="#fef9c3"
@@ -156,7 +158,7 @@ export default function BranchesView() {
 
       {isLoading && (
         <Card>
-          <div className="text-sm" style={{ color: Theme.mutedFg }}>Loading branches...</div>
+          <div className="text-sm" style={{ color: Theme.mutedFg }}>{t.branches.loadingBranches}</div>
         </Card>
       )}
 
@@ -171,7 +173,7 @@ export default function BranchesView() {
               <div className="mb-3 flex gap-1.5">
                 {b.hq && (
                   <span className="rounded-full bg-yellow-100 px-2.5 py-[3px] text-[10px] font-bold text-yellow-800">
-                    HQ
+                    {t.branches.hq}
                   </span>
                 )}
                 <span
@@ -181,7 +183,7 @@ export default function BranchesView() {
                     color: b.active ? '#166534' : '#991b1b',
                   }}
                 >
-                  {b.active ? 'Active' : 'Inactive'}
+                  {b.active ? t.branches.activeBranch : t.branches.inactiveBranch}
                 </span>
               </div>
 
@@ -189,14 +191,14 @@ export default function BranchesView() {
                 {b.name}
               </div>
               <div className="mb-3 text-xs" style={{ color: Theme.mutedFg }}>
-                📍 {b.city || 'N/A'} · 👤 {b.manager}
+                📍 {b.city || t.na} · 👤 {b.manager}
               </div>
 
               <div className="mb-3.5 grid grid-cols-3 gap-2">
                 {[
-                  ['Orders', b.orders, '#dbeafe'],
-                  ['Stock', `${b.stock}u`, '#dcfce7'],
-                  ['Revenue', formatCurrency(b.revenue), '#fff0f6'],
+                  [t.branches.orders, b.orders, '#dbeafe'],
+                  [t.branches.stock, `${b.stock}u`, '#dcfce7'],
+                  [t.branches.revenue, formatCurrency(b.revenue), '#fff0f6'],
                 ].map(([label, value, bg]) => (
                   <div
                     key={label as string}
@@ -221,7 +223,7 @@ export default function BranchesView() {
                   className="mb-1 flex justify-between text-[11px]"
                   style={{ color: Theme.mutedFg }}
                 >
-                  <span>Revenue share</span>
+                  <span>{t.branches.revenueShare}</span>
                   <span>{revenueShare}%</span>
                 </div>
                 <div className="h-[5px] rounded-full" style={{ background: Theme.muted }}>
@@ -237,7 +239,7 @@ export default function BranchesView() {
 
               <div className="flex flex-wrap gap-2">
                 <Btn variant="secondary" size="sm" onClick={() => openEditModal(b as BranchDTO)}>
-                  Edit
+                  {t.inventory.edit}
                 </Btn>
                 <button
                   onClick={() => toggleActive(b as BranchDTO)}
@@ -247,7 +249,7 @@ export default function BranchesView() {
                       : 'border-green-600 text-green-600 hover:bg-green-50'
                   }`}
                 >
-                  {b.active ? 'Deactivate' : 'Activate'}
+                  {b.active ? t.products.deactivate : t.products.activate}
                 </button>
               </div>
             </Card>
@@ -261,7 +263,7 @@ export default function BranchesView() {
             <Card>
               <div className="mb-4 flex items-center justify-between">
                 <div className="text-lg font-extrabold" style={{ color: Theme.fg }}>
-                  {editingBranch ? 'Edit Branch' : 'Add Branch'}
+                  {editingBranch ? t.branches.editBranch : t.branches.newBranch}
                 </div>
                 <button className="border-0 bg-transparent text-xl" onClick={() => setModalOpen(false)} style={{ color: Theme.mutedFg }}>
                   ✕
@@ -269,26 +271,26 @@ export default function BranchesView() {
               </div>
 
               <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Branch name" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.branchCode} onChange={(e) => setForm((p) => ({ ...p, branchCode: e.target.value }))} placeholder="Branch code" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder={t.branches.branchNamePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.branchCode} onChange={(e) => setForm((p) => ({ ...p, branchCode: e.target.value }))} placeholder={t.branches.branchCodePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
                 <select value={form.branchType} onChange={(e) => setForm((p) => ({ ...p, branchType: e.target.value as BranchFormState['branchType'] }))} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }}>
-                  <option value="WAREHOUSE">Warehouse</option>
-                  <option value="RETAIL">Retail</option>
-                  <option value="OFFICE">Office</option>
-                  <option value="DISTRIBUTION">Distribution</option>
+                  <option value="WAREHOUSE">{t.branches.warehouse}</option>
+                  <option value="RETAIL">{t.branches.retail}</option>
+                  <option value="OFFICE">{t.branches.office}</option>
+                  <option value="DISTRIBUTION">{t.branches.distribution}</option>
                 </select>
-                <input value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} placeholder="City" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.managerName} onChange={(e) => setForm((p) => ({ ...p, managerName: e.target.value }))} placeholder="Manager name" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.managerPhone} onChange={(e) => setForm((p) => ({ ...p, managerPhone: e.target.value }))} placeholder="Manager phone" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Branch phone" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="Branch email" className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder="Address" className="col-span-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} placeholder={t.branches.city} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.managerName} onChange={(e) => setForm((p) => ({ ...p, managerName: e.target.value }))} placeholder={t.branches.managerName} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.managerPhone} onChange={(e) => setForm((p) => ({ ...p, managerPhone: e.target.value }))} placeholder={t.branches.managerPhone} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder={t.branches.branchPhone} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder={t.branches.branchEmail} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder={t.branches.address} className="col-span-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
               </div>
 
               <div className="mt-4 flex justify-end gap-2">
-                <Btn variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Btn>
+                <Btn variant="secondary" onClick={() => setModalOpen(false)}>{t.products.cancel}</Btn>
                 <Btn onClick={handleSubmit} disabled={createBranchMutation.isPending || updateBranchMutation.isPending}>
-                  {editingBranch ? 'Update Branch' : 'Create Branch'}
+                  {editingBranch ? t.branches.updateBranch : t.branches.createBranchBtn}
                 </Btn>
               </div>
             </Card>

@@ -5,6 +5,7 @@ import { Theme, formatCurrency } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Btn } from './Primitives';
 import { Product } from '@/modules/dashboard/data/mockData';
+import { useDashboardLocale } from '../locales/DashboardLocaleContext';
 
 interface ManualSaleModalProps {
   products: Product[];
@@ -14,6 +15,7 @@ interface ManualSaleModalProps {
 
 export default function ManualSaleModal({ products, onClose, onConfirm }: ManualSaleModalProps) {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const [selectedProductId, setSelectedProductId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -55,7 +57,7 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
   const handleConfirm = () => {
     if (selectedProduct && qty > 0 && !overStock) {
       onConfirm(selectedProduct, qty, '', total);
-      setLastSale(`✓ Sold ${qty} × ${selectedProduct.name}`);
+      setLastSale(`✓ ${t.sold} ${qty} × ${selectedProduct.name}`);
       setSelectedProductId('');
       setSearchQuery('');
       setSalePrice(0);
@@ -87,7 +89,7 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
         >
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: Theme.fg }}>
-              Record Sale
+              {t.modal.recordSale}
             </div>
           </div>
           <button
@@ -112,11 +114,11 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
         <div className="flex flex-col gap-[10px] px-4 py-3">
           {/* Product Selection with Search */}
           <div className="relative">
-            <label className="mb-1 block" style={lbl}>Product *</label>
+            <label className="mb-1 block" style={lbl}>{t.modal.product} *</label>
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search product name or SKU..."
+                placeholder={t.modal.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -161,16 +163,16 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
                       >
                         <div>
                           <div style={{ fontWeight: 600 }}>{p.name}</div>
-                          <div style={{ fontSize: 10, color: Theme.mutedFg }}>SKU: {p.sku}</div>
+                          <div style={{ fontSize: 10, color: Theme.mutedFg }}>{t.modal.sku}: {p.sku}</div>
                         </div>
                         <div className="ml-2 text-[11px]" style={{ color: Theme.mutedFg }}>
-                          {p.stock} in stock
+                          {p.stock} {t.modal.inStock}
                         </div>
                       </button>
                     ))
                   ) : (
                     <div className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>
-                      No products found
+                      {t.modal.noProductsFound}
                     </div>
                   )}
                 </div>
@@ -182,7 +184,7 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
           <div className="flex flex-col gap-[10px]">
             {/* Quantity */}
             <div>
-              <label className="mb-1 block" style={lbl}>Quantity *</label>
+              <label className="mb-1 block" style={lbl}>{t.modal.quantity} *</label>
               <div className="flex items-center gap-1.5">
                 <button
                   disabled={!selectedProduct}
@@ -227,14 +229,14 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
                   +
                 </button>
                 <span className="text-[11px]" style={{ color: Theme.mutedFg }}>
-                  {selectedProduct ? `Max: ${selectedProduct.stock}` : ''}
+                  {selectedProduct ? `${t.modal.max}: ${selectedProduct.stock}` : ''}
                 </span>
               </div>
             </div>
 
             {/* Sale Price */}
             <div>
-              <label className="mb-1 block" style={lbl}>Sale Price (৳)</label>
+              <label className="mb-1 block" style={lbl}>{t.modal.salePrice}</label>
               <input
                 type="number"
                 disabled={!selectedProduct}
@@ -245,7 +247,7 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
                 style={{ ...inp, background: '#fff', opacity: selectedProduct ? 1 : 0.5 }}
               />
               <div className="mt-0.5 text-[9px]" style={{ color: Theme.mutedFg }}>
-                {salePrice > 0 ? '✎ Custom' : selectedProduct ? 'Default' : '—'}
+                {salePrice > 0 ? `✎ ${t.modal.customPrice}` : selectedProduct ? t.modal.defaultPrice : '—'}
               </div>
             </div>
           </div>
@@ -260,20 +262,20 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
             }}
           >
             <div className="mb-1 flex justify-between text-[11px]" style={{ color: Theme.mutedFg }}>
-              <span>Unit Price</span>
+              <span>{t.modal.unitPrice}</span>
               <span style={{ fontWeight: 600, color: Theme.fg }}>
                 {selectedProduct ? formatCurrency(basePrice) : '—'}
               </span>
             </div>
             <div className="mb-1 flex justify-between text-[11px]" style={{ color: Theme.mutedFg }}>
-              <span>Quantity</span>
+              <span>{t.modal.quantity}</span>
               <span style={{ fontWeight: 600, color: Theme.fg }}>
                 {selectedProduct ? qty : '—'}
               </span>
             </div>
             <div className="my-1.5 h-px" style={{ background: Theme.border }} />
             <div className="flex justify-between text-sm font-bold">
-              <span>Total</span>
+              <span>{t.modal.total}</span>
               <span style={{ color: Theme.primary }}>
                 {selectedProduct ? formatCurrency(total) : '—'}
               </span>
@@ -282,7 +284,7 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
 
           {selectedProduct && overStock && (
             <div className="rounded-md bg-[#fee2e2] px-[10px] py-1.5 text-[11px] font-semibold text-[#991b1b]">
-              ⚠ Max: {selectedProduct.stock}
+              ⚠ {t.modal.maxWarning}: {selectedProduct.stock}
             </div>
           )}
         </div>
@@ -293,14 +295,14 @@ export default function ManualSaleModal({ products, onClose, onConfirm }: Manual
           style={{ borderTop: `1px solid ${Theme.border}` }}
         >
           <Btn variant="ghost" onClick={onClose}>
-            Close
+            {t.modal.close}
           </Btn>
           <Btn
             variant="primary"
             disabled={!selectedProduct || qty < 1 || overStock}
             onClick={handleConfirm}
           >
-            Record ({formatCurrency(total)})
+            {t.modal.record} ({formatCurrency(total)})
           </Btn>
         </div>
       </div>

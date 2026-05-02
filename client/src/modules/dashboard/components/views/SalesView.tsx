@@ -11,6 +11,7 @@ import { useListBranches } from '@/modules/branches';
 import { useListProducts } from '@/modules/products';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 interface SalesViewProps {
   products: Product[];
@@ -38,6 +39,7 @@ export default function SalesView({
   products,
 }: SalesViewProps) {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const { data: session } = useSession();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b) => b.active);
@@ -73,12 +75,12 @@ export default function SalesView({
 
   const branchProducts: Product[] = branchInventoryData.map((item: any) => ({
     id: item.productId || item.product?.id,
-    name: item.product?.name || 'Unknown Product',
-    sku: item.product?.sku || 'N/A',
-    category: 'Uncategorized',
+    name: item.product?.name || t.unknownProduct,
+    sku: item.product?.sku || t.na,
+    category: t.uncategorized,
     price: Number(item.product?.price ?? 0),
     stock: Number(item.availableQty ?? item.quantity ?? 0),
-    warehouse: item.warehouse || 'N/A',
+    warehouse: item.warehouse || t.na,
     sold: 0,
     manualSold: 0,
     status: 'active',
@@ -190,10 +192,10 @@ export default function SalesView({
     if (lineItems.length > 0 && !hasInvalidLine) {
       try {
         await createManualSaleMutation.mutateAsync({
-          soldBy: session?.user?.name || session?.user?.email || 'Staff',
-          note: 'Manual Sale',
+          soldBy: session?.user?.name || session?.user?.email || t.sales.staff,
+          note: t.manualSale,
           branchId: Number(saleBranchId),
-          branchName: activeBranches.find((b) => b.id === Number(saleBranchId))?.name || 'Main',
+          branchName: activeBranches.find((b) => b.id === Number(saleBranchId))?.name || t.sales.main,
           items: lineItems.map((item) => ({
             productId: item.productId,
             quantity: item.qty,
@@ -201,11 +203,11 @@ export default function SalesView({
             ...(item.sizeName ? { sizeName: item.sizeName } : {}),
           })),
         });
-        toast.success(`Recorded ${lineItems.length} product(s), ${totalQty} qty total`);
+        toast.success(`${t.sales.recorded} ${lineItems.length} ${t.inventory.product}(s), ${totalQty} ${t.sales.qty} ${t.modal.total.toLowerCase()}`);
         setSearchQuery('');
         setLineItems([]);
       } catch {
-        toast.error('Failed to record sale. Please try again.');
+        toast.error(t.sales.failedRecord);
       }
     }
   };
@@ -246,11 +248,11 @@ export default function SalesView({
           {/* Header + Branch selector on same row */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>Add New Sale</div>
-              <div className="text-[12px]" style={{ color: Theme.mutedFg }}>Record a manual sales transaction</div>
+              <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>{t.sales.addNewSale}</div>
+              <div className="text-[12px]" style={{ color: Theme.mutedFg }}>{t.sales.recordManualTx}</div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <label className="text-xs font-semibold whitespace-nowrap" style={{ color: Theme.mutedFg }}>Branch</label>
+              <label className="text-xs font-semibold whitespace-nowrap" style={{ color: Theme.mutedFg }}>{t.sales.branch}</label>
               <select
                 value={saleBranchId}
                 onChange={(e) => setSaleBranchId(e.target.value)}
@@ -269,7 +271,7 @@ export default function SalesView({
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search product name or SKU..."
+                placeholder={t.sales.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -306,16 +308,16 @@ export default function SalesView({
                       >
                         <div>
                           <div className="font-semibold">{p.name}</div>
-                          <div className="text-xs" style={{ color: Theme.mutedFg }}>SKU: {p.sku}</div>
+                          <div className="text-xs" style={{ color: Theme.mutedFg }}>{t.modal.sku}: {p.sku}</div>
                         </div>
                         <div className="text-xs ml-2" style={{ color: Theme.mutedFg }}>
-                          Stock: {p.stock}
+                          {t.inventory.stock}: {p.stock}
                         </div>
                       </button>
                     ))
                   ) : (
                     <div className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>
-                      No products found in this branch
+                      {t.sales.noProductsBranch}
                     </div>
                   )}
                 </div>
@@ -327,10 +329,10 @@ export default function SalesView({
           <div className="rounded-xl border overflow-hidden bg-white" style={{ borderColor: Theme.border }}>
             {!isMobile && (
               <div className="grid grid-cols-12 gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wide bg-gray-50" style={{ color: Theme.mutedFg }}>
-                <div className="col-span-4">Product</div>
-                <div className="col-span-3 text-center">Qty</div>
-                <div className="col-span-2 text-right">Unit Price</div>
-                <div className="col-span-2 text-right">Line Total</div>
+                <div className="col-span-4">{t.sales.product}</div>
+                <div className="col-span-3 text-center">{t.sales.qty}</div>
+                <div className="col-span-2 text-right">{t.sales.unitPrice}</div>
+                <div className="col-span-2 text-right">{t.sales.lineTotal}</div>
                 <div className="col-span-1 text-right"> </div>
               </div>
             )}
@@ -388,7 +390,7 @@ export default function SalesView({
                       <div className="grid grid-cols-2 gap-2 mt-2.5">
                         <div>
                           <div className="text-[10px] mb-1 font-semibold uppercase tracking-wide" style={{ color: Theme.mutedFg }}>
-                            Qty
+                            {t.sales.qty}
                           </div>
                           <div className="inline-flex items-center rounded-lg border bg-white overflow-hidden" style={{ borderColor: Theme.border }}>
                             <button
@@ -423,7 +425,7 @@ export default function SalesView({
 
                         <div>
                           <div className="text-[10px] mb-1 font-semibold uppercase tracking-wide text-right" style={{ color: Theme.mutedFg }}>
-                            Unit Price
+                            {t.sales.unitPrice}
                           </div>
                           <input
                             type="number"
@@ -437,7 +439,7 @@ export default function SalesView({
                       </div>
 
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-[11px] font-semibold" style={{ color: Theme.mutedFg }}>Line Total</span>
+                        <span className="text-[11px] font-semibold" style={{ color: Theme.mutedFg }}>{t.sales.lineTotal}</span>
                         <span className="text-sm font-bold" style={{ color: Theme.primary }}>
                           {formatCurrency(item.total)}
                         </span>
@@ -539,7 +541,7 @@ export default function SalesView({
               })
             ) : (
               <div className="px-3 py-5 text-center text-xs" style={{ color: Theme.mutedFg }}>
-                No products added yet — search above to add items.
+                {t.sales.noProductsAdded}
               </div>
             )}
           </div>
@@ -547,12 +549,12 @@ export default function SalesView({
           {/* Footer Row */}
           <div className={`pt-1 ${isMobile ? 'space-y-1.5' : 'flex items-center justify-between'}`}>
             <div className="text-xs" style={{ color: Theme.mutedFg }}>
-              <span className="font-semibold">Total items: {totalItems}</span>
+              <span className="font-semibold">{t.sales.totalItems}: {totalItems}</span>
               <span className="mx-2">•</span>
-              <span className="font-semibold">Total qty: {totalQty}</span>
+              <span className="font-semibold">{t.sales.totalQty}: {totalQty}</span>
             </div>
             <div className="text-sm font-black" style={{ color: Theme.primary }}>
-              Grand Total: {formatCurrency(grandTotal)}
+              {t.sales.grandTotal}: {formatCurrency(grandTotal)}
             </div>
           </div>
 
@@ -567,7 +569,7 @@ export default function SalesView({
               }}
               className={isMobile ? 'w-full' : ''}
             >
-              Reset
+              {t.sales.reset}
             </Btn>
             <Btn
               variant="primary"
@@ -575,7 +577,7 @@ export default function SalesView({
               onClick={handleConfirm}
               className={isMobile ? 'w-full' : ''}
             >
-              {createManualSaleMutation.isPending ? 'Recording...' : `Record Sale · ${formatCurrency(grandTotal)}`}
+              {createManualSaleMutation.isPending ? t.sales.recording : `${t.sales.recordSale} · ${formatCurrency(grandTotal)}`}
             </Btn>
           </div>
         </div>
@@ -584,8 +586,8 @@ export default function SalesView({
       {/* Sales History */}
       <Card>
         <SecHead 
-          title="Sales History" 
-          sub={`Total sales: ${historyMeta?.total ?? 0}`}
+          title={t.sales.salesHistory} 
+          sub={`${t.sales.totalSales}: ${historyMeta?.total ?? 0}`}
         />
         
         <div className="p-3.5">
@@ -593,7 +595,7 @@ export default function SalesView({
           <div className="mb-3 grid gap-2 md:grid-cols-3">
             <input
               type="text"
-              placeholder="Search by product or staff..."
+              placeholder={t.sales.searchHistory}
               value={searchLog}
               onChange={(e) => {
                 setSearchLog(e.target.value);
@@ -615,10 +617,10 @@ export default function SalesView({
               className="w-full px-3 py-2 border rounded text-xs outline-none"
               style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
             >
-              <option value="createdAt">Sort: Date</option>
-              <option value="saleNumber">Sort: Sale ID</option>
-              <option value="totalQty">Sort: Quantity</option>
-              <option value="totalAmount">Sort: Amount</option>
+              <option value="createdAt">{t.sales.sortDate}</option>
+              <option value="saleNumber">{t.sales.sortSaleId}</option>
+              <option value="totalQty">{t.sales.sortQty}</option>
+              <option value="totalAmount">{t.sales.sortAmount}</option>
             </select>
             <div className="flex gap-2">
               <select
@@ -630,8 +632,8 @@ export default function SalesView({
                 className="w-1/2 px-3 py-2 border rounded text-xs outline-none"
                 style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
               >
-                <option value="desc">Desc</option>
-                <option value="asc">Asc</option>
+                <option value="desc">{t.sales.desc}</option>
+                <option value="asc">{t.sales.asc}</option>
               </select>
               <select
                 value={historyLimit}
@@ -642,8 +644,8 @@ export default function SalesView({
                 className="w-1/2 px-3 py-2 border rounded text-xs outline-none"
                 style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
               >
-                <option value={10}>10 / page</option>
-                <option value={20}>20 / page</option>
+                <option value={10}>10 {t.sales.perPage}</option>
+                <option value={20}>20 {t.sales.perPage}</option>
               </select>
             </div>
           </div>
@@ -653,20 +655,20 @@ export default function SalesView({
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr className="border-b-2" style={{ borderColor: Theme.border }}>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>Sale ID</th>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>Product</th>
-                  <th className="px-2 py-2 font-bold text-center" style={{ color: Theme.mutedFg }}>Qty</th>
-                  <th className="px-2 py-2 font-bold text-right" style={{ color: Theme.mutedFg }}>Amount</th>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>Date</th>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>Branch</th>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>By</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.saleId}</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.product}</th>
+                  <th className="px-2 py-2 font-bold text-center" style={{ color: Theme.mutedFg }}>{t.sales.qty}</th>
+                  <th className="px-2 py-2 font-bold text-right" style={{ color: Theme.mutedFg }}>{t.sales.amount}</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.date}</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.branch}</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.by}</th>
                 </tr>
               </thead>
               <tbody>
                 {manualSalesQuery.isLoading ? (
                   <tr>
                     <td colSpan={6} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>
-                      Loading sales...
+                      {t.sales.loadingSales}
                     </td>
                   </tr>
                 ) : historyRows.length > 0 ? (
@@ -681,8 +683,8 @@ export default function SalesView({
                       </td>
                       <td className="px-2 py-2.5" style={{ color: Theme.fg }}>
                         {sale.items?.length > 1
-                          ? `${sale.items[0]?.productNameSnapshot || 'Sale Item'} +${sale.items.length - 1} more`
-                          : sale.items?.[0]?.productNameSnapshot || 'Sale Item'}
+                          ? `${sale.items[0]?.productNameSnapshot || t.sales.saleItem} +${sale.items.length - 1} ${t.sales.more}`
+                          : sale.items?.[0]?.productNameSnapshot || t.sales.saleItem}
                       </td>
                       <td className="px-2 py-2.5 text-center font-semibold" style={{ color: Theme.fg }}>
                         {sale.totalQty}
@@ -694,17 +696,17 @@ export default function SalesView({
                         {new Date(sale.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-2 py-2.5" style={{ color: Theme.mutedFg }}>
-                        {sale.branchName || 'Main'}
+                        {sale.branchName || t.sales.main}
                       </td>
                       <td className="px-2 py-2.5" style={{ color: Theme.mutedFg }}>
-                        {sale.soldBy || 'Staff'}
+                        {sale.soldBy || t.sales.staff}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan={7} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>
-                      {searchLog ? 'No sales found matching your search' : 'No sales recorded yet'}
+                      {searchLog ? t.sales.noSalesMatch : t.sales.noSalesYet}
                     </td>
                   </tr>
                 )}
@@ -718,17 +720,17 @@ export default function SalesView({
               disabled={historyPage <= 1 || manualSalesQuery.isFetching}
               onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
             >
-              Prev
+              {t.sales.prev}
             </Btn>
             <span className="text-xs" style={{ color: Theme.mutedFg }}>
-              Page {historyMeta?.page || historyPage} / {historyMeta?.pages || 1}
+              {t.sales.page} {historyMeta?.page || historyPage} / {historyMeta?.pages || 1}
             </span>
             <Btn
               variant="ghost"
               disabled={!!historyMeta && historyPage >= historyMeta.pages || manualSalesQuery.isFetching}
               onClick={() => setHistoryPage((p) => p + 1)}
             >
-              Next
+              {t.sales.next}
             </Btn>
           </div>
         </div>

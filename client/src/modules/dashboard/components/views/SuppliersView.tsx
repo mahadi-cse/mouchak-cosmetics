@@ -11,11 +11,13 @@ import { useListBranches } from '@/modules/branches';
 import { useSession } from 'next-auth/react';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import toast from 'react-hot-toast';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 interface TxnLineItem { productId: number; name: string; sku: string; qty: number; unitPrice: number; total: number; }
 
 export default function SuppliersView() {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const { data: session } = useSession();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b: any) => b.active);
@@ -64,25 +66,25 @@ export default function SuppliersView() {
   useEffect(() => { const h = (e: MouseEvent | TouchEvent) => { if (!productSearchRef.current?.contains(e.target as Node)) setShowProductDropdown(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
 
   const handleSaveSupplier = async () => {
-    if (!form.name.trim()) return toast.error('Supplier name is required');
+    if (!form.name.trim()) return toast.error(t.suppliers.supplierNameReq);
     try {
-      if (editId) { await updateSupplierMut.mutateAsync({ id: editId, data: { name: form.name, email: form.email || undefined, phone: form.phone || undefined, address: form.address || undefined, rotationDays: form.rotationDays ? Number(form.rotationDays) : undefined } }); toast.success('Supplier updated'); }
-      else { await createSupplierMut.mutateAsync({ name: form.name, email: form.email || undefined, phone: form.phone || undefined, address: form.address || undefined, rotationDays: form.rotationDays ? Number(form.rotationDays) : undefined }); toast.success('Supplier created'); }
+      if (editId) { await updateSupplierMut.mutateAsync({ id: editId, data: { name: form.name, email: form.email || undefined, phone: form.phone || undefined, address: form.address || undefined, rotationDays: form.rotationDays ? Number(form.rotationDays) : undefined } }); toast.success(t.suppliers.supplierUpdated); }
+      else { await createSupplierMut.mutateAsync({ name: form.name, email: form.email || undefined, phone: form.phone || undefined, address: form.address || undefined, rotationDays: form.rotationDays ? Number(form.rotationDays) : undefined }); toast.success(t.suppliers.supplierCreated); }
       setShowForm(false); setEditId(null); setForm({ name: '', email: '', phone: '', address: '', rotationDays: '' });
-    } catch { toast.error('Failed to save supplier'); }
+    } catch { toast.error(t.suppliers.failedSaveSupplier); }
   };
 
   const handleDeleteSupplier = async (id: number) => {
-    const ok = await confirmDialog({ title: 'Delete Supplier?', text: 'This will delete the supplier and all their transactions.', confirmButtonText: 'Yes, delete', icon: 'warning' });
+    const ok = await confirmDialog({ title: t.suppliers.deleteSupplierTitle, text: t.suppliers.deleteSupplierText, confirmButtonText: t.products.yesDelete, icon: 'warning' });
     if (!ok) return;
-    try { await deleteSupplierMut.mutateAsync(id); toast.success('Supplier deleted'); } catch { toast.error('Failed to delete'); }
+    try { await deleteSupplierMut.mutateAsync(id); toast.success(t.suppliers.supplierDeleted); } catch { toast.error(t.products.failedDelete); }
   };
 
   const handleRecordTransaction = async () => {
-    if (!txnSupplierId) return toast.error('Select a supplier');
+    if (!txnSupplierId) return toast.error(t.suppliers.selectSupplierReq);
     const amount = txnItems.length > 0 ? txnItems.reduce((s, i) => s + i.total, 0) : Number(txnAmount);
-    if (amount <= 0 && txnItems.length === 0) return toast.error('Enter amount or add items');
-    const ok = await confirmDialog({ title: 'Record Transaction?', text: `${txnDirection === 'DUE_TO_SUPPLIER' ? 'Due to supplier' : 'Supplier owes us'}: ${formatCurrency(amount)}`, confirmButtonText: 'Yes, record', icon: 'question' });
+    if (amount <= 0 && txnItems.length === 0) return toast.error(t.suppliers.enterAmountReq);
+    const ok = await confirmDialog({ title: t.suppliers.recordTransactionTitle, text: `${txnDirection === 'DUE_TO_SUPPLIER' ? t.suppliers.dueToSupplierMsg : t.suppliers.supplierOwesUsMsg}: ${formatCurrency(amount)}`, confirmButtonText: t.suppliers.yesRecord, icon: 'question' });
     if (!ok) return;
     try {
       await createTxnMut.mutateAsync({
@@ -91,8 +93,8 @@ export default function SuppliersView() {
         transactionDate: txnDate || undefined, note: txnNote || undefined, recordedBy: session?.user?.name || session?.user?.email || 'Staff',
         items: txnItems.length > 0 ? txnItems.map(i => ({ productId: i.productId, quantity: i.qty, unitPrice: i.unitPrice })) : undefined,
       });
-      toast.success('Transaction recorded'); setTxnOpen(false); setTxnItems([]); setTxnAmount(''); setTxnNote(''); setProductSearch('');
-    } catch { toast.error('Failed to record transaction'); }
+      toast.success(t.suppliers.transactionRecorded); setTxnOpen(false); setTxnItems([]); setTxnAmount(''); setTxnNote(''); setProductSearch('');
+    } catch { toast.error(t.suppliers.failedRecordTxn); }
   };
 
   const addProductToTxn = (p: any) => {
@@ -108,8 +110,8 @@ export default function SuppliersView() {
       {/* Tab bar — Material style */}
       <div className="flex border-b" style={{ borderColor: Theme.border }}>
         {([
-          { id: 'transaction' as const, label: '📝 Record Transaction' },
-          { id: 'suppliers' as const, label: '🏭 Suppliers' },
+          { id: 'transaction' as const, label: t.suppliers.recordTransaction },
+          { id: 'suppliers' as const, label: t.suppliers.suppliersTab },
         ]).map((t) => (
           <button
             key={t.id}
@@ -130,27 +132,27 @@ export default function SuppliersView() {
         <Card className="border border-blue-100">
           <div className="px-3.5 py-3.5 flex flex-col gap-3">
             <div>
-              <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>📝 Record Transaction</div>
-              <div className="text-[12px]" style={{ color: Theme.mutedFg }}>Log supplier payments and item deliveries</div>
+              <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>{t.suppliers.recordTransaction}</div>
+              <div className="text-[12px]" style={{ color: Theme.mutedFg }}>{t.suppliers.logPayments}</div>
             </div>
             <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-4'}`}>
               <select value={txnSupplierId} onChange={(e) => setTxnSupplierId(e.target.value)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }}>
-                <option value="">Select Supplier *</option>
+                <option value="">{t.suppliers.selectSupplier}</option>
                 {suppliers.filter((s: Supplier) => s.isActive).map((s: Supplier) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <select value={txnBranchId} onChange={(e) => setTxnBranchId(e.target.value)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }}>
-                <option value="">Branch (optional)</option>
+                <option value="">{t.suppliers.branchOptional}</option>
                 {activeBranches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
               <select value={txnDirection} onChange={(e) => setTxnDirection(e.target.value as any)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }}>
-                <option value="DUE_TO_SUPPLIER">Due to Supplier</option>
-                <option value="DUE_TO_US">Supplier Owes Us</option>
+                <option value="DUE_TO_SUPPLIER">{t.suppliers.dueToSupplier}</option>
+                <option value="DUE_TO_US">{t.suppliers.supplierOwesUs}</option>
               </select>
               <input type="date" value={txnDate} onChange={(e) => setTxnDate(e.target.value)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
             </div>
-            <input value={txnNote} onChange={(e) => setTxnNote(e.target.value)} placeholder="Note (optional)" className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+            <input value={txnNote} onChange={(e) => setTxnNote(e.target.value)} placeholder={t.suppliers.noteOptional} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
             <div className="relative" ref={productSearchRef}>
-              <input type="text" placeholder="Search product to add items..." value={productSearch}
+              <input type="text" placeholder={t.suppliers.searchProductTxn} value={productSearch}
                 onChange={(e) => { setProductSearch(e.target.value); setShowProductDropdown(true); }} onFocus={() => setShowProductDropdown(true)}
                 className="w-full px-3 py-2 border rounded-lg text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
               {showProductDropdown && productSearch && (
@@ -160,14 +162,14 @@ export default function SuppliersView() {
                       <div><div className="font-semibold">{p.name}</div><div className="text-[10px]" style={{ color: Theme.mutedFg }}>SKU: {p.sku}</div></div>
                       <div className="text-[10px]" style={{ color: Theme.mutedFg }}>৳{p.price}</div>
                     </button>
-                  )) : <div className="px-3 py-2 text-xs" style={{ color: Theme.mutedFg }}>No products found</div>}
+                  )) : <div className="px-3 py-2 text-xs" style={{ color: Theme.mutedFg }}>{t.products.noProducts}</div>}
                 </div>
               )}
             </div>
             {txnItems.length > 0 && (
               <div className="rounded-lg border overflow-hidden" style={{ borderColor: Theme.border }}>
                 <div className="grid grid-cols-12 gap-1 px-3 py-1.5 text-[9px] font-bold uppercase bg-blue-50" style={{ color: Theme.mutedFg }}>
-                  <div className="col-span-4">Product</div><div className="col-span-2 text-center">Qty</div><div className="col-span-2 text-right">Price</div><div className="col-span-3 text-right">Total</div><div className="col-span-1" />
+                  <div className="col-span-4">{t.products.product}</div><div className="col-span-2 text-center">{t.suppliers.qty}</div><div className="col-span-2 text-right">{t.suppliers.price}</div><div className="col-span-3 text-right">{t.suppliers.total}</div><div className="col-span-1" />
                 </div>
                 {txnItems.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-1 px-3 py-2 border-t items-center text-xs" style={{ borderColor: Theme.border }}>
@@ -184,16 +186,16 @@ export default function SuppliersView() {
                     <div className="col-span-1 text-right"><button onClick={() => setTxnItems(prev => prev.filter((_, i) => i !== idx))} className="text-xs" style={{ color: '#dc2626' }}>✕</button></div>
                   </div>
                 ))}
-                <div className="px-3 py-1.5 text-right text-xs font-black border-t" style={{ borderColor: Theme.border, color: '#2563eb' }}>Total: {formatCurrency(txnGrandTotal)}</div>
+                <div className="px-3 py-1.5 text-right text-xs font-black border-t" style={{ borderColor: Theme.border, color: '#2563eb' }}>{t.suppliers.total}: {formatCurrency(txnGrandTotal)}</div>
               </div>
             )}
             {txnItems.length === 0 && (
-              <input type="number" value={txnAmount} onChange={(e) => setTxnAmount(e.target.value)} placeholder="Amount (৳) — or add items above" className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+              <input type="number" value={txnAmount} onChange={(e) => setTxnAmount(e.target.value)} placeholder={t.suppliers.amountOrItems} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
             )}
             <div className="flex gap-2 justify-end">
-              <Btn variant="ghost" onClick={() => { setTxnItems([]); setTxnAmount(''); setTxnNote(''); setProductSearch(''); }}>Reset</Btn>
+              <Btn variant="ghost" onClick={() => { setTxnItems([]); setTxnAmount(''); setTxnNote(''); setProductSearch(''); }}>{t.suppliers.reset}</Btn>
               <Btn variant="primary" disabled={createTxnMut.isPending} onClick={handleRecordTransaction}>
-                {createTxnMut.isPending ? 'Recording...' : `Record · ${formatCurrency(txnItems.length > 0 ? txnGrandTotal : Number(txnAmount) || 0)}`}
+                {createTxnMut.isPending ? t.suppliers.recording : `${t.suppliers.record} · ${formatCurrency(txnItems.length > 0 ? txnGrandTotal : Number(txnAmount) || 0)}`}
               </Btn>
             </div>
           </div>
@@ -204,25 +206,25 @@ export default function SuppliersView() {
       {activeTab === 'suppliers' && (
         <Card>
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <SecHead title="Suppliers" sub={`${suppliers.length} supplier(s)`} />
+            <SecHead title={t.suppliers.suppliers} sub={`${suppliers.length} ${t.suppliers.suppliers.toLowerCase()}`} />
             <div className="flex items-center gap-2">
-              <input value={supplierSearch} onChange={(e) => setSupplierSearch(e.target.value)} placeholder="Search suppliers..." className="rounded-lg border px-3 py-1.5 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
-              <Btn variant="primary" size="sm" onClick={() => { setEditId(null); setForm({ name: '', email: '', phone: '', address: '', rotationDays: '' }); setShowForm(true); }}>＋ Add Supplier</Btn>
+              <input value={supplierSearch} onChange={(e) => setSupplierSearch(e.target.value)} placeholder={t.suppliers.searchSuppliers} className="rounded-lg border px-3 py-1.5 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+              <Btn variant="primary" size="sm" onClick={() => { setEditId(null); setForm({ name: '', email: '', phone: '', address: '', rotationDays: '' }); setShowForm(true); }}>{t.suppliers.addSupplier}</Btn>
             </div>
           </div>
           {showForm && (
             <div className="mb-3 rounded-xl border-[1.5px] p-3" style={{ borderColor: Theme.primary, background: '#fdf2f8' }}>
-              <div className="text-sm font-bold mb-2" style={{ color: Theme.primary }}>{editId ? 'Edit Supplier' : 'New Supplier'}</div>
+              <div className="text-sm font-bold mb-2" style={{ color: Theme.primary }}>{editId ? t.suppliers.editSupplier : t.suppliers.newSupplier}</div>
               <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Name *" className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone" className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address" className="rounded-lg border px-3 py-2 text-xs outline-none col-span-2" style={{ borderColor: Theme.border }} />
-                <input type="number" value={form.rotationDays} onChange={(e) => setForm({ ...form, rotationDays: e.target.value })} placeholder="Rotation (days)" className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t.suppliers.nameReq} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={t.suppliers.email} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder={t.suppliers.phone} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+                <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t.branches.address} className="rounded-lg border px-3 py-2 text-xs outline-none col-span-2" style={{ borderColor: Theme.border }} />
+                <input type="number" value={form.rotationDays} onChange={(e) => setForm({ ...form, rotationDays: e.target.value })} placeholder={t.suppliers.rotationDays} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
               </div>
               <div className="flex gap-2 mt-2">
-                <Btn variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancel</Btn>
-                <Btn variant="primary" size="sm" onClick={handleSaveSupplier}>{editId ? 'Save' : 'Create'}</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setShowForm(false)}>{t.products.cancel}</Btn>
+                <Btn variant="primary" size="sm" onClick={handleSaveSupplier}>{editId ? t.products.saveChanges : t.categories.createCategory.split(' ')[0]}</Btn>
               </div>
             </div>
           )}
@@ -230,57 +232,57 @@ export default function SuppliersView() {
             {suppliers.map((s: Supplier) => (
               <div key={s.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5" style={{ borderColor: Theme.border, opacity: s.isActive ? 1 : 0.5 }}>
                 <div>
-                  <div className="text-xs font-bold" style={{ color: Theme.fg }}>{s.name} {!s.isActive && <span className="text-[9px] text-gray-400 ml-1">Inactive</span>}</div>
-                  <div className="text-[10px]" style={{ color: Theme.mutedFg }}>{[s.email, s.phone, s.address, s.rotationDays ? `${s.rotationDays}d rotation` : ''].filter(Boolean).join(' · ') || 'No details'}</div>
+                  <div className="text-xs font-bold" style={{ color: Theme.fg }}>{s.name} {!s.isActive && <span className="text-[9px] text-gray-400 ml-1">{t.products.inactive}</span>}</div>
+                  <div className="text-[10px]" style={{ color: Theme.mutedFg }}>{[s.email, s.phone, s.address, s.rotationDays ? `${s.rotationDays}d rotation` : ''].filter(Boolean).join(' · ') || t.suppliers.noDetails}</div>
                 </div>
                 <div className="flex gap-1.5">
-                  <Btn variant="ghost" size="sm" onClick={() => { setEditId(s.id); setForm({ name: s.name, email: s.email || '', phone: s.phone || '', address: s.address || '', rotationDays: s.rotationDays?.toString() || '' }); setShowForm(true); }}>Edit</Btn>
+                  <Btn variant="ghost" size="sm" onClick={() => { setEditId(s.id); setForm({ name: s.name, email: s.email || '', phone: s.phone || '', address: s.address || '', rotationDays: s.rotationDays?.toString() || '' }); setShowForm(true); }}>{t.inventory.edit}</Btn>
                   <Btn variant="ghost" size="sm" onClick={() => handleDeleteSupplier(s.id)}>🗑️</Btn>
                 </div>
               </div>
             ))}
-            {suppliers.length === 0 && <div className="text-center text-xs py-4" style={{ color: Theme.mutedFg }}>No suppliers found</div>}
+            {suppliers.length === 0 && <div className="text-center text-xs py-4" style={{ color: Theme.mutedFg }}>{t.suppliers.noSuppliers}</div>}
           </div>
         </Card>
       )}
 
       {/* Transaction History — always visible */}
       <Card>
-        <SecHead title="Transaction History" sub={`${txnMeta?.total ?? 0} transactions`} />
+        <SecHead title={t.suppliers.transactionHistory} sub={`${txnMeta?.total ?? 0} ${t.suppliers.transactions}`} />
         <div className="p-3.5">
-          <input value={histSearch} onChange={(e) => { setHistSearch(e.target.value); setHistPage(1); }} placeholder="Search transactions..." className="w-full mb-3 px-3 py-2 border rounded text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+          <input value={histSearch} onChange={(e) => { setHistSearch(e.target.value); setHistPage(1); }} placeholder={t.suppliers.searchTxn} className="w-full mb-3 px-3 py-2 border rounded text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs">
               <thead><tr className="border-b-2" style={{ borderColor: Theme.border }}>
-                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>Supplier</th>
-                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>Type</th>
-                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>Items</th>
-                <th className="px-2 py-2 text-right font-bold" style={{ color: Theme.mutedFg }}>Amount</th>
-                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>Date</th>
-                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>Branch</th>
-                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>By</th>
+                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>{t.suppliers.supplier}</th>
+                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>{t.suppliers.type}</th>
+                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>{t.suppliers.items}</th>
+                <th className="px-2 py-2 text-right font-bold" style={{ color: Theme.mutedFg }}>{t.suppliers.amount}</th>
+                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>{t.suppliers.date}</th>
+                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>{t.sales.branch}</th>
+                <th className="px-2 py-2 text-left font-bold" style={{ color: Theme.mutedFg }}>{t.suppliers.by}</th>
               </tr></thead>
               <tbody>
                 {txnQuery.isLoading ? (
-                  <tr><td colSpan={7} className="px-2 py-6 text-center" style={{ color: Theme.mutedFg }}>Loading...</td></tr>
-                ) : txnRows.length > 0 ? txnRows.map((t: any) => (
-                  <tr key={t.id} className="border-b" style={{ borderColor: Theme.border }}>
-                    <td className="px-2 py-2 font-semibold" style={{ color: Theme.fg }}>{t.supplier?.name || 'N/A'}</td>
+                  <tr><td colSpan={7} className="px-2 py-6 text-center" style={{ color: Theme.mutedFg }}>{t.products.loading}</td></tr>
+                ) : txnRows.length > 0 ? txnRows.map((tRow: any) => (
+                  <tr key={tRow.id} className="border-b" style={{ borderColor: Theme.border }}>
+                    <td className="px-2 py-2 font-semibold" style={{ color: Theme.fg }}>{tRow.supplier?.name || t.na}</td>
                     <td className="px-2 py-2">
-                      <span className="rounded px-1.5 py-0.5 text-[9px] font-bold" style={{ background: t.direction === 'DUE_TO_SUPPLIER' ? '#fef2f2' : '#f0fdf4', color: t.direction === 'DUE_TO_SUPPLIER' ? '#dc2626' : '#16a34a' }}>
-                        {t.direction === 'DUE_TO_SUPPLIER' ? '↑ Due' : '↓ Owed'}
+                      <span className="rounded px-1.5 py-0.5 text-[9px] font-bold" style={{ background: tRow.direction === 'DUE_TO_SUPPLIER' ? '#fef2f2' : '#f0fdf4', color: tRow.direction === 'DUE_TO_SUPPLIER' ? '#dc2626' : '#16a34a' }}>
+                        {tRow.direction === 'DUE_TO_SUPPLIER' ? t.suppliers.due : t.suppliers.owed}
                       </span>
                     </td>
                     <td className="px-2 py-2" style={{ color: Theme.mutedFg }}>
-                      {t.items?.length > 0 ? (t.items.length === 1 ? t.items[0].productNameSnapshot : `${t.items[0].productNameSnapshot} +${t.items.length - 1}`) : '—'}
+                      {tRow.items?.length > 0 ? (tRow.items.length === 1 ? tRow.items[0].productNameSnapshot : `${tRow.items[0].productNameSnapshot} +${tRow.items.length - 1}`) : '—'}
                     </td>
-                    <td className="px-2 py-2 text-right font-bold" style={{ color: t.direction === 'DUE_TO_SUPPLIER' ? '#dc2626' : '#16a34a' }}>{formatCurrency(t.totalAmount)}</td>
-                    <td className="px-2 py-2" style={{ color: Theme.mutedFg }}>{new Date(t.transactionDate || t.createdAt).toLocaleDateString()}</td>
-                    <td className="px-2 py-2" style={{ color: Theme.mutedFg }}>{t.branchName || '—'}</td>
-                    <td className="px-2 py-2" style={{ color: Theme.mutedFg }}>{t.recordedBy || 'Staff'}</td>
+                    <td className="px-2 py-2 text-right font-bold" style={{ color: tRow.direction === 'DUE_TO_SUPPLIER' ? '#dc2626' : '#16a34a' }}>{formatCurrency(tRow.totalAmount)}</td>
+                    <td className="px-2 py-2" style={{ color: Theme.mutedFg }}>{new Date(tRow.transactionDate || tRow.createdAt).toLocaleDateString()}</td>
+                    <td className="px-2 py-2" style={{ color: Theme.mutedFg }}>{tRow.branchName || '—'}</td>
+                    <td className="px-2 py-2" style={{ color: Theme.mutedFg }}>{tRow.recordedBy || 'Staff'}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={7} className="px-2 py-6 text-center" style={{ color: Theme.mutedFg }}>No transactions yet</td></tr>
+                  <tr><td colSpan={7} className="px-2 py-6 text-center" style={{ color: Theme.mutedFg }}>{t.suppliers.noTxnYet}</td></tr>
                 )}
               </tbody>
             </table>

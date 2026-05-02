@@ -23,6 +23,7 @@ import SettingsView from './views/SettingsView';
 import ProfileView from './views/ProfileView';
 import ManualSaleModal from './ManualSaleModal';
 import { Product, SellLog, Order } from '@/modules/dashboard/data/mockData';
+import { useDashboardLocale } from '../locales/DashboardLocaleContext';
 
 interface DashboardLayoutProps {
   products: Product[];
@@ -61,6 +62,7 @@ const SidebarContent: React.FC<{
   userModuleCodes,
 }) => {
   const settingsRef = useRef<HTMLDivElement>(null);
+  const { t } = useDashboardLocale();
 
   useEffect(() => {
     if (settingsOpen && settingsRef.current) {
@@ -99,7 +101,7 @@ const SidebarContent: React.FC<{
             }}
             className="mt-0.5"
           >
-            Cosmetics · Control Centre
+            {t.sidebar.brandSub}
           </div>
         </div>
         {isMobile && (
@@ -136,7 +138,7 @@ const SidebarContent: React.FC<{
                 }}
               >
                 <span style={{ fontSize: 16 }}>⚙️</span>
-                <span className="flex-1">Settings</span>
+                <span className="flex-1">{t.sidebar.settings}</span>
                 <motion.span
                   animate={{ rotate: settingsOpen ? 90 : 0 }}
                   transition={{ duration: 0.2 }}
@@ -167,6 +169,7 @@ const SidebarContent: React.FC<{
                         if (!userModuleCodes) return true;
                         return userModuleCodes.has(`settings:${item.id}`);
                       }).map((item) => {
+                        const localizedLabel = (t.settingsItems as any)[item.id] || item.label;
                         const subActive = active && settingsTab === item.id;
                         return (
                           <button
@@ -184,7 +187,7 @@ const SidebarContent: React.FC<{
                             }}
                           >
                             <span className="shrink-0 text-sm">{item.icon}</span>
-                            <span>{item.label}</span>
+                            <span>{localizedLabel}</span>
                           </button>
                         );
                       })}
@@ -278,6 +281,7 @@ export default function DashboardLayout({
   orders,
   time,
 }: DashboardLayoutProps) {
+  const { locale, t, toggleLocale } = useDashboardLocale();
   const { isMobile } = useResponsive();
   const { data: session } = useSession();
   const { data: profileUser } = useProfileQuery();
@@ -351,13 +355,22 @@ export default function DashboardLayout({
   }, [session?.accessToken]);
 
   const lowCount = products.filter((p) => p.status !== 'active').length;
-  const settingsLabel = SETTINGS_ITEMS.find((i) => i.id === settingsTab)?.label || '';
+  const settingsItemsLocalized = SETTINGS_ITEMS.map((item) => ({
+    ...item,
+    label: (t.settingsItems as any)[item.id] || item.label,
+  }));
+  const settingsLabel = settingsItemsLocalized.find((i) => i.id === settingsTab)?.label || '';
+  const navItemsLocalized = navItems.map((n: any) => ({
+    ...n,
+    label: (t.nav as any)[n.id] || n.label,
+    badge: n.badge ? t.nav.soon : n.badge,
+  }));
   const topbarLabel =
     activeNav === 'settings'
-      ? `Settings › ${settingsLabel}`
+      ? `${t.nav.settings} › ${settingsLabel}`
       : activeNav === 'profile'
-        ? 'User Profile'
-        : navItems.find((n: { id: string; label: string }) => n.id === activeNav)?.label || activeNav;
+        ? t.topbar.userProfile
+        : navItemsLocalized.find((n: { id: string; label: string }) => n.id === activeNav)?.label || activeNav;
 
   const views: Record<string, React.ReactNode> = {
     profile: <ProfileView />,
@@ -497,7 +510,7 @@ export default function DashboardLayout({
             time={time}
             isMobile={isMobile}
             setSidebarOpen={setSidebarOpen}
-            navItems={navItems}
+            navItems={navItemsLocalized}
             userModuleCodes={userModuleCodes}
           />
         </aside>
@@ -537,7 +550,7 @@ export default function DashboardLayout({
                 time={time}
                 isMobile={isMobile}
                 setSidebarOpen={setSidebarOpen}
-                navItems={navItems}
+                navItems={navItemsLocalized}
                 userModuleCodes={userModuleCodes}
               />
             </motion.div>
@@ -574,7 +587,7 @@ export default function DashboardLayout({
             )}
             {!isMobile && (
               <>
-                <span style={{ fontSize: 12, color: Theme.mutedFg }}>Dashboard</span>
+                <span style={{ fontSize: 12, color: Theme.mutedFg }}>{t.topbar.dashboard}</span>
                 <span style={{ color: Theme.border }}>›</span>
               </>
             )}
@@ -593,6 +606,21 @@ export default function DashboardLayout({
             </span>
           </div>
           <div className={`flex items-center ${isMobile ? 'gap-[10px]' : 'gap-4'}`}>
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLocale}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              style={{
+                background: locale === 'bn' ? Theme.primary : Theme.secondary,
+                color: locale === 'bn' ? '#fff' : Theme.fg,
+                border: `1px solid ${locale === 'bn' ? Theme.primary : Theme.border}`,
+              }}
+              title={locale === 'en' ? 'বাংলায় পরিবর্তন করুন' : 'Switch to English'}
+            >
+              <span style={{ fontSize: 14 }}>🌐</span>
+              <span>{locale === 'en' ? 'বাংলা' : 'English'}</span>
+            </button>
+
             {/* Profile Dropdown */}
             <div className="relative" ref={profileRef}>
               <button
@@ -652,10 +680,10 @@ export default function DashboardLayout({
                         </div>
                         <div className="space-y-1">
                           <div className="text-[16px] font-bold tracking-tight" style={{ color: Theme.fg }}>
-                            {profileUser?.name || 'User'}
+                            {profileUser?.name || t.profile.user}
                           </div>
                           <div className="text-[11px] font-medium uppercase tracking-widest opacity-60" style={{ color: Theme.mutedFg }}>
-                            {profileUser?.role || 'Administrator'}
+                            {profileUser?.role || t.profile.administrator}
                           </div>
                         </div>
                       </div>
@@ -673,7 +701,7 @@ export default function DashboardLayout({
                         }}
                       >
                         <User size={15} strokeWidth={2.5} />
-                        <span>Account</span>
+                        <span>{t.profile.account}</span>
                       </button>
                       <button
                         onClick={handleLogout}
@@ -685,7 +713,7 @@ export default function DashboardLayout({
                         }}
                       >
                         <LogOut size={15} strokeWidth={2.5} />
-                        <span>Logout</span>
+                        <span>{t.profile.logout}</span>
                       </button>
                     </div>
                   </motion.div>
@@ -724,11 +752,11 @@ export default function DashboardLayout({
           }}
         >
           {[
-            { id: 'overview', label: 'Home', icon: '◈' },
-            { id: 'inventory', label: 'Inventory', icon: '📦' },
-            { id: 'sales', label: 'Sales', icon: '💰' },
-            { id: 'ecommerce', label: 'Orders', icon: '🌐' },
-            { id: 'settings', label: 'Settings', icon: '⚙️' },
+            { id: 'overview', label: t.mobileNav.home, icon: '◈' },
+            { id: 'inventory', label: t.mobileNav.inventory, icon: '📦' },
+            { id: 'sales', label: t.mobileNav.sales, icon: '💰' },
+            { id: 'ecommerce', label: t.mobileNav.orders, icon: '🌐' },
+            { id: 'settings', label: t.mobileNav.settings, icon: '⚙️' },
           ].map((n) => {
             const active = activeNav === n.id;
             return (
@@ -788,13 +816,13 @@ export default function DashboardLayout({
                   product: product.name,
                   qty,
                   amount: total,
-                  note: note || 'Walk-in sale',
-                  date: 'Just now',
-                  by: 'Manager',
+                  note: note || t.walkInSale,
+                  date: t.justNow,
+                  by: t.manager,
                 },
                 ...sellLog,
               ]);
-              setToast(`✓ Sold ${qty} × ${product.name}`);
+              setToast(`✓ ${t.sold} ${qty} × ${product.name}`);
             }}
           />
         )}
@@ -803,7 +831,9 @@ export default function DashboardLayout({
   );
 }
 
-const POSView: React.FC = () => (
+const POSView: React.FC = () => {
+  const { t } = useDashboardLocale();
+  return (
   <div className="flex min-h-[400px] flex-col items-center justify-center gap-[18px] px-5 py-8 text-center">
     <div
       className="flex h-20 w-20 items-center justify-center rounded-[22px] text-[40px]"
@@ -812,15 +842,15 @@ const POSView: React.FC = () => (
       🖥️
     </div>
     <div style={{ fontSize: 26, fontWeight: 800, color: Theme.fg }}>
-      Point of Sale
+      {t.pos.title}
     </div>
     <div
       className="max-w-[380px] text-sm leading-[1.8]"
       style={{ color: Theme.mutedFg }}
     >
-      Full POS terminal planned for next release. Until then, use{' '}
-      <strong style={{ color: Theme.primary }}>Manual Sell</strong> in Inventory for
-      walk-in sales with real-time stock sync.
+      {t.pos.description}{' '}
+      <strong style={{ color: Theme.primary }}>{t.pos.manualSell}</strong> {t.pos.suffix}
     </div>
   </div>
-);
+  );
+};

@@ -8,6 +8,7 @@ import type { OverviewMetrics } from '@/modules/analytics';
 import { useListBranches } from '@/modules/branches';
 import { Btn } from '../Primitives';
 import { Product, Order } from '@/modules/dashboard/data/mockData';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 interface OverviewViewProps {
   products: Product[];
@@ -125,6 +126,7 @@ function SectionHeading({ icon, title, sub, badge, badgeColor = 'bg-pink-100 tex
 
 export default function OverviewView({ products, orders, onQuickSale }: OverviewViewProps) {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b: any) => b.active);
   const [tab, setTab] = React.useState<'today' | 'week' | 'month' | 'custom'>('today');
@@ -152,7 +154,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
   const overview = overviewQuery.data as OverviewMetrics | undefined;
   const isOverviewLoading = overviewQuery.isLoading;
 
-  const comparisonLabel = overview?.range.comparisonLabel || (tab === 'today' ? 'yesterday' : tab === 'week' ? 'last week' : 'last month');
+  const comparisonLabel = overview?.range.comparisonLabel || (tab === 'today' ? t.overview.today.toLowerCase() : tab === 'week' ? t.overview.week.toLowerCase() : t.overview.month.toLowerCase());
   const totalSales = overview?.manualSales.totalSales || 0;
   const transactions = overview?.manualSales.transactions || 0;
   const avgTicket = overview?.manualSales.avgTicket || 0;
@@ -174,10 +176,10 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
 
   const donutSegments = categoryData.length > 0
     ? categoryData.map((c) => ({ value: Math.max(1, c.value), color: c.color, label: c.label }))
-    : [{ value: 1, color: '#e5e7eb', label: 'No data' }];
+    : [{ value: 1, color: '#e5e7eb', label: t.overview.noData }];
 
   const invProductsSnapshot = {
-    label: 'Total Products',
+    label: t.overview.totalProducts,
     value: `${overview?.inventory.totalProducts ?? products.length}`,
     spark: transactionTrend,
     detail: (overview?.inventory.categoryDistribution || []).map((d, i) => ({
@@ -189,7 +191,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
   };
 
   const invAlertsSnapshot = {
-    label: 'Stock Alerts',
+    label: t.overview.stockAlerts,
     low: overview?.inventory.lowStockCount ?? products.filter((p) => p.status === 'low').length,
     out: overview?.inventory.outOfStockCount ?? products.filter((p) => p.status === 'out').length,
     spark: revenueTrend,
@@ -240,25 +242,25 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
 
   const manualKpis = [
     {
-      label: tab === 'today' ? "Today's Sales" : tab === 'week' ? 'This Week' : tab === 'month' ? 'This Month' : 'Period Sales',
+      label: tab === 'today' ? t.overview.todaysSales : tab === 'week' ? t.overview.thisWeek : tab === 'month' ? t.overview.thisMonth : t.overview.periodSales,
       value: formatCurrency(totalSales),
-      delta: `${salesDeltaPercent >= 0 ? '+' : ''}${salesDeltaPercent.toFixed(1)}% vs ${comparisonLabel}`,
+      delta: `${salesDeltaPercent >= 0 ? '+' : ''}${salesDeltaPercent.toFixed(1)}% ${t.overview.vs} ${comparisonLabel}`,
       up: salesDeltaPercent >= 0,
       spark: revenueTrend,
       color: '#e91e8c',
     },
     {
-      label: 'Transactions',
+      label: t.overview.transactions,
       value: `${transactions}`,
-      delta: `${transactionDelta >= 0 ? '+' : ''}${transactionDelta} vs ${comparisonLabel}`,
+      delta: `${transactionDelta >= 0 ? '+' : ''}${transactionDelta} ${t.overview.vs} ${comparisonLabel}`,
       up: transactionDelta >= 0,
       spark: transactionTrend,
       color: '#8b5cf6',
     },
     {
-      label: 'Avg Ticket',
+      label: t.overview.avgTicket,
       value: formatCurrency(avgTicket),
-      delta: `${avgTicketDelta >= 0 ? '+' : '-'}${formatCurrency(Math.abs(avgTicketDelta))} vs ${comparisonLabel}`,
+      delta: `${avgTicketDelta >= 0 ? '+' : '-'}${formatCurrency(Math.abs(avgTicketDelta))} ${t.overview.vs} ${comparisonLabel}`,
       up: avgTicketDelta >= 0,
       spark: avgTicketTrend,
       color: '#0ea5e9',
@@ -271,9 +273,9 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <SectionHeading
             icon="🛒"
-            title="Manual Sales"
-            sub={isCustom ? `${customStart || '…'} → ${customEnd || '…'}` : `In-store transactions ${tab === 'today' ? 'today' : `this ${tab}`}`}
-            badge="Primary Channel"
+            title={t.overview.manualSalesTitle}
+            sub={isCustom ? `${customStart || '…'} → ${customEnd || '…'}` : tab === 'today' ? t.overview.inStoreToday : tab === 'week' ? t.overview.inStoreThisWeek : t.overview.inStoreThisMonth}
+            badge={t.overview.primaryChannel}
           />
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -282,15 +284,15 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
               className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold outline-none border"
               style={{ borderColor: '#e5e7eb', color: '#374151' }}
             >
-              <option value="">All Branches</option>
+              <option value="">{t.overview.allBranches}</option>
               {activeBranches.map((b: any) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
             <div className="flex bg-muted rounded-xl p-0.5 text-xs font-semibold">
-              {(['today', 'week', 'month', 'custom'] as const).map((t) => (
-                <button key={t} onClick={() => setTab(t)} className={`px-3 py-1 rounded-lg capitalize transition-colors ${tab === t ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
-                  {t}
+              {([['today', t.overview.today], ['week', t.overview.week], ['month', t.overview.month], ['custom', t.overview.custom]] as const).map(([key, label]) => (
+                <button key={key} onClick={() => setTab(key as any)} className={`px-3 py-1 rounded-lg capitalize transition-colors ${tab === key ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
+                  {label}
                 </button>
               ))}
             </div>
@@ -306,7 +308,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
               className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
               style={{ borderColor: '#e5e7eb', color: '#374151' }}
             />
-            <span className="text-xs text-muted-foreground">to</span>
+            <span className="text-xs text-muted-foreground">{t.overview.to}</span>
             <input
               type="date"
               value={customEnd}
@@ -316,7 +318,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
             />
             {customStart && customEnd && (
               <span className="text-[10px] font-semibold text-primary">
-                {Math.max(1, Math.ceil((new Date(customEnd).getTime() - new Date(customStart).getTime()) / 86400000))} days
+                {Math.max(1, Math.ceil((new Date(customEnd).getTime() - new Date(customStart).getTime()) / 86400000))} {t.overview.days}
               </span>
             )}
           </div>
@@ -378,29 +380,29 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
             </div>
             <div className="flex items-end gap-2 mt-0.5">
               <div>
-                <p className="text-[10px] text-red-400 font-semibold">Low Stock</p>
+                <p className="text-[10px] text-red-400 font-semibold">{t.overview.lowStock}</p>
                 <p className="text-xl font-black text-red-600">{invAlertsSnapshot.low}</p>
               </div>
               <div className="mb-0.5 text-gray-300 text-lg font-thin">/</div>
               <div>
-                <p className="text-[10px] text-green-500 font-semibold">Out of Stock</p>
+                <p className="text-[10px] text-green-500 font-semibold">{t.overview.outOfStock}</p>
                 <p className="text-xl font-black text-green-600">{invAlertsSnapshot.out}</p>
               </div>
             </div>
-            <p className="text-[10px] text-red-400 font-semibold mt-auto">⚠ {invAlertsSnapshot.low} items need reorder</p>
+            <p className="text-[10px] text-red-400 font-semibold mt-auto">⚠ {invAlertsSnapshot.low} {t.overview.itemsNeedReorder}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 2xl:gap-5">
           <div className="bg-muted rounded-xl p-4">
-            <p className="text-xs font-bold text-muted-foreground mb-3">🍩 Sales by Category</p>
+            <p className="text-xs font-bold text-muted-foreground mb-3">🍩 {t.overview.salesByCategory}</p>
             <div className={`flex ${isMobile ? 'flex-col' : ''} items-center gap-5`}>
               <div className="shrink-0">
                 <DonutChart segments={donutSegments} size={160} thickness={30} onHover={setHoveredCategory} />
               </div>
               <div className="flex-1 space-y-1.5 min-w-0">
                 {categoryData.length === 0 ? (
-                  <div className="text-xs text-muted-foreground">No category sales in this period</div>
+                  <div className="text-xs text-muted-foreground">{t.overview.noCategorySales}</div>
                 ) : categoryData.map((c, i) => {
                   const isActive = hoveredCategory === i;
                   const isDimmed = hoveredCategory !== null && !isActive;
@@ -421,7 +423,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
                         <span className="w-3 h-3 rounded-full shrink-0" style={{ background: c.color, boxShadow: isActive ? `0 0 8px ${c.color}88` : 'none' }} />
                         <div className="min-w-0">
                           <span className={`text-xs font-bold text-foreground truncate block ${isActive ? 'text-sm' : ''}`} style={isActive ? { color: c.color } : {}}>{c.label}</span>
-                          {isActive && <span className="text-[10px] text-muted-foreground">{c.value}% of total</span>}
+                          {isActive && <span className="text-[10px] text-muted-foreground">{c.value}% {t.overview.ofTotal}</span>}
                         </div>
                       </div>
                       <div className="text-right shrink-0">
@@ -436,7 +438,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
           </div>
 
           <div className="bg-muted rounded-xl p-4">
-            <p className="text-xs font-bold text-muted-foreground mb-3">🔥 Top Products — Manual</p>
+            <p className="text-xs font-bold text-muted-foreground mb-3">🔥 {t.overview.topProductsManual}</p>
             <div className="space-y-2.5">
               {topProducts.map((p) => (
                 <div key={p.name} className="flex items-center gap-2">
@@ -449,7 +451,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
                       <div className="h-full rounded-full bg-primary" style={{ width: `${p.pct}%` }} />
                     </div>
                   </div>
-                  <span className="text-[12px] text-muted-foreground shrink-0 w-10 text-right">{p.sold} sold</span>
+                  <span className="text-[12px] text-muted-foreground shrink-0 w-10 text-right">{p.sold} {t.overview.xSold}</span>
                 </div>
               ))}
             </div>
@@ -461,7 +463,7 @@ export default function OverviewView({ products, orders, onQuickSale }: Overview
 
       {stockAlertItems.length > 0 && (
         <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
-          <p className="text-sm font-black text-foreground mb-3">⚠ Stock Alerts</p>
+          <p className="text-sm font-black text-foreground mb-3">⚠ {t.overview.stockAlertsTitle}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-3">
             {stockAlertItems.slice(0, 4).map((p) => {
               const pct = Math.min((p.qty / Math.max(1, p.threshold)) * 100, 100);
