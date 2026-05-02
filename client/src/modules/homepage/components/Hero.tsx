@@ -167,21 +167,21 @@ export function Hero() {
         <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-pink-50/60 to-transparent blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-[1400px] flex flex-col lg:grid lg:grid-cols-2 items-stretch gap-0 h-[calc(100vh-140px)]">
+      <div className="relative mx-auto max-w-[1400px] flex flex-col lg:grid lg:grid-cols-2 items-stretch gap-0 h-auto lg:h-[calc(100vh-140px)] min-h-[700px] lg:min-h-[600px]">
         {/* Left Content */}
         <motion.div
-          className="flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-4 lg:py-8 order-last lg:order-first"
+          className="flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-10 lg:py-8 order-last lg:order-first"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
         >
           {/* Badges */}
-          <motion.div className="flex flex-wrap gap-2 mb-4" custom={0} variants={fadeUp}>
-            <span className="bg-zinc-900 text-white text-[10px] font-semibold px-3 py-1.5 rounded-full tracking-widest uppercase">
+          <motion.div className="flex flex-wrap gap-2 mb-4 lg:mb-6" custom={0} variants={fadeUp}>
+            <span className="bg-zinc-900 text-white text-[9px] lg:text-[10px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase">
               {t.hero.badgeNew}
             </span>
             {isOfferActive && (
-              <span className="bg-rose-100 text-primary text-[10px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase">
+              <span className="bg-rose-100 text-primary text-[9px] lg:text-[10px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase">
                 {t.hero.upTo} {activePromotion?.pct ?? 40}% {t.hero.off}
               </span>
             )}
@@ -189,22 +189,22 @@ export function Hero() {
 
           {/* Title */}
           <motion.h1
-            className="text-3xl sm:text-4xl lg:text-5xl font-light leading-[1.1] mb-2"
+            className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-light leading-[1.1] mb-3 lg:mb-4"
             custom={1}
             variants={fadeUp}
           >
             {heroHeadline.split(/\s+/).slice(0, 1).join(" ")}
             <br />
-            <em className="text-primary not-italic font-semibold">
+            <em className="text-primary not-italic font-bold">
               {heroHeadline.split(/\s+/).slice(1).join(" ")}
             </em>
             <br />
-            <span className="text-lg font-light text-zinc-400">{heroYear}</span>
+            <span className="text-base lg:text-lg font-light text-zinc-400">{heroYear}</span>
           </motion.h1>
 
           {/* Description */}
           <motion.p
-            className="text-zinc-500 text-sm sm:text-base leading-relaxed max-w-lg mb-4"
+            className="text-zinc-500 text-sm sm:text-base leading-relaxed max-w-lg mb-6 lg:mb-8"
             custom={2}
             variants={fadeUp}
           >
@@ -212,13 +212,13 @@ export function Hero() {
           </motion.p>
 
           {/* Stats */}
-          <div className="flex gap-6 sm:gap-8 mb-5">
+          <div className="flex gap-4 sm:gap-8 mb-8 lg:mb-10">
             {displayStats.map((item, i) => (
               <motion.div key={item.label} custom={i} variants={statPop} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-                <p className="text-primary text-xl sm:text-2xl font-bold leading-none mb-1">
+                <p className="text-primary text-lg sm:text-2xl font-black leading-none mb-1">
                   <AnimatedStat value={item.value} isLoading={isLoading} />
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-zinc-400 tracking-wider uppercase font-medium">
+                <p className="text-[9px] sm:text-[11px] text-zinc-400 tracking-wider uppercase font-bold">
                   {item.label}
                 </p>
               </motion.div>
@@ -226,16 +226,16 @@ export function Hero() {
           </div>
 
           {/* CTA Buttons */}
-          <motion.div className="flex flex-wrap gap-3 mb-4" custom={3} variants={fadeUp}>
+          <motion.div className="flex flex-col sm:flex-row gap-3 mb-6 lg:mb-8" custom={3} variants={fadeUp}>
             <Link
               href="/categories"
-              className="bg-primary text-white px-7 py-3 rounded-full font-semibold text-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_rgba(240,17,114,0.3)] hover:-translate-y-0.5 active:translate-y-0"
+              className="bg-primary text-white px-8 py-4 rounded-full font-bold text-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_rgba(240,17,114,0.3)] hover:-translate-y-0.5 text-center"
             >
               {t.hero.shopNow}
             </Link>
             <Link
               href="/shop"
-              className="border-2 border-zinc-200 text-zinc-700 px-7 py-3 rounded-full font-semibold text-sm transition-all duration-300 hover:border-primary hover:text-primary hover:-translate-y-0.5 active:translate-y-0"
+              className="border-2 border-zinc-200 text-zinc-700 px-8 py-4 rounded-full font-bold text-sm transition-all duration-300 hover:border-primary hover:text-primary hover:-translate-y-0.5 text-center"
             >
               {t.hero.viewAllProducts}
             </Link>
@@ -244,11 +244,11 @@ export function Hero() {
           {/* Delivery Note */}
           {stats?.isFreeDeliveryActive && (
             <motion.div
-              className="flex items-center gap-2 text-xs text-green-700 font-medium"
+              className="flex items-center gap-2 text-xs text-green-700 font-bold"
               custom={4}
               variants={fadeUp}
             >
-              <Truck size={14} />
+              <Truck size={14} strokeWidth={2.5} />
               {t.hero.deliveryNote}
             </motion.div>
           )}
