@@ -1054,6 +1054,7 @@ model SiteSettings {
   // Store branding
   storeName             String    @default("Mouchak Cosmetics")
   tagline               String    @default("Clean · Cruelty-Free · Bangladesh")
+  primaryColor          String    @default("#f01172")
   
   // Hero section
   heroHeadline          String    @default("Spring Beauty Collection") // e.g., "Summer Collection", "Winter Edition"

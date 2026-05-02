@@ -104,6 +104,7 @@ interface StaffMember {
 
 interface SettingsState {
   storeName: string;
+  primaryColor: string;
   currency: string;
   taxRate: number;
   timezone: string;
@@ -135,6 +136,7 @@ const DASHBOARD_STAFF_KEY = 'mouchak.dashboard.staff.v1';
 
 const DEFAULT_SETTINGS: SettingsState = {
   storeName: 'Mouchak Cosmetics',
+  primaryColor: '#f01172',
   currency: 'BDT',
   taxRate: 15,
   timezone: 'Asia/Dhaka',
@@ -453,7 +455,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   }, [staffUsers, staffSearch]);
   // ─── End staff management ───────────────────────────────────────────────────
 
-  const updateSiteSettingsMutation = useMutation({    mutationFn: (data: Partial<{ storeName: string }>) => homepageAPI.updateSettings(data),
+  const updateSiteSettingsMutation = useMutation({    mutationFn: (data: Partial<{ storeName: string; primaryColor: string }>) => homepageAPI.updateSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['homepage', 'settings'] });
     },
@@ -558,7 +560,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     setSettings((prev) => ({
       ...prev,
-      ...(siteSettingsData ? { storeName: siteSettingsData.storeName || prev.storeName } : {}),
+      ...(siteSettingsData ? { 
+        storeName: siteSettingsData.storeName || prev.storeName,
+        primaryColor: siteSettingsData.primaryColor || prev.primaryColor
+      } : {}),
       ...(homepageStatsData
         ? {
             freeShippingOver: homepageStatsData.minFreeDeliveryAmount ?? prev.freeShippingOver,
@@ -874,6 +879,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       setSettings((prev) => ({
         ...prev,
         storeName: siteSettingsData?.storeName || DEFAULT_SETTINGS.storeName,
+        primaryColor: siteSettingsData?.primaryColor || DEFAULT_SETTINGS.primaryColor,
         currency: DEFAULT_SETTINGS.currency,
         taxRate: DEFAULT_SETTINGS.taxRate,
         timezone: DEFAULT_SETTINGS.timezone,
@@ -934,6 +940,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       if (targetTab === 'general') {
         await updateSiteSettingsMutation.mutateAsync({
           storeName: settings.storeName.trim() || DEFAULT_SETTINGS.storeName,
+          primaryColor: settings.primaryColor || DEFAULT_SETTINGS.primaryColor,
         });
       }
 
@@ -985,6 +992,22 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                 onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
                 className={inputClass}
               />
+            </div>
+            <div>
+              <label className={labelClass}>Primary Brand Color</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  className="h-9 w-12 cursor-pointer rounded border border-border p-1 outline-none"
+                  value={settings.primaryColor}
+                  onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                />
+                <input
+                  value={settings.primaryColor}
+                  onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
             </div>
             <div>
               <label className={labelClass}>{t.settings.currency}</label>

@@ -80,7 +80,7 @@ const SidebarContent: React.FC<{
       style={{ borderBottom: `1px solid ${Theme.border}` }}
     >
       <div className="flex items-center justify-between">
-        <div>
+        <div onClick={() => navigate('overview')} className="cursor-pointer hover:opacity-80 transition-opacity">
           <div
             style={{
               fontSize: 22,

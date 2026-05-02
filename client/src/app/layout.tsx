@@ -5,6 +5,7 @@ import { CartProvider } from "@/shared/contexts/CartContext";
 import { WishlistProvider } from "@/shared/contexts/WishlistContext";
 import { CartDrawer } from "@/shared/components/CartDrawer";
 import { WishlistDrawer } from "@/shared/components/WishlistDrawer";
+import ColorThemeProvider from "@/shared/providers/ColorThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default function RootLayout({
           <QueryProvider>
             <CartProvider>
               <WishlistProvider>
+                <ColorThemeProvider />
                 {children}
                 <CartDrawer />
                 <WishlistDrawer />

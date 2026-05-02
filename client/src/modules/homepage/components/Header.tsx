@@ -114,13 +114,13 @@ export function Header() {
       <div className="border-b border-zinc-200">
         <div className="mx-auto max-w-[1400px] px-6 sm:px-10 py-4 flex items-center justify-between">
           {/* Brand Logo - Serif font */}
-          <div className="flex-shrink-0">
+          <Link href="/" className="flex-shrink-0 no-underline text-inherit hover:opacity-90 transition-opacity">
             <h1 className="text-2xl font-bold tracking-tight">
               {storeNameFirst || "Mouchak"}{" "}
               <span className="text-primary italic">{storeNameRestText || "Cosmetics"}</span>
             </h1>
             <p className="text-xs tracking-widest text-zinc-500 uppercase">{tagline}</p>
-          </div>
+          </Link>
 
           {/* Search Bar - Center */}
           <div className="hidden lg:flex flex-1 justify-center px-12 relative" ref={searchContainerRef}>
