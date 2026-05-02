@@ -49,9 +49,9 @@ function StarRating({ rating }: { rating: number }) {
             points="6,1 7.5,4.5 11,5 8.5,7.5 9.2,11 6,9.2 2.8,11 3.5,7.5 1,5 4.5,4.5"
             fill={
               star <= Math.floor(rating)
-                ? '#e91e8c'
+                ? 'var(--primary)'
                 : star - 0.5 <= rating
-                  ? '#e91e8c'
+                  ? 'var(--primary)'
                   : '#e0e0e0'
             }
             opacity={
@@ -108,7 +108,7 @@ function EnhancedProductCard({ product, index }: { product: Product; index: numb
           onMouseLeave={() => setHovered(false)}
           className="relative overflow-hidden rounded-2xl bg-white transition-all duration-300 cursor-pointer group"
           style={{
-            border: `1.5px solid ${hovered ? '#f01172' : '#f5e6ed'}`,
+            border: `1.5px solid ${hovered ? 'var(--primary)' : '#f5e6ed'}`,
             transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
             boxShadow: hovered
               ? '0 20px 40px rgba(240,17,114,0.12), 0 8px 16px rgba(0,0,0,0.04)'
@@ -135,7 +135,7 @@ function EnhancedProductCard({ product, index }: { product: Product; index: numb
               </div>
             )}
 
-            <div className="absolute right-11 top-3 rounded-full border border-pink-200 bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[10px] font-bold text-pink-700 tracking-wide">
+            <div className="absolute right-11 top-3 rounded-full border border-pink-200 bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[10px] font-bold text-primary tracking-wide">
               {t.featuredProducts.bestSeller}
             </div>
 
@@ -157,15 +157,15 @@ function EnhancedProductCard({ product, index }: { product: Product; index: numb
               }}
               className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 hover:scale-110"
               style={{
-                background: inWishlist ? '#f01172' : 'rgba(255,255,255,0.95)',
-                border: `1.5px solid ${inWishlist ? '#f01172' : '#f3c8dc'}`,
+                background: inWishlist ? 'var(--primary)' : 'rgba(255,255,255,0.95)',
+                border: `1.5px solid ${inWishlist ? 'var(--primary)' : '#f3c8dc'}`,
                 backdropFilter: 'blur(8px)',
               }}
             >
               <Heart
                 size={14}
                 fill={inWishlist ? 'white' : 'none'}
-                stroke={inWishlist ? 'white' : '#f01172'}
+                stroke={inWishlist ? 'white' : 'var(--primary)'}
                 strokeWidth={2}
               />
             </button>
@@ -186,7 +186,7 @@ function EnhancedProductCard({ product, index }: { product: Product; index: numb
               }}
               className="absolute bottom-0 left-0 right-0 flex items-center justify-center py-3 text-xs font-bold uppercase text-white transition-transform duration-300 backdrop-blur-sm"
               style={{
-                background: 'rgba(240,17,114,0.92)',
+                background: 'color-mix(in srgb, var(--primary), transparent 8%)',
                 letterSpacing: '1.5px',
                 transform: hovered ? 'translateY(0)' : 'translateY(100%)',
               }}
@@ -348,9 +348,9 @@ export function FeaturedProducts() {
                 onClick={() => setActiveFilter(filter)}
                 className="rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300"
                 style={{
-                  border: `1.5px solid ${activeFilter === filter ? '#f01172' : '#f0d0e0'}`,
-                  background: activeFilter === filter ? '#f01172' : '#fff',
-                  color: activeFilter === filter ? '#fff' : '#c2185b',
+                  border: `1.5px solid ${activeFilter === filter ? 'var(--primary)' : '#f0d0e0'}`,
+                  background: activeFilter === filter ? 'var(--primary)' : '#fff',
+                  color: activeFilter === filter ? '#fff' : 'var(--primary-dark)',
                   boxShadow:
                     activeFilter === filter
                       ? '0 4px 14px rgba(240,17,114,0.2)'

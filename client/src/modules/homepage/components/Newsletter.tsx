@@ -15,7 +15,7 @@ export function Newsletter() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#F01172_0%,#C20D5E_50%,#7B0038_100%)] p-8 sm:p-12 lg:p-16"
+          className="relative overflow-hidden rounded-3xl bg-[linear-gradient(135deg,var(--primary)_0%,var(--primary-dark)_100%)] p-8 sm:p-12 lg:p-16"
         >
           {/* Decorative elements */}
           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-xl" />
@@ -58,7 +58,7 @@ export function Newsletter() {
                   placeholder={t.newsletter.inputPlaceholder}
                   className="w-full px-2 py-3.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
                 />
-                <button className="flex items-center gap-2 bg-zinc-900 px-6 text-sm font-bold text-white transition-all duration-200 hover:bg-zinc-800 whitespace-nowrap">
+                <button className="flex items-center gap-2 bg-primary px-6 text-sm font-bold text-white transition-all duration-200 hover:brightness-90 whitespace-nowrap">
                   {t.newsletter.submitButton}
                   <ArrowRight size={14} />
                 </button>

@@ -25,7 +25,7 @@ export function CategoryCard({ id, label, description, count, image, fallbackIma
         onMouseLeave={() => setHovered(false)}
         className="relative h-52 sm:h-56 overflow-hidden rounded-2xl cursor-pointer group"
         style={{
-          border: `2px solid ${hovered ? '#f01172' : 'transparent'}`,
+          border: `2px solid ${hovered ? 'var(--primary)' : 'transparent'}`,
           transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
           transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
           boxShadow: hovered
@@ -55,14 +55,15 @@ export function CategoryCard({ id, label, description, count, image, fallbackIma
           className="absolute inset-0"
           style={{
             background: hovered
-              ? 'linear-gradient(to top, rgba(194,24,91,0.85) 0%, rgba(240,17,114,0.3) 55%, transparent 100%)'
+              ? 'linear-gradient(to top, var(--primary-dark) 0%, var(--primary) 55%, transparent 100%)'
               : 'linear-gradient(to top, rgba(20,10,15,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)',
-            transition: 'background 0.4s ease',
+            opacity: hovered ? 0.85 : 1,
+            transition: 'all 0.4s ease',
           }}
         />
 
         {/* Product count pill */}
-        <div className="absolute right-3 top-3 rounded-full bg-white/95 backdrop-blur-sm px-3 py-1 text-[10px] font-bold text-pink-700 tracking-wide">
+        <div className="absolute right-3 top-3 rounded-full bg-white/95 backdrop-blur-sm px-3 py-1 text-[10px] font-bold text-primary tracking-wide">
           {count}
         </div>
 
@@ -81,7 +82,7 @@ export function CategoryCard({ id, label, description, count, image, fallbackIma
             <div
               className="flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-white/40"
               style={{
-                background: hovered ? '#f01172' : 'rgba(255,255,255,0.15)',
+                background: hovered ? 'var(--primary)' : 'rgba(255,255,255,0.15)',
                 transition: 'all 0.3s ease',
               }}
             >

@@ -1,9 +1,9 @@
 // Homepage Module - Exports
 
 // Hooks (React Query)
-export { 
-  useHomepageStats, 
-  useSiteSettings, 
+export {
+  useHomepageStats,
+  useSiteSettings,
   useHomepageCategories,
   useHomepageFeaturedProducts,
   useSliders,

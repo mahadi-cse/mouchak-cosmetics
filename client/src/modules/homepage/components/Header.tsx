@@ -195,9 +195,9 @@ export function Header() {
             <LanguageToggle />
 
             {/* Wishlist */}
-            <button 
+            <button
               onClick={() => setWishlistOpen(true)}
-              className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" 
+              className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary"
               aria-label={t.header.ariaWishlist}
             >
               <Heart size={18} />
@@ -209,9 +209,9 @@ export function Header() {
             </button>
 
             {/* Cart */}
-            <button 
+            <button
               onClick={() => setCartOpen(true)}
-              className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary" 
+              className="relative p-2 rounded-lg transition hover:bg-rose-50 text-zinc-700 hover:text-primary"
               aria-label={t.header.ariaCart}
             >
               <ShoppingCart size={18} />

@@ -4,6 +4,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { motion } from "framer-motion";
 import { footerContent, paymentMethods } from "./data";
 import { useHomepageLocale } from "../locales/HomepageLocaleContext";
+import Link from "next/link";
 
 const containerVariants = {
   hidden: {},
@@ -66,13 +67,28 @@ export function Footer() {
             {t.footer.sections.support}
           </h4>
           <ul className="space-y-3 text-sm">
-            {t.footer.supportLinks.map((item) => (
-              <li key={item}>
-                <a href="#" className="transition-colors duration-200 hover:text-white">
-                  {item}
-                </a>
-              </li>
-            ))}
+            {t.footer.supportLinks.map((item, index) => {
+              const footerLinks = [
+                "/dashboard",
+                "/dashboard?tab=order-tracking",
+                "/dashboard?tab=returns",
+                "/support/faq",
+                "/support/shipping-policy",
+                "/support/contact",
+              ];
+              const href = footerLinks[index] || "#";
+
+              return (
+                <li key={item}>
+                  <Link
+                    href={href}
+                    className="transition-colors duration-200 hover:text-white"
+                  >
+                    {item}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </motion.div>
 

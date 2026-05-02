@@ -18,7 +18,7 @@ import {
   type UpdateProfilePayload,
 } from '@/modules/customer-dashboard';
 
-type CustomerNavId = 'overview' | 'profile' | 'order' | 'wishlist' | 'order-tracking';
+type CustomerNavId = 'overview' | 'profile' | 'order' | 'wishlist' | 'order-tracking' | 'returns';
 
 type ProfileDraft = {
   firstName: string;
@@ -68,6 +68,7 @@ const CUSTOMER_NAV_ITEMS: Array<{ id: CustomerNavId; label: string; icon: string
   { id: 'order', label: 'Orders', icon: '🧾' },
   { id: 'wishlist', label: 'Wishlist', icon: '💖' },
   { id: 'order-tracking', label: 'Order Tracking', icon: '📦' },
+  { id: 'returns', label: 'Returns', icon: '🔄' },
 ];
 
 const contentByNav: Record<CustomerNavId, { title: string; subtitle: string }> = {
@@ -90,6 +91,10 @@ const contentByNav: Record<CustomerNavId, { title: string; subtitle: string }> =
   'order-tracking': {
     title: 'Order tracking',
     subtitle: 'Track shipment updates and delivery progress in one place.',
+  },
+  returns: {
+    title: 'Returns',
+    subtitle: 'Manage your product returns and check refund status.',
   },
 };
 
@@ -292,7 +297,7 @@ export default function CustomerDashboardClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabParam = searchParams?.get('tab') as CustomerNavId | null;
-  const validTabs: CustomerNavId[] = ['overview', 'profile', 'order', 'wishlist', 'order-tracking'];
+  const validTabs: CustomerNavId[] = ['overview', 'profile', 'order', 'wishlist', 'order-tracking', 'returns'];
   const initialTab: CustomerNavId = tabParam && validTabs.includes(tabParam) ? tabParam : 'overview';
 
   const [activeNav, setActiveNav] = React.useState<CustomerNavId>(initialTab);
@@ -623,6 +628,7 @@ export default function CustomerDashboardClient() {
                 { label: 'Wishlist', icon: '💖', nav: 'wishlist' as CustomerNavId },
                 { label: 'Track Order', icon: '📦', nav: 'order-tracking' as CustomerNavId },
                 { label: 'Edit Profile', icon: '✏️', nav: 'profile' as CustomerNavId },
+                { label: 'Returns', icon: '🔄', nav: 'returns' as CustomerNavId },
               ].map((action) => (
                 <button
                   key={action.nav}
@@ -1143,6 +1149,30 @@ export default function CustomerDashboardClient() {
     );
   };
 
+  const renderReturnsSection = () => {
+    return (
+      <SectionContainer>
+        <div className="text-center py-12">
+          <div className="text-5xl mb-4">🔄</div>
+          <h3 className="text-xl font-bold" style={{ color: DESIGN.fg }}>Product Returns</h3>
+          <p className="mt-2 text-zinc-500 max-w-md mx-auto">
+            You haven&apos;t initiated any returns yet. To return a product, please go to your <button onClick={() => setActiveNav('order')} className="text-pink-600 font-bold hover:underline">Orders</button> and select the item you wish to return within 7 days of delivery.
+          </p>
+          <div className="mt-8 grid gap-4 max-w-lg mx-auto sm:grid-cols-2">
+            <div className="rounded-2xl border p-4 text-left" style={{ borderColor: DESIGN.border }}>
+              <p className="font-bold text-sm">Easy Returns</p>
+              <p className="text-xs text-zinc-500 mt-1">Return any unused item in its original condition within 7 days.</p>
+            </div>
+            <div className="rounded-2xl border p-4 text-left" style={{ borderColor: DESIGN.border }}>
+              <p className="font-bold text-sm">Quick Refunds</p>
+              <p className="text-xs text-zinc-500 mt-1">Get your refund processed within 3-5 business days after inspection.</p>
+            </div>
+          </div>
+        </div>
+      </SectionContainer>
+    );
+  };
+
   const renderActiveSection = () => {
     switch (activeNav) {
       case 'overview':
@@ -1155,6 +1185,8 @@ export default function CustomerDashboardClient() {
         return renderWishlistSection();
       case 'order-tracking':
         return renderTrackingSection();
+      case 'returns':
+        return renderReturnsSection();
       default:
         return null;
     }
