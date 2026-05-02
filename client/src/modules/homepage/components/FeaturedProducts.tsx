@@ -269,7 +269,7 @@ export function FeaturedProducts() {
   if (isLoading || categoriesLoading) {
     return (
       <section className="space-y-8 bg-zinc-50/50 py-14 lg:py-20">
-        <div className="mx-auto max-w-[1400px] px-6 sm:px-10">
+        <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
           <div className="mb-8">
             <div className="mb-6 flex items-end justify-between">
               <div>
@@ -297,7 +297,7 @@ export function FeaturedProducts() {
   if (error) {
     return (
       <section className="bg-zinc-50/50 py-14 lg:py-20">
-        <div className="mx-auto max-w-[1400px] px-6 sm:px-10">
+        <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
           <div className="rounded-xl border border-red-200 bg-red-50 p-6">
             <p className="text-red-800">{t.featuredProducts.failedToLoad}</p>
           </div>
@@ -313,7 +313,7 @@ export function FeaturedProducts() {
 
   return (
     <section className="space-y-16 bg-zinc-50/50 py-14 lg:py-20">
-      <div className="mx-auto max-w-[1400px] px-6 sm:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
         {/* ── FEATURED PRODUCTS ── */}
         <div>
           {/* Header */}
@@ -387,14 +387,14 @@ export function FeaturedProducts() {
 
       {/* Divider */}
       <div
-        className="h-px mx-auto max-w-[1400px]"
+        className="h-px mx-auto max-w-[1600px]"
         style={{
           background: 'linear-gradient(to right, transparent, #f3c8dc, transparent)',
         }}
       />
 
       {/* ── SHOP BY CATEGORY ── */}
-      <div className="mx-auto max-w-[1400px] px-6 sm:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
         <div className="bg-white py-12 px-6 sm:px-10 rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)]">
           <motion.div
             className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"

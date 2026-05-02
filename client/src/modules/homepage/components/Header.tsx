@@ -110,7 +110,7 @@ export function Header() {
     <header className="bg-white sticky top-0 z-50 shadow-sm">
       {/* Top Bar - Dark background info strip */}
       <div className="hidden md:block bg-zinc-900 text-zinc-400 text-xs tracking-widest border-b border-zinc-800">
-        <div className="mx-auto max-w-[1400px] px-6 sm:px-10 py-2 flex gap-6">
+        <div className="mx-auto max-w-[1600px] px-6 sm:px-10 py-2 flex gap-6">
           <span className="flex items-center gap-2">
             <MapPin size={12} /> {t.header.deliveryBanner}
           </span>
@@ -134,7 +134,7 @@ export function Header() {
 
       {/* Main Navigation */}
       <div className="border-b border-zinc-200">
-        <div className="mx-auto max-w-[1400px] px-6 sm:px-10 py-3 lg:py-4 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-[1600px] px-6 sm:px-10 py-2.5 lg:py-3 flex items-center justify-between gap-4">
           {/* Brand Logo - Serif font */}
           <Link href="/" className="flex-shrink-0 no-underline text-inherit hover:opacity-90 transition-opacity">
             <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
@@ -373,13 +373,13 @@ export function Header() {
 
       {/* Category Navigation (Desktop Only) */}
       <nav className="hidden lg:block border-b border-zinc-200 bg-white">
-        <div className="mx-auto max-w-[1400px] px-6 sm:px-10 flex items-center gap-1 py-0">
+        <div className="mx-auto max-w-[1600px] px-6 sm:px-10 flex items-center gap-1 py-0">
           <div className="flex items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
             {navCategories.map((cat) => (
               <Link
                 key={cat.key}
                 href={cat.href}
-                className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-600 whitespace-nowrap transition hover:text-primary"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-600 whitespace-nowrap transition hover:text-primary"
               >
                 <span className="w-1 h-1 rounded-full bg-current opacity-40"></span>
                 {cat.label}

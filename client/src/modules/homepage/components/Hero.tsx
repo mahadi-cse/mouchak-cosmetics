@@ -90,7 +90,9 @@ function AnimatedStat({ value, isLoading }: { value: string; isLoading: boolean 
   const displayNum = isInteger ? Math.round(animatedNum) : animatedNum.toFixed(1);
 
   if (isLoading) {
-    return <span className="inline-block animate-pulse bg-zinc-200 h-8 w-16 rounded" />;
+    return (
+      <span ref={ref} className="inline-block animate-pulse bg-zinc-200 h-8 w-16 rounded" />
+    );
   }
 
   return (
@@ -167,10 +169,10 @@ export function Hero() {
         <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-pink-50/60 to-transparent blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-[1400px] flex flex-col lg:grid lg:grid-cols-2 items-stretch gap-0 h-auto lg:h-[calc(100vh-140px)] min-h-[700px] lg:min-h-[600px]">
+      <div className="relative mx-auto max-w-[1600px] flex flex-col lg:grid lg:grid-cols-2 items-stretch gap-0 min-h-[calc(100vh-140px)]">
         {/* Left Content */}
         <motion.div
-          className="flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-10 lg:py-8 order-last lg:order-first"
+          className="flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-8 lg:py-6 order-last lg:order-first"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
@@ -189,7 +191,7 @@ export function Hero() {
 
           {/* Title */}
           <motion.h1
-            className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-light leading-[1.1] mb-3 lg:mb-4"
+            className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-light leading-[1.1] mb-2 lg:mb-3"
             custom={1}
             variants={fadeUp}
           >
@@ -204,18 +206,34 @@ export function Hero() {
 
           {/* Description */}
           <motion.p
-            className="text-zinc-500 text-sm sm:text-base leading-relaxed max-w-lg mb-6 lg:mb-8"
+            className="text-zinc-500 text-sm sm:text-base leading-relaxed max-w-lg mb-4 lg:mb-6"
             custom={2}
             variants={fadeUp}
           >
             {settings?.heroDescription || t.hero.description}
           </motion.p>
 
+          {/* CTA Buttons */}
+          <motion.div className="flex flex-col sm:flex-row gap-3 mb-5 lg:mb-6" custom={3} variants={fadeUp}>
+            <Link
+              href="/categories"
+              className="bg-primary text-white px-8 py-3.5 rounded-full font-bold text-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_rgba(240,17,114,0.3)] hover:-translate-y-0.5 text-center"
+            >
+              {t.hero.shopNow}
+            </Link>
+            <Link
+              href="/shop"
+              className="border-2 border-zinc-200 text-zinc-700 px-8 py-3.5 rounded-full font-bold text-sm transition-all duration-300 hover:border-primary hover:text-primary hover:-translate-y-0.5 text-center"
+            >
+              {t.hero.viewAllProducts}
+            </Link>
+          </motion.div>
+
           {/* Stats */}
-          <div className="flex gap-4 sm:gap-8 mb-8 lg:mb-10">
+          <div className="flex gap-4 sm:gap-6 mb-6 lg:mb-8">
             {displayStats.map((item, i) => (
               <motion.div key={item.label} custom={i} variants={statPop} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-                <p className="text-primary text-lg sm:text-2xl font-black leading-none mb-1">
+                <p className="text-primary text-base sm:text-xl font-black leading-none mb-1">
                   <AnimatedStat value={item.value} isLoading={isLoading} />
                 </p>
                 <p className="text-[9px] sm:text-[11px] text-zinc-400 tracking-wider uppercase font-bold">
@@ -224,22 +242,6 @@ export function Hero() {
               </motion.div>
             ))}
           </div>
-
-          {/* CTA Buttons */}
-          <motion.div className="flex flex-col sm:flex-row gap-3 mb-6 lg:mb-8" custom={3} variants={fadeUp}>
-            <Link
-              href="/categories"
-              className="bg-primary text-white px-8 py-4 rounded-full font-bold text-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_rgba(240,17,114,0.3)] hover:-translate-y-0.5 text-center"
-            >
-              {t.hero.shopNow}
-            </Link>
-            <Link
-              href="/shop"
-              className="border-2 border-zinc-200 text-zinc-700 px-8 py-4 rounded-full font-bold text-sm transition-all duration-300 hover:border-primary hover:text-primary hover:-translate-y-0.5 text-center"
-            >
-              {t.hero.viewAllProducts}
-            </Link>
-          </motion.div>
 
           {/* Delivery Note */}
           {stats?.isFreeDeliveryActive && (
@@ -255,7 +257,7 @@ export function Hero() {
         </motion.div>
 
         {/* Right Image Section - Slider */}
-        <div className="relative order-first lg:order-last bg-gradient-to-br from-rose-100 via-rose-50 to-pink-50 flex items-center justify-center overflow-hidden h-[45vh] lg:h-auto">
+        <div className="relative order-first lg:order-last bg-gradient-to-br from-rose-100 via-rose-50 to-pink-50 overflow-hidden h-[50vh] sm:h-[60vh] lg:h-full w-full">
           {/* Offer Badge */}
           {isOfferActive && (
             <motion.div
@@ -330,7 +332,7 @@ export function Hero() {
               </button>
 
               {/* Indicators */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-30">
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-30">
                 {sliders.map((_, index) => (
                   <button
                     key={index}
@@ -351,21 +353,21 @@ export function Hero() {
               {/* Slide Overlay */}
               {currentSliderImage &&
                 (currentSliderImage.title || currentSliderImage.description) && (
-                  <div className="absolute left-0 right-0 bottom-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent px-6 pt-6 pb-16 z-20 flex flex-col justify-end min-h-40">
+                  <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/80 via-black/30 to-transparent px-6 pb-10 lg:pb-14 z-20 flex flex-col justify-end items-start pointer-events-none">
                     {currentSliderImage.title && (
-                      <h2 className="text-white text-xl md:text-2xl font-bold mb-1">
+                      <h2 className="text-white text-xl md:text-2xl font-bold mb-2 drop-shadow-md">
                         {currentSliderImage.title}
                       </h2>
                     )}
                     {currentSliderImage.description && (
-                      <p className="text-white/90 text-xs md:text-sm mb-3 line-clamp-2">
+                      <p className="text-white/95 text-xs md:text-sm mb-4 line-clamp-2 drop-shadow">
                         {currentSliderImage.description}
                       </p>
                     )}
                     {currentSliderImage.buttonText && (
                       <a
                         href={currentSliderImage.buttonLink || "#"}
-                        className="inline-block bg-primary text-white px-5 py-2.5 rounded-full text-xs md:text-sm font-medium transition hover:bg-primary/90 w-fit"
+                        className="pointer-events-auto inline-flex bg-primary text-white px-6 py-2.5 rounded-full text-xs md:text-sm font-bold transition hover:bg-primary/90 w-fit shadow-lg shadow-primary/30"
                       >
                         {currentSliderImage.buttonText}
                       </a>
@@ -387,17 +389,12 @@ export function Hero() {
           )}
 
           {/* In Stock Badge */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1, duration: 0.5 }}
-            className="absolute bottom-6 right-4 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg z-30"
-          >
+          <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg z-30 scale-90 sm:scale-100 origin-top-left">
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
               <circle cx="6" cy="6" r="5" fill="#4CAF50" />
             </svg>
             <span className="text-[10px] font-semibold text-zinc-900">{t.hero.inStock}</span>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

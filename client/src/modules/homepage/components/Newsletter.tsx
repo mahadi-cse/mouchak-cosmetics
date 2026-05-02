@@ -9,7 +9,7 @@ export function Newsletter() {
 
   return (
     <section className="py-10 lg:py-14">
-      <div className="mx-auto max-w-[1400px] px-6 sm:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}

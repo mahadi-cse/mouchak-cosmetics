@@ -57,7 +57,7 @@ export function Features() {
   return (
     <section className="border-b border-zinc-100 bg-white py-5">
       <motion.div
-        className="mx-auto max-w-[1400px] grid gap-0 px-6 sm:px-10 sm:grid-cols-2 lg:grid-cols-4"
+        className="mx-auto max-w-[1600px] grid gap-0 px-6 sm:px-10 sm:grid-cols-2 lg:grid-cols-4"
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"

@@ -22,7 +22,7 @@ export function Footer() {
   return (
     <footer className="bg-zinc-950 text-zinc-400">
       <motion.div
-        className="mx-auto grid max-w-[1400px] gap-10 px-6 sm:px-10 py-14 sm:grid-cols-2 lg:grid-cols-4"
+        className="mx-auto max-w-[1600px] grid gap-10 px-6 sm:px-10 py-14 sm:grid-cols-2 lg:grid-cols-4"
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
@@ -120,7 +120,7 @@ export function Footer() {
       </motion.div>
 
       <div className="border-t border-zinc-800/60">
-        <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-3 px-6 sm:px-10 py-5 text-xs sm:flex-row">
+        <div className="mx-auto max-w-[1600px] flex flex-col items-center justify-between gap-3 px-6 sm:px-10 py-5 text-xs sm:flex-row">
           <p className="text-zinc-500">{t.footer.copyright}</p>
           <div className="flex items-center gap-2">
             <span className="text-zinc-500">{t.footer.paymentLabel}</span>
