@@ -99,6 +99,7 @@ export const en = {
       products: "Product Range",
       support: "Help & Support",
       contact: "Contact Us",
+      links: "Quick Links",
     },
     contact: {
       address: "Dhaka, Bangladesh",

@@ -448,7 +448,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                 <option value="out">{t.ecommerce.outOfStock}</option>
               </select>
               <Btn variant="primary" size="sm" onClick={() => router.push('/dashboard/settings?tab=products')}>
-                {t.products.addProductBtn}
+                {t.products.addProduct}
               </Btn>
             </div>
           </div>
@@ -457,7 +457,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
             <table className="w-full min-w-[600px] border-collapse">
               <thead>
                 <tr>
-                  {[t.returns.product, t.modal.sku, t.ecommerce.price, t.returns.stock, t.products.statusCol, ''].map((h) => (
+                  {[t.returns.product, t.modal.sku, t.ecommerce.price, t.returns.stock, t.inventory.status, ''].map((h) => (
                     <th
                       key={h}
                       className="whitespace-nowrap px-4 py-[11px] text-left text-[11px] font-bold uppercase tracking-[0.06em]"

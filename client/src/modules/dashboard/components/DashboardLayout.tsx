@@ -9,6 +9,7 @@ import { User, LogOut } from 'lucide-react';
 import { useProfileQuery } from '@/modules/auth';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
 import { usePathname, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
@@ -80,7 +81,7 @@ const SidebarContent: React.FC<{
       style={{ borderBottom: `1px solid ${Theme.border}` }}
     >
       <div className="flex items-center justify-between">
-        <div onClick={() => navigate('overview')} className="cursor-pointer hover:opacity-80 transition-opacity">
+        <Link href="/" className="no-underline cursor-pointer hover:opacity-80 transition-opacity">
           <div
             style={{
               fontSize: 22,
@@ -103,7 +104,7 @@ const SidebarContent: React.FC<{
           >
             {t.sidebar.brandSub}
           </div>
-        </div>
+        </Link>
         {isMobile && (
           <button
             onClick={() => setSidebarOpen(false)}

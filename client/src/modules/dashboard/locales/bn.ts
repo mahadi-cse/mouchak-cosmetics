@@ -1,6 +1,7 @@
 import { en } from "./en";
+import { DashboardTranslations } from "./types";
 
-export const bn: typeof en = {
+export const bn: DashboardTranslations = {
   // ─── Shared / fallback strings (DashboardPageClient) ───
   unknownProduct: "অজানা পণ্য",
   na: "প্রযোজ্য নয়",
@@ -456,7 +457,9 @@ export const bn: typeof en = {
     next: "পরবর্তী",
     page: "পৃষ্ঠা",
     confirmReturnTitle: "রিটার্ন নিশ্চিত করবেন?",
+    confirmReturnText: "{totalItems} টি পণ্য, {totalQty} টি পরিমাণ (মোট {totalAmount}) কি গুদামে ফেরত দেবেন?",
     yesRecordReturn: "হ্যাঁ, রিটার্ন রেকর্ড করুন",
+    returnSuccess: "{count} টি পণ্য ({qty} টি পরিমাণ) সফলভাবে ফেরত নেওয়া হয়েছে",
     returnFailed: "রিটার্ন রেকর্ড করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।",
     manualReturn: "ম্যানুয়াল রিটার্ন",
   },
@@ -609,6 +612,7 @@ export const bn: typeof en = {
     ends: "শেষ হবে",
     pause: "স্থগিত করুন",
     remove: "মুছে ফেলুন",
+    edit: "সম্পাদনা",
     createNewPromotion: "＋ নতুন প্রোমোশন তৈরি করুন",
     selectSetting: "মেনু থেকে একটি সেটিং নির্বাচন করুন।",
     reset: "রিসেট",

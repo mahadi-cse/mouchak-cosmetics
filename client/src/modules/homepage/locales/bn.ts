@@ -99,6 +99,7 @@ export const bn = {
       products: "পণ্যের পরিসর",
       support: "সাহায্য ও সহায়তা",
       contact: "যোগাযোগ করুন",
+      links: "দ্রুত লিঙ্ক",
     },
     contact: {
       address: "ঢাকা, বাংলাদেশ",

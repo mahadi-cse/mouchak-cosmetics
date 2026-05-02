@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Heart, Search, ShoppingCart, User, MapPin, Mail, Phone } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
-import { useState, useEffect, useRef, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent, type MouseEvent as ReactMouseEvent } from "react";
 
 import { useHomepageCategories, useHomepageStats, useSiteSettings, useSearchProducts } from "@/modules/homepage";
 import { useCart } from "@/shared/contexts/CartContext";
@@ -93,8 +93,8 @@ export function Header() {
     await signOut({ callbackUrl: "/" });
   };
 
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSearchSubmit = (event?: FormEvent | ReactMouseEvent) => {
+    event?.preventDefault();
     const trimmed = searchTerm.trim();
 
     if (!trimmed) {
