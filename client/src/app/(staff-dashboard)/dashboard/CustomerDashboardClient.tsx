@@ -5,20 +5,23 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import {
   useAddCustomerWishlistItem,
+  useCreateReturnRequest,
   useCustomerDashboardOrders,
   useCustomerDashboardProfile,
   useCustomerDashboardSummary,
   useCustomerOrderTracking,
+  useCustomerReturns,
   useCustomerWishlist,
   useRemoveCustomerWishlistItem,
   useUpdateCustomerDashboardProfile,
   type CustomerDashboardOrder,
   type CustomerDashboardProfile,
   type DashboardOrderStatus,
+  type ReturnReason,
   type UpdateProfilePayload,
 } from '@/modules/customer-dashboard';
 
-type CustomerNavId = 'overview' | 'profile' | 'order' | 'wishlist' | 'order-tracking';
+type CustomerNavId = 'overview' | 'profile' | 'order' | 'wishlist' | 'order-tracking' | 'returns';
 
 type ProfileDraft = {
   firstName: string;
@@ -68,6 +71,7 @@ const CUSTOMER_NAV_ITEMS: Array<{ id: CustomerNavId; label: string; icon: string
   { id: 'order', label: 'Orders', icon: '🧾' },
   { id: 'wishlist', label: 'Wishlist', icon: '💖' },
   { id: 'order-tracking', label: 'Order Tracking', icon: '📦' },
+  { id: 'returns', label: 'Returns', icon: '🔄' },
 ];
 
 const contentByNav: Record<CustomerNavId, { title: string; subtitle: string }> = {
@@ -90,6 +94,10 @@ const contentByNav: Record<CustomerNavId, { title: string; subtitle: string }> =
   'order-tracking': {
     title: 'Order tracking',
     subtitle: 'Track shipment updates and delivery progress in one place.',
+  },
+  returns: {
+    title: 'Returns',
+    subtitle: 'Manage your product returns and check refund status.',
   },
 };
 
@@ -292,7 +300,7 @@ export default function CustomerDashboardClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabParam = searchParams?.get('tab') as CustomerNavId | null;
-  const validTabs: CustomerNavId[] = ['overview', 'profile', 'order', 'wishlist', 'order-tracking'];
+  const validTabs: CustomerNavId[] = ['overview', 'profile', 'order', 'wishlist', 'order-tracking', 'returns'];
   const initialTab: CustomerNavId = tabParam && validTabs.includes(tabParam) ? tabParam : 'overview';
 
   const [activeNav, setActiveNav] = React.useState<CustomerNavId>(initialTab);
@@ -306,6 +314,15 @@ export default function CustomerDashboardClient() {
   const [profileDirty, setProfileDirty] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
   const profileRef = React.useRef<HTMLDivElement>(null);
+
+  // Returns state
+  const [returnFormOpen, setReturnFormOpen] = React.useState(false);
+  const [returnSelectedOrderId, setReturnSelectedOrderId] = React.useState<number | undefined>(undefined);
+  const [returnSelectedItemId, setReturnSelectedItemId] = React.useState<number | undefined>(undefined);
+  const [returnReason, setReturnReason] = React.useState<ReturnReason>('DEFECTIVE');
+  const [returnQty, setReturnQty] = React.useState(1);
+  const [returnNotes, setReturnNotes] = React.useState('');
+  const [returnNotice, setReturnNotice] = React.useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   const { data: session } = useSession();
 
@@ -357,6 +374,12 @@ export default function CustomerDashboardClient() {
   const trackingQuery = useCustomerOrderTracking(trackingOrderId, {
     enabled: activeNav === 'order-tracking' && !!trackingOrderId,
   });
+  const returnsQuery = useCustomerReturns(1, { enabled: activeNav === 'returns' });
+  // Fetch delivered orders for the return form (always available when on returns tab)
+  const deliveredOrdersQuery = useCustomerDashboardOrders(
+    { page: 1, limit: 50, status: 'DELIVERED' },
+    { enabled: activeNav === 'returns' }
+  );
 
   const updateProfileMutation = useUpdateCustomerDashboardProfile({
     onSuccess: () => {
@@ -384,6 +407,22 @@ export default function CustomerDashboardClient() {
     },
     onError: () => {
       setWishlistNotice('Unable to remove wishlist item right now.');
+    },
+  });
+
+  const createReturnMutation = useCreateReturnRequest({
+    onSuccess: () => {
+      setReturnFormOpen(false);
+      setReturnSelectedOrderId(undefined);
+      setReturnSelectedItemId(undefined);
+      setReturnQty(1);
+      setReturnNotes('');
+      setReturnReason('DEFECTIVE');
+      setReturnNotice({ type: 'success', msg: 'Return request submitted successfully.' });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || 'Failed to submit return request. Please try again.';
+      setReturnNotice({ type: 'error', msg });
     },
   });
 
@@ -623,6 +662,7 @@ export default function CustomerDashboardClient() {
                 { label: 'Wishlist', icon: '💖', nav: 'wishlist' as CustomerNavId },
                 { label: 'Track Order', icon: '📦', nav: 'order-tracking' as CustomerNavId },
                 { label: 'Edit Profile', icon: '✏️', nav: 'profile' as CustomerNavId },
+                { label: 'Returns', icon: '🔄', nav: 'returns' as CustomerNavId },
               ].map((action) => (
                 <button
                   key={action.nav}
@@ -1143,6 +1183,310 @@ export default function CustomerDashboardClient() {
     );
   };
 
+  const RETURN_REASON_LABELS: Record<ReturnReason, string> = {
+    DEFECTIVE: 'Defective product',
+    WRONG_ITEM: 'Wrong item received',
+    COLOR_MISMATCH: 'Color mismatch',
+    NOT_AS_DESCRIBED: 'Not as described',
+    CUSTOMER_CHANGED_MIND: 'Changed my mind',
+    DAMAGED_IN_TRANSIT: 'Damaged in transit',
+    EXPIRED: 'Expired product',
+    QUALITY_ISSUE: 'Quality issue',
+    OTHER: 'Other',
+  };
+
+  const RETURN_STATUS_STYLE: Record<string, { background: string; color: string }> = {
+    REQUESTED:        { background: '#fff7ed', color: '#c2410c' },
+    APPROVED:         { background: '#f0fdf4', color: '#15803d' },
+    REJECTED:         { background: '#fef2f2', color: '#b91c1c' },
+    RETURNED_RECEIVED:{ background: '#eff6ff', color: '#1d4ed8' },
+    INSPECTED:        { background: '#fdf4ff', color: '#7e22ce' },
+    REFUND_PROCESSED: { background: '#ecfdf5', color: DESIGN.success },
+    CLOSED:           { background: '#f3f4f6', color: '#6b7280' },
+  };
+
+  const selectedOrderItems = React.useMemo(() => {
+    if (!returnSelectedOrderId) return [];
+    const order = deliveredOrdersQuery.data?.orders.find((o) => o.id === returnSelectedOrderId);
+    return order?.items || [];
+  }, [returnSelectedOrderId, deliveredOrdersQuery.data]);
+
+  const selectedItem = selectedOrderItems.find((i) => i.id === returnSelectedItemId);
+
+  const handleSubmitReturn = () => {
+    if (!returnSelectedItemId) return;
+    setReturnNotice(null);
+    createReturnMutation.mutate({
+      orderItemId: returnSelectedItemId,
+      reason: returnReason,
+      returnedQuantity: returnQty,
+      notes: returnNotes.trim() || undefined,
+    });
+  };
+
+  const renderReturnsSection = () => {
+    const isLoading = returnsQuery.isLoading;
+    const returns = returnsQuery.data?.returns || [];
+    const deliveredOrders = deliveredOrdersQuery.data?.orders || [];
+
+    return (
+      <div className="space-y-4">
+        {/* Policy strip */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[
+            { icon: '📦', title: 'Easy Returns', desc: 'Return unused items in original condition within 7 days.' },
+            { icon: '🔍', title: 'Inspection', desc: 'We inspect returns within 2 business days of receipt.' },
+            { icon: '💸', title: 'Quick Refunds', desc: 'Refunds processed within 3–5 business days after approval.' },
+          ].map((card) => (
+            <div
+              key={card.title}
+              className="rounded-2xl border p-4"
+              style={{ borderColor: DESIGN.border, background: DESIGN.card, boxShadow: '0 2px 8px rgba(233,30,140,0.04)' }}
+            >
+              <span className="text-2xl">{card.icon}</span>
+              <p className="mt-2 text-sm font-bold" style={{ color: DESIGN.fg }}>{card.title}</p>
+              <p className="mt-1 text-xs" style={{ color: DESIGN.mutedFg }}>{card.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* New return request button */}
+        <SectionContainer>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xl font-bold" style={{ color: DESIGN.fg }}>My Returns</p>
+              <p className="text-sm" style={{ color: DESIGN.mutedFg }}>Track all your return requests and refund status.</p>
+            </div>
+            <button
+              onClick={() => { setReturnFormOpen(true); setReturnNotice(null); }}
+              className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5"
+              style={{ background: DESIGN.primary, boxShadow: '0 8px 20px rgba(233,30,140,0.22)' }}
+            >
+              + New Return Request
+            </button>
+          </div>
+
+          {returnNotice && (
+            <div
+              className="mt-4 rounded-xl px-4 py-3 text-sm font-semibold"
+              style={{
+                background: returnNotice.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                color: returnNotice.type === 'success' ? DESIGN.success : '#b91c1c',
+              }}
+            >
+              {returnNotice.msg}
+            </div>
+          )}
+
+          {/* Return request form */}
+          {returnFormOpen && (
+            <div
+              className="mt-4 rounded-2xl border p-4 space-y-4"
+              style={{ borderColor: DESIGN.ring, background: DESIGN.softPink }}
+            >
+              <p className="text-sm font-bold" style={{ color: DESIGN.fg }}>New Return Request</p>
+
+              {/* Step 1: Select order */}
+              <label className="block text-sm">
+                <span style={{ color: DESIGN.mutedFg }}>Select Delivered Order</span>
+                {deliveredOrdersQuery.isLoading ? (
+                  <p className="mt-1 text-xs" style={{ color: DESIGN.subtleFg }}>Loading orders…</p>
+                ) : deliveredOrders.length === 0 ? (
+                  <p className="mt-1 text-xs" style={{ color: DESIGN.subtleFg }}>No delivered orders eligible for return.</p>
+                ) : (
+                  <select
+                    value={returnSelectedOrderId ?? ''}
+                    onChange={(e) => {
+                      setReturnSelectedOrderId(Number(e.target.value) || undefined);
+                      setReturnSelectedItemId(undefined);
+                    }}
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-[#e91e8c] focus:ring-4 focus:ring-pink-100"
+                    style={{ borderColor: DESIGN.border, color: DESIGN.fg, background: '#fff' }}
+                  >
+                    <option value="">— Choose an order —</option>
+                    {deliveredOrders.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.orderNumber} · {toDateLabel(o.createdAt)} · {money(o.total)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
+
+              {/* Step 2: Select item */}
+              {returnSelectedOrderId && selectedOrderItems.length > 0 && (
+                <label className="block text-sm">
+                  <span style={{ color: DESIGN.mutedFg }}>Select Item to Return</span>
+                  <select
+                    value={returnSelectedItemId ?? ''}
+                    onChange={(e) => {
+                      const id = Number(e.target.value) || undefined;
+                      setReturnSelectedItemId(id);
+                      const item = selectedOrderItems.find((i) => i.id === id);
+                      if (item) setReturnQty(item.quantity);
+                    }}
+                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-[#e91e8c] focus:ring-4 focus:ring-pink-100"
+                    style={{ borderColor: DESIGN.border, color: DESIGN.fg, background: '#fff' }}
+                  >
+                    <option value="">— Choose an item —</option>
+                    {selectedOrderItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.productName} (qty: {item.quantity}) · {money(item.totalPrice)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {/* Step 3: Qty + reason + notes */}
+              {returnSelectedItemId && selectedItem && (
+                <>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="text-sm">
+                      <span style={{ color: DESIGN.mutedFg }}>Quantity to Return</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={selectedItem.quantity}
+                        value={returnQty}
+                        onChange={(e) => setReturnQty(Math.max(1, Math.min(selectedItem.quantity, Number(e.target.value))))}
+                        className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-[#e91e8c] focus:ring-4 focus:ring-pink-100"
+                        style={{ borderColor: DESIGN.border, color: DESIGN.fg, background: '#fff' }}
+                      />
+                    </label>
+                    <label className="text-sm">
+                      <span style={{ color: DESIGN.mutedFg }}>Return Reason</span>
+                      <select
+                        value={returnReason}
+                        onChange={(e) => setReturnReason(e.target.value as ReturnReason)}
+                        className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-[#e91e8c] focus:ring-4 focus:ring-pink-100"
+                        style={{ borderColor: DESIGN.border, color: DESIGN.fg, background: '#fff' }}
+                      >
+                        {(Object.keys(RETURN_REASON_LABELS) as ReturnReason[]).map((r) => (
+                          <option key={r} value={r}>{RETURN_REASON_LABELS[r]}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <label className="block text-sm">
+                    <span style={{ color: DESIGN.mutedFg }}>Additional Notes (optional)</span>
+                    <textarea
+                      value={returnNotes}
+                      onChange={(e) => setReturnNotes(e.target.value)}
+                      rows={2}
+                      placeholder="Describe the issue in detail…"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-[#e91e8c] focus:ring-4 focus:ring-pink-100"
+                      style={{ borderColor: DESIGN.border, color: DESIGN.fg, background: '#fff' }}
+                    />
+                  </label>
+                  <div
+                    className="rounded-xl px-4 py-3 text-sm"
+                    style={{ background: '#fff', border: `1px solid ${DESIGN.border}` }}
+                  >
+                    <p className="font-semibold" style={{ color: DESIGN.mutedFg }}>Estimated Refund</p>
+                    <p className="text-lg font-black" style={{ color: DESIGN.primary }}>
+                      {money(Number(selectedItem.unitPrice) * returnQty)}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSubmitReturn}
+                  disabled={!returnSelectedItemId || createReturnMutation.isPending}
+                  className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{ background: DESIGN.primary, boxShadow: '0 6px 16px rgba(233,30,140,0.22)' }}
+                >
+                  {createReturnMutation.isPending ? 'Submitting…' : 'Submit Return Request'}
+                </button>
+                <button
+                  onClick={() => { setReturnFormOpen(false); setReturnNotice(null); }}
+                  className="rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5"
+                  style={{ borderColor: DESIGN.border, color: DESIGN.mutedFg, background: '#fff' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Returns list */}
+          <div className="mt-5 space-y-3">
+            {isLoading ? (
+              <LoadingState message="Loading your return requests…" />
+            ) : returnsQuery.isError ? (
+              <ErrorState message="Unable to load return requests." />
+            ) : returns.length === 0 ? (
+              <EmptyState message="No return requests yet. Delivered orders are eligible for return within 7 days." />
+            ) : (
+              returns.map((ret) => {
+                const statusStyle = RETURN_STATUS_STYLE[ret.status] || { background: '#f3f4f6', color: '#6b7280' };
+                const img = ret.orderItem.product.images[0];
+                return (
+                  <div
+                    key={ret.id}
+                    className="rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-0.5"
+                    style={{ borderColor: DESIGN.border, boxShadow: '0 2px 8px rgba(233,30,140,0.04)', background: '#fff' }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="h-14 w-14 shrink-0 overflow-hidden rounded-xl"
+                        style={{ background: DESIGN.softPink }}
+                      >
+                        {img ? (
+                          <img src={img} alt={ret.orderItem.product.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-lg">📦</div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="truncate text-sm font-semibold" style={{ color: DESIGN.fg }}>
+                              {ret.orderItem.product.name}
+                            </p>
+                            <p className="text-xs" style={{ color: DESIGN.mutedFg }}>
+                              Order {ret.orderItem.order.orderNumber} · Qty {ret.returnedQuantity}
+                            </p>
+                          </div>
+                          <span
+                            className="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.10em]"
+                            style={statusStyle}
+                          >
+                            {ret.status.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-4 text-xs">
+                          <span style={{ color: DESIGN.mutedFg }}>
+                            <span className="font-semibold" style={{ color: DESIGN.fg }}>Reason: </span>
+                            {RETURN_REASON_LABELS[ret.reason]}
+                          </span>
+                          <span style={{ color: DESIGN.mutedFg }}>
+                            <span className="font-semibold" style={{ color: DESIGN.fg }}>Refund: </span>
+                            <span style={{ color: DESIGN.primary }}>{money(ret.refundAmount)}</span>
+                          </span>
+                          <span style={{ color: DESIGN.mutedFg }}>
+                            Requested on {toDateLabel(ret.createdAt)}
+                          </span>
+                        </div>
+                        {ret.notes && (
+                          <p className="mt-1.5 rounded-lg px-3 py-1.5 text-xs" style={{ background: DESIGN.softPink, color: DESIGN.mutedFg }}>
+                            {ret.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </SectionContainer>
+      </div>
+    );
+  };
+
   const renderActiveSection = () => {
     switch (activeNav) {
       case 'overview':
@@ -1155,6 +1499,8 @@ export default function CustomerDashboardClient() {
         return renderWishlistSection();
       case 'order-tracking':
         return renderTrackingSection();
+      case 'returns':
+        return renderReturnsSection();
       default:
         return null;
     }

@@ -12,6 +12,7 @@ import { useListProducts } from '@/modules/products';
 import { useSession } from 'next-auth/react';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import toast from 'react-hot-toast';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 interface ReturnLineItem {
   productId: number;
@@ -30,6 +31,7 @@ const RETURNS_BRANCH_STORAGE_KEY = 'dashboard.returns.selectedBranchId';
 
 export default function ReturnsView() {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const { data: session } = useSession();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b) => b.active);
@@ -126,9 +128,9 @@ export default function ReturnsView() {
   const handleConfirmReturn = async () => {
     if (lineItems.length === 0) return;
     const confirmed = await confirmDialog({
-      title: 'Confirm Return?',
-      text: `Return ${totalItems} product(s), ${totalQty} qty totaling ${formatCurrency(grandTotal)} to warehouse?`,
-      confirmButtonText: 'Yes, record return',
+      title: t.returns.confirmReturnTitle,
+      text: t.returns.confirmReturnText ? t.returns.confirmReturnText.replace('{totalItems}', totalItems.toString()).replace('{totalQty}', totalQty.toString()).replace('{totalAmount}', formatCurrency(grandTotal)) : `Return ${totalItems} product(s), ${totalQty} qty totaling ${formatCurrency(grandTotal)} to warehouse?`,
+      confirmButtonText: t.returns.yesRecordReturn,
       icon: 'question',
     });
     if (!confirmed) return;
@@ -136,7 +138,7 @@ export default function ReturnsView() {
     try {
       await createReturnMutation.mutateAsync({
         returnedBy: session?.user?.name || session?.user?.email || 'Staff',
-        reason: reason || 'Manual Return',
+        reason: reason || t.returns.manualReturn,
         branchId: Number(returnBranchId),
         branchName: activeBranches.find((b) => b.id === Number(returnBranchId))?.name || 'Main',
         items: lineItems.map((item) => ({
@@ -144,10 +146,10 @@ export default function ReturnsView() {
           ...(item.sizeName ? { sizeName: item.sizeName } : {}),
         })),
       });
-      toast.success(`Returned ${lineItems.length} product(s), ${totalQty} qty total`);
+      toast.success(t.returns.returnSuccess ? t.returns.returnSuccess.replace('{count}', lineItems.length.toString()).replace('{qty}', totalQty.toString()) : `Returned ${lineItems.length} product(s), ${totalQty} qty total`);
       setSearchQuery(''); setLineItems([]); setReason('');
     } catch {
-      toast.error('Failed to record return. Please try again.');
+      toast.error(t.returns.returnFailed);
     }
   };
 
@@ -169,11 +171,11 @@ export default function ReturnsView() {
         <div className="px-3.5 py-3.5 flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>↩ Record Return</div>
-              <div className="text-[12px]" style={{ color: Theme.mutedFg }}>Return items back to warehouse inventory</div>
+              <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>{t.returns.recordReturnTitle}</div>
+              <div className="text-[12px]" style={{ color: Theme.mutedFg }}>{t.returns.recordReturnDesc}</div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <label className="text-xs font-semibold whitespace-nowrap" style={{ color: Theme.mutedFg }}>Branch</label>
+              <label className="text-xs font-semibold whitespace-nowrap" style={{ color: Theme.mutedFg }}>{t.returns.branchLabel}</label>
               <select value={returnBranchId} onChange={(e) => setReturnBranchId(e.target.value)}
                 className="rounded-lg border px-3 py-2 text-sm font-semibold outline-none"
                 style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}>
@@ -183,12 +185,12 @@ export default function ReturnsView() {
           </div>
 
           {/* Reason */}
-          <input type="text" placeholder="Return reason (optional)..." value={reason} onChange={(e) => setReason(e.target.value)}
+          <input type="text" placeholder={t.returns.returnReason} value={reason} onChange={(e) => setReason(e.target.value)}
             className="w-full px-3 py-2 border rounded-lg text-sm outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
 
           {/* Search */}
           <div className="relative" ref={searchBoxRef}>
-            <input type="text" placeholder="Search product name or SKU to return..." value={searchQuery}
+            <input type="text" placeholder={t.returns.searchProductReturn} value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
               onFocus={() => setShowDropdown(true)}
               className="w-full px-3 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-100"
@@ -202,12 +204,12 @@ export default function ReturnsView() {
                     style={{ background: 'transparent', color: Theme.fg, borderColor: Theme.border }}>
                     <div>
                       <div className="font-semibold">{p.name}</div>
-                      <div className="text-xs" style={{ color: Theme.mutedFg }}>SKU: {p.sku}</div>
+                      <div className="text-xs" style={{ color: Theme.mutedFg }}>{t.modal.sku}: {p.sku}</div>
                     </div>
-                    <div className="text-xs ml-2" style={{ color: Theme.mutedFg }}>Stock: {p.stock}</div>
+                    <div className="text-xs ml-2" style={{ color: Theme.mutedFg }}>{t.returns.stock}: {p.stock}</div>
                   </button>
                 )) : (
-                  <div className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>No products found</div>
+                  <div className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>{t.products.noProducts}</div>
                 )}
               </div>
             )}
@@ -217,10 +219,10 @@ export default function ReturnsView() {
           <div className="rounded-xl border overflow-hidden bg-white" style={{ borderColor: Theme.border }}>
             {!isMobile && (
               <div className="grid grid-cols-12 gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wide bg-emerald-50" style={{ color: Theme.mutedFg }}>
-                <div className="col-span-4">Product</div>
-                <div className="col-span-3 text-center">Qty</div>
-                <div className="col-span-2 text-right">Unit Price</div>
-                <div className="col-span-2 text-right">Line Total</div>
+                <div className="col-span-4">{t.returns.product}</div>
+                <div className="col-span-3 text-center">{t.suppliers.qty}</div>
+                <div className="col-span-2 text-right">{t.returns.unitPrice}</div>
+                <div className="col-span-2 text-right">{t.returns.lineTotal}</div>
                 <div className="col-span-1 text-right"> </div>
               </div>
             )}
@@ -264,22 +266,22 @@ export default function ReturnsView() {
                 </div>
               </div>
             )) : (
-              <div className="px-3 py-5 text-center text-xs" style={{ color: Theme.mutedFg }}>No products added — search above to add return items.</div>
+              <div className="px-3 py-5 text-center text-xs" style={{ color: Theme.mutedFg }}>{t.returns.noProductsAddedReturn}</div>
             )}
           </div>
 
           {/* Footer */}
           <div className={`pt-1 ${isMobile ? 'space-y-1.5' : 'flex items-center justify-between'}`}>
             <div className="text-xs" style={{ color: Theme.mutedFg }}>
-              <span className="font-semibold">Items: {totalItems}</span><span className="mx-2">•</span><span className="font-semibold">Qty: {totalQty}</span>
+              <span className="font-semibold">{t.returns.items}: {totalItems}</span><span className="mx-2">•</span><span className="font-semibold">{t.suppliers.qty}: {totalQty}</span>
             </div>
-            <div className="text-sm font-black" style={{ color: '#10b981' }}>Return Total: {formatCurrency(grandTotal)}</div>
+            <div className="text-sm font-black" style={{ color: '#10b981' }}>{t.returns.returnTotal}: {formatCurrency(grandTotal)}</div>
           </div>
 
           <div className={`flex gap-2 ${isMobile ? 'flex-col-reverse' : 'justify-end'}`}>
-            <Btn variant="ghost" onClick={() => { setSearchQuery(''); setShowDropdown(false); setLineItems([]); setReason(''); }} className={isMobile ? 'w-full' : ''}>Reset</Btn>
+            <Btn variant="ghost" onClick={() => { setSearchQuery(''); setShowDropdown(false); setLineItems([]); setReason(''); }} className={isMobile ? 'w-full' : ''}>{t.suppliers.reset}</Btn>
             <Btn variant="primary" disabled={lineItems.length === 0 || createReturnMutation.isPending} onClick={handleConfirmReturn} className={isMobile ? 'w-full' : ''}>
-              {createReturnMutation.isPending ? 'Recording...' : `↩ Record Return · ${formatCurrency(grandTotal)}`}
+              {createReturnMutation.isPending ? t.returns.recordingReturn : `${t.returns.recordReturnBtn} · ${formatCurrency(grandTotal)}`}
             </Btn>
           </div>
         </div>
@@ -287,27 +289,27 @@ export default function ReturnsView() {
 
       {/* Return History */}
       <Card>
-        <SecHead title="Return History" sub={`Total returns: ${historyMeta?.total ?? 0}`} />
+        <SecHead title={t.returns.returnHistory} sub={`${t.returns.totalReturns}: ${historyMeta?.total ?? 0}`} />
         <div className="p-3.5">
           <div className="mb-3 grid gap-2 md:grid-cols-3">
-            <input type="text" placeholder="Search by product or staff..." value={searchLog}
+            <input type="text" placeholder={t.returns.searchReturnHistory} value={searchLog}
               onChange={(e) => { setSearchLog(e.target.value); setHistoryPage(1); }}
               className="w-full px-3 py-2 border rounded text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
             <select value={historySortBy} onChange={(e) => { setHistorySortBy(e.target.value as any); setHistoryPage(1); }}
               className="w-full px-3 py-2 border rounded text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}>
-              <option value="createdAt">Sort: Date</option>
-              <option value="returnNumber">Sort: Return ID</option>
-              <option value="totalQty">Sort: Quantity</option>
-              <option value="totalAmount">Sort: Amount</option>
+              <option value="createdAt">{t.returns.sortDate}</option>
+              <option value="returnNumber">{t.returns.sortReturnId}</option>
+              <option value="totalQty">{t.returns.sortQty}</option>
+              <option value="totalAmount">{t.returns.sortAmount}</option>
             </select>
             <div className="flex gap-2">
               <select value={historySortOrder} onChange={(e) => { setHistorySortOrder(e.target.value as 'asc' | 'desc'); setHistoryPage(1); }}
                 className="w-1/2 px-3 py-2 border rounded text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}>
-                <option value="desc">Desc</option><option value="asc">Asc</option>
+                <option value="desc">{t.returns.desc}</option><option value="asc">{t.returns.asc}</option>
               </select>
               <select value={historyLimit} onChange={(e) => { setHistoryLimit(Number(e.target.value)); setHistoryPage(1); }}
                 className="w-1/2 px-3 py-2 border rounded text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}>
-                <option value={10}>10 / page</option><option value={20}>20 / page</option>
+                <option value={10}>10 {t.returns.perPage}</option><option value={20}>20 {t.returns.perPage}</option>
               </select>
             </div>
           </div>
@@ -316,18 +318,18 @@ export default function ReturnsView() {
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr className="border-b-2" style={{ borderColor: Theme.border }}>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>Return ID</th>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>Product</th>
-                  <th className="px-2 py-2 font-bold text-center" style={{ color: Theme.mutedFg }}>Qty</th>
-                  <th className="px-2 py-2 font-bold text-right" style={{ color: Theme.mutedFg }}>Amount</th>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>Date</th>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>Branch</th>
-                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>By</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.returns.returnId}</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.returns.product}</th>
+                  <th className="px-2 py-2 font-bold text-center" style={{ color: Theme.mutedFg }}>{t.suppliers.qty}</th>
+                  <th className="px-2 py-2 font-bold text-right" style={{ color: Theme.mutedFg }}>{t.suppliers.amount}</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.suppliers.date}</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.branch}</th>
+                  <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.suppliers.by}</th>
                 </tr>
               </thead>
               <tbody>
                 {manualReturnsQuery.isLoading ? (
-                  <tr><td colSpan={7} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>Loading returns...</td></tr>
+                  <tr><td colSpan={7} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>{t.returns.loadingReturns}</td></tr>
                 ) : historyRows.length > 0 ? historyRows.map((ret) => (
                   <tr key={ret.returnNumber} className="border-b" style={{ borderColor: Theme.border }}>
                     <td className="px-2 py-2.5 font-semibold" style={{ color: '#10b981' }}>{ret.returnNumber}</td>
@@ -341,16 +343,16 @@ export default function ReturnsView() {
                     <td className="px-2 py-2.5" style={{ color: Theme.mutedFg }}>{ret.returnedBy || 'Staff'}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={7} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>{searchLog ? 'No returns found' : 'No returns recorded yet'}</td></tr>
+                  <tr><td colSpan={7} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>{searchLog ? t.returns.noReturnsFound : t.returns.noReturnsRecorded}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
 
           <div className="mt-3 flex items-center justify-end gap-2">
-            <Btn variant="ghost" disabled={historyPage <= 1 || manualReturnsQuery.isFetching} onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}>Prev</Btn>
-            <span className="text-xs" style={{ color: Theme.mutedFg }}>Page {historyMeta?.page || historyPage} / {historyMeta?.pages || 1}</span>
-            <Btn variant="ghost" disabled={!!historyMeta && historyPage >= historyMeta.pages || manualReturnsQuery.isFetching} onClick={() => setHistoryPage((p) => p + 1)}>Next</Btn>
+            <Btn variant="ghost" disabled={historyPage <= 1 || manualReturnsQuery.isFetching} onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}>{t.returns.prev}</Btn>
+            <span className="text-xs" style={{ color: Theme.mutedFg }}>{t.returns.page} {historyMeta?.page || historyPage} / {historyMeta?.pages || 1}</span>
+            <Btn variant="ghost" disabled={!!historyMeta && historyPage >= historyMeta.pages || manualReturnsQuery.isFetching} onClick={() => setHistoryPage((p) => p + 1)}>{t.returns.next}</Btn>
           </div>
         </div>
       </Card>
