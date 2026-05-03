@@ -1,10 +1,12 @@
 import apiClient from '@/shared/lib/apiClient';
 import type {
   AddWishlistPayload,
+  CreateReturnPayload,
   CustomerDashboardOrder,
   CustomerDashboardProfile,
   CustomerDashboardSummary,
   CustomerOrderTracking,
+  CustomerReturn,
   ListMyOrdersParams,
   PaginationMeta,
   UpdateProfilePayload,
@@ -78,6 +80,27 @@ export const customerDashboardAPI = {
   removeWishlistItem: async (productId: number) => {
     const response = await apiClient.delete<ApiOk<{ removed: boolean; productId: number }>>(
       `/customer-dashboard/wishlist/${productId}`
+    );
+    return response.data.data;
+  },
+
+  listMyReturns: async (params?: { page?: number; limit?: number }) => {
+    const response = await apiClient.get<ApiPaginated<CustomerReturn>>('/customer-dashboard/returns', {
+      params: {
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
+      },
+    });
+    return {
+      returns: response.data.data,
+      meta: response.data.meta,
+    };
+  },
+
+  createReturnRequest: async (payload: CreateReturnPayload) => {
+    const response = await apiClient.post<ApiOk<CustomerReturn>>(
+      '/customer-dashboard/returns',
+      payload
     );
     return response.data.data;
   },

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useHomepageFeaturedProducts, useHomepageCategories } from '@/modules/homepage';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { useCart } from '@/shared/contexts/CartContext';
@@ -34,7 +35,8 @@ function getCategoryFallbackImage(slug?: string, name?: string): string {
   if (key.includes('skin')) return CATEGORY_FALLBACK_IMAGES.skincare;
   if (key.includes('make')) return CATEGORY_FALLBACK_IMAGES.makeup;
   if (key.includes('hair')) return CATEGORY_FALLBACK_IMAGES.haircare;
-  if (key.includes('frag') || key.includes('perfume') || key.includes('scent')) return CATEGORY_FALLBACK_IMAGES.fragrance;
+  if (key.includes('frag') || key.includes('perfume') || key.includes('scent'))
+    return CATEGORY_FALLBACK_IMAGES.fragrance;
   return CATEGORY_FALLBACK_IMAGES.default;
 }
 
@@ -45,8 +47,16 @@ function StarRating({ rating }: { rating: number }) {
         <svg key={star} width="11" height="11" viewBox="0 0 12 12" fill="none">
           <polygon
             points="6,1 7.5,4.5 11,5 8.5,7.5 9.2,11 6,9.2 2.8,11 3.5,7.5 1,5 4.5,4.5"
-            fill={star <= Math.floor(rating) ? '#e91e8c' : star - 0.5 <= rating ? '#e91e8c' : '#e0e0e0'}
-            opacity={star <= Math.floor(rating) ? 1 : star - 0.5 <= rating ? 0.55 : 1}
+            fill={
+              star <= Math.floor(rating)
+                ? 'var(--primary)'
+                : star - 0.5 <= rating
+                  ? 'var(--primary)'
+                  : '#e0e0e0'
+            }
+            opacity={
+              star <= Math.floor(rating) ? 1 : star - 0.5 <= rating ? 0.55 : 1
+            }
           />
         </svg>
       ))}
@@ -54,7 +64,20 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function EnhancedProductCard({ product }: { product: Product }) {
+const cardVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.06,
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+    },
+  }),
+};
+
+function EnhancedProductCard({ product, index }: { product: Product; index: number }) {
   const [hovered, setHovered] = useState(false);
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { addToCart, setIsOpen: openCart } = useCart();
@@ -64,9 +87,13 @@ function EnhancedProductCard({ product }: { product: Product }) {
   );
 
   const discount = product.compareAtPrice
-    ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+    ? Math.round(
+        ((product.compareAtPrice - product.price) / product.compareAtPrice) * 100
+      )
     : null;
-  const savingsAmount = product.compareAtPrice ? Math.round(product.compareAtPrice - product.price) : 0;
+  const savingsAmount = product.compareAtPrice
+    ? Math.round(product.compareAtPrice - product.price)
+    : 0;
 
   const category = product.category?.name || t.featuredProducts.products;
   const rating = 4.5;
@@ -74,169 +101,143 @@ function EnhancedProductCard({ product }: { product: Product }) {
   const inWishlist = isInWishlist(String(product.id));
 
   return (
-    <Link href={`/product/${product.slug}`} className="block">
-      <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className="relative overflow-hidden rounded-2xl border-1.5 bg-white transition-all duration-300 cursor-pointer"
-        style={{
-          borderColor: hovered ? '#e91e8c' : '#f3e0ea',
-          transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
-          boxShadow: hovered
-            ? '0 12px 32px rgba(233,30,140,0.13)'
-            : '0 2px 8px rgba(233,30,140,0.04)',
-        }}
-      >
-        {/* Image wrapper */}
-        <div className="relative overflow-hidden bg-pink-50 h-48">
-        <Image
-          src={imageSrc}
-          alt={product.name}
-          width={300}
-          height={200}
-          className="w-full h-full object-cover transition-transform duration-300"
-          onError={() => {
-            if (imageSrc !== PRODUCT_FALLBACK_IMAGE) {
-              setImageSrc(PRODUCT_FALLBACK_IMAGE);
-            }
-          }}
+    <motion.div custom={index} variants={cardVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }}>
+      <Link href={`/product/${product.slug}`} className="block">
+        <div
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className="relative overflow-hidden rounded-2xl bg-white transition-all duration-300 cursor-pointer group"
           style={{
-            transform: hovered ? 'scale(1.06)' : 'scale(1)',
+            border: `1.5px solid ${hovered ? 'var(--primary)' : '#f5e6ed'}`,
+            transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
+            boxShadow: hovered
+              ? '0 20px 40px rgba(240,17,114,0.12), 0 8px 16px rgba(0,0,0,0.04)'
+              : '0 2px 12px rgba(0,0,0,0.04)',
           }}
-        />
+        >
+          {/* Image */}
+          <div className="relative overflow-hidden bg-gradient-to-b from-pink-50 to-rose-50 h-52">
+            <Image
+              src={imageSrc}
+              alt={product.name}
+              width={400}
+              height={260}
+              className="w-full h-full object-cover transition-transform duration-500"
+              onError={() => {
+                if (imageSrc !== PRODUCT_FALLBACK_IMAGE) setImageSrc(PRODUCT_FALLBACK_IMAGE);
+              }}
+              style={{ transform: hovered ? 'scale(1.08)' : 'scale(1)' }}
+            />
 
-          {/* Discount badge */}
-          {discount && (
-            <div
-              className="absolute left-3 top-3 rounded-full bg-pink-600 px-2 py-0.5 text-center text-xs font-bold text-white"
-              style={{ letterSpacing: '0.5px' }}
-            >
-              -{discount}%
+            {discount && (
+              <div className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold text-white tracking-wide">
+                -{discount}%
+              </div>
+            )}
+
+            <div className="absolute right-11 top-3 rounded-full border border-pink-200 bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[10px] font-bold text-primary tracking-wide">
+              {t.featuredProducts.bestSeller}
             </div>
-          )}
 
-          {/* Tag badge */}
-          <div
-            className="absolute right-11 top-3 rounded-full border border-pink-200 bg-white bg-opacity-95 px-2 py-0.5 text-center text-xs font-bold text-pink-700"
-            style={{ letterSpacing: '0.5px' }}
-          >
-            {t.featuredProducts.bestSeller}
-          </div>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (inWishlist) {
+                  removeFromWishlist(String(product.id));
+                } else {
+                  addToWishlist({
+                    id: String(product.id),
+                    name: product.name,
+                    price: product.price,
+                    image: product.images?.[0],
+                    slug: product.slug,
+                  });
+                }
+              }}
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 hover:scale-110"
+              style={{
+                background: inWishlist ? 'var(--primary)' : 'rgba(255,255,255,0.95)',
+                border: `1.5px solid ${inWishlist ? 'var(--primary)' : '#f3c8dc'}`,
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <Heart
+                size={14}
+                fill={inWishlist ? 'white' : 'none'}
+                stroke={inWishlist ? 'white' : 'var(--primary)'}
+                strokeWidth={2}
+              />
+            </button>
 
-          {/* Wishlist button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (inWishlist) {
-                removeFromWishlist(String(product.id));
-              } else {
-                addToWishlist({
+            {/* Quick add overlay */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addToCart({
                   id: String(product.id),
                   name: product.name,
                   price: product.price,
                   image: product.images?.[0],
                   slug: product.slug,
                 });
-              }
-            }}
-            className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-200"
-            style={{
-              background: inWishlist ? '#e91e8c' : 'rgba(255,255,255,0.95)',
-              borderColor: inWishlist ? '#e91e8c' : '#f3c8dc',
-            }}
-          >
-            <Heart
-              size={14}
-              className="transition-all"
-              fill={inWishlist ? 'white' : 'none'}
-              stroke={inWishlist ? 'white' : '#e91e8c'}
-              strokeWidth={2}
-            />
-          </button>
-
-          {/* Quick add to cart overlay */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              addToCart({
-                id: String(product.id),
-                name: product.name,
-                price: product.price,
-                image: product.images?.[0],
-                slug: product.slug,
-              });
-              openCart(true);
-            }}
-            className="absolute bottom-0 left-0 right-0 flex items-center justify-center py-2.5 text-center text-xs font-bold uppercase text-white transition-transform duration-300"
-            style={{
-              background: 'rgba(233,30,140,0.93)',
-              letterSpacing: '1px',
-              transform: hovered ? 'translateY(0)' : 'translateY(100%)',
-            }}
-          >
-            {t.featuredProducts.addToCart}
-          </button>
-        </div>
-
-        {/* Card body */}
-        <div className="space-y-2 p-4">
-          {/* Category pill */}
-          <span
-            className="inline-block rounded-full bg-pink-50 px-2 py-0.5 text-xs font-bold uppercase text-pink-600"
-            style={{ letterSpacing: '0.5px' }}
-          >
-            {category}
-          </span>
-
-          {/* Product name */}
-          <h3
-            className="line-clamp-2 font-semibold text-zinc-900"
-            style={{
-              fontSize: '13.5px',
-              lineHeight: 1.4,
-              letterSpacing: '-0.1px',
-            }}
-          >
-            {product.name}
-          </h3>
-
-          {/* Rating */}
-          <div className="flex items-center gap-1.5">
-            <StarRating rating={rating} />
-            <span className="text-xs text-zinc-500">({reviews})</span>
+                openCart(true);
+              }}
+              className="absolute bottom-0 left-0 right-0 flex items-center justify-center py-3 text-xs font-bold uppercase text-white transition-transform duration-300 backdrop-blur-sm"
+              style={{
+                background: 'color-mix(in srgb, var(--primary), transparent 8%)',
+                letterSpacing: '1.5px',
+                transform: hovered ? 'translateY(0)' : 'translateY(100%)',
+              }}
+            >
+              {t.featuredProducts.addToCart}
+            </button>
           </div>
 
-          {/* Price row */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-base font-black text-pink-600">
-                ৳{Math.round(product.price).toLocaleString()}
-              </span>
-              {product.compareAtPrice && (
-                <span
-                  className="text-xs text-zinc-400 line-through"
-                >
-                  ৳{Math.round(product.compareAtPrice).toLocaleString()}
+          {/* Body */}
+          <div className="space-y-2 p-4">
+            <span className="inline-block rounded-full bg-pink-50 px-2.5 py-0.5 text-[10px] font-bold uppercase text-pink-600 tracking-wider">
+              {category}
+            </span>
+
+            <h3 className="line-clamp-2 text-[13px] font-semibold text-zinc-900 leading-snug">
+              {product.name}
+            </h3>
+
+            <div className="flex items-center gap-1.5">
+              <StarRating rating={rating} />
+              <span className="text-[10px] text-zinc-400">({reviews})</span>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg font-black text-primary">
+                  ৳{Math.round(product.price).toLocaleString()}
+                </span>
+                {product.compareAtPrice && (
+                  <span className="text-xs text-zinc-400 line-through">
+                    ৳{Math.round(product.compareAtPrice).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              {discount && (
+                <span className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700">
+                  {t.featuredProducts.save} ৳{savingsAmount.toLocaleString()}
                 </span>
               )}
             </div>
-            {discount && (
-              <div
-                className="inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-bold text-green-700"
-              >
-                {t.featuredProducts.save} ৳{savingsAmount.toLocaleString()}
-              </div>
-            )}
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 }
 
-const DEFAULT_FILTER_OPTIONS = ['All'];
+const sectionHeaderVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
+};
 
 export function FeaturedProducts() {
   const { t } = useHomepageLocale();
@@ -245,19 +246,17 @@ export function FeaturedProducts() {
   const { data: categories = [], isLoading: categoriesLoading } = useHomepageCategories();
 
   const activeCategories = useMemo(
-    () => [...categories]
-      .filter((c: Category) => c.isActive)
-      .sort((a: Category, b: Category) => a.sortOrder - b.sortOrder),
+    () =>
+      [...categories]
+        .filter((c: Category) => c.isActive)
+        .sort((a: Category, b: Category) => a.sortOrder - b.sortOrder),
     [categories]
   );
 
-  const filterOptions = useMemo(
-    () => {
-      const byDb = activeCategories.map((c: Category) => c.name).filter(Boolean);
-      return byDb.length > 0 ? [t.featuredProducts.all, ...byDb] : [t.featuredProducts.all];
-    },
-    [activeCategories, t]
-  );
+  const filterOptions = useMemo(() => {
+    const byDb = activeCategories.map((c: Category) => c.name).filter(Boolean);
+    return byDb.length > 0 ? [t.featuredProducts.all, ...byDb] : [t.featuredProducts.all];
+  }, [activeCategories, t]);
 
   const categoryProductCount = useMemo(() => {
     const map = new Map<number, number>();
@@ -269,9 +268,8 @@ export function FeaturedProducts() {
 
   if (isLoading || categoriesLoading) {
     return (
-      <section className="space-y-8 bg-zinc-50 py-12 md:py-16">
-        <div className="mx-auto max-w-6xl px-4">
-          {/* Featured products skeleton */}
+      <section className="space-y-8 bg-zinc-50/50 py-14 lg:py-20">
+        <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
           <div className="mb-8">
             <div className="mb-6 flex items-end justify-between">
               <div>
@@ -285,25 +283,9 @@ export function FeaturedProducts() {
                 <div key={i} className="h-8 w-20 animate-pulse rounded-full bg-zinc-200" />
               ))}
             </div>
-            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
+            <div className="grid gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-64 animate-pulse rounded-2xl bg-zinc-200" />
-              ))}
-            </div>
-          </div>
-
-          {/* Categories skeleton */}
-          <div>
-            <div className="mb-6 flex items-end justify-between">
-              <div>
-                <div className="mb-2 h-3 w-32 animate-pulse rounded bg-zinc-200" />
-                <div className="h-8 w-48 animate-pulse rounded bg-zinc-200" />
-              </div>
-              <div className="h-9 w-24 animate-pulse rounded-full bg-zinc-200" />
-            </div>
-            <div className="grid gap-5 grid-cols-2 sm:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-48 animate-pulse rounded-2xl bg-zinc-200" />
+                <div key={i} className="h-72 animate-pulse rounded-2xl bg-zinc-200" />
               ))}
             </div>
           </div>
@@ -314,9 +296,9 @@ export function FeaturedProducts() {
 
   if (error) {
     return (
-      <section className="bg-zinc-50 py-12 md:py-16">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+      <section className="bg-zinc-50/50 py-14 lg:py-20">
+        <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-6">
             <p className="text-red-800">{t.featuredProducts.failedToLoad}</p>
           </div>
         </div>
@@ -330,34 +312,33 @@ export function FeaturedProducts() {
       : products.filter((p: Product) => p.category?.name === activeFilter);
 
   return (
-    <section className="space-y-12 bg-zinc-50 py-12 md:py-16">
-      <div className="mx-auto max-w-6xl px-4">
-        {/* ── FEATURED PRODUCTS SECTION ── */}
+    <section className="space-y-16 bg-zinc-50/50 py-14 lg:py-20">
+      <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
+        {/* ── FEATURED PRODUCTS ── */}
         <div>
-          {/* Section header */}
-          <div className="mb-8 flex items-end justify-between">
+          {/* Header */}
+          <motion.div
+            className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+            variants={sectionHeaderVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+          >
             <div>
-              <p
-                className="mb-1.5 text-xs font-bold uppercase text-pink-600"
-                style={{ letterSpacing: '2.5px' }}
-              >
+              <p className="mb-1.5 text-xs font-bold uppercase text-primary tracking-[3px]">
                 ◆ {t.featuredProducts.hotDeals}
               </p>
-              <h2
-                className="m-0 text-3xl font-black text-zinc-900"
-                style={{ letterSpacing: '-0.5px' }}
-              >
+              <h2 className="text-3xl sm:text-4xl font-black text-zinc-900 tracking-tight">
                 {t.featuredProducts.title}
               </h2>
             </div>
             <Link
               href="/shop"
-              className="rounded-full border-1.5 border-pink-600 px-5 py-2 text-sm font-bold text-pink-600 transition-all duration-200 hover:bg-pink-600 hover:text-white"
-              style={{ letterSpacing: '0.5px' }}
+              className="rounded-full border-2 border-primary px-6 py-2.5 text-sm font-bold text-primary transition-all duration-300 hover:bg-primary hover:text-white hover:shadow-[0_4px_20px_rgba(240,17,114,0.25)] w-fit"
             >
               {t.featuredProducts.viewAll}
             </Link>
-          </div>
+          </motion.div>
 
           {/* Filter pills */}
           <div className="mb-8 flex flex-wrap gap-2">
@@ -365,12 +346,15 @@ export function FeaturedProducts() {
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
-                className="rounded-full border-1.5 px-5 py-1.5 text-sm font-bold transition-all duration-200"
+                className="rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300"
                 style={{
-                  borderColor: activeFilter === filter ? '#e91e8c' : '#f0d0e0',
-                  background: activeFilter === filter ? '#e91e8c' : '#fff',
-                  color: activeFilter === filter ? '#fff' : '#c2185b',
-                  letterSpacing: '0.3px',
+                  border: `1.5px solid ${activeFilter === filter ? 'var(--primary)' : '#f0d0e0'}`,
+                  background: activeFilter === filter ? 'var(--primary)' : '#fff',
+                  color: activeFilter === filter ? '#fff' : 'var(--primary-dark)',
+                  boxShadow:
+                    activeFilter === filter
+                      ? '0 4px 14px rgba(240,17,114,0.2)'
+                      : '0 1px 3px rgba(0,0,0,0.04)',
                 }}
               >
                 {filter}
@@ -379,9 +363,9 @@ export function FeaturedProducts() {
           </div>
 
           {/* Product grid */}
-          <div className="mb-12 grid gap-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-            {filtered.map((product: Product) => (
-              <EnhancedProductCard key={product.id} product={product} />
+          <div className="mb-12 grid gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            {filtered.map((product: Product, i: number) => (
+              <EnhancedProductCard key={product.id} product={product} index={i} />
             ))}
           </div>
 
@@ -389,22 +373,13 @@ export function FeaturedProducts() {
           <div className="text-center">
             <Link
               href="/shop"
-              className="inline-block rounded-full bg-gradient-to-r from-pink-600 to-pink-700 px-12 py-3.5 font-bold text-white transition-all duration-200 hover:-translate-y-0.5"
-              style={{
-                letterSpacing: '0.5px',
-                boxShadow: '0 6px 24px rgba(233,30,140,0.3)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 10px 32px rgba(233,30,140,0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 6px 24px rgba(233,30,140,0.3)';
-              }}
+              className="inline-block rounded-full bg-gradient-to-r from-primary to-primary-dark px-14 py-4 font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(240,17,114,0.3)]"
             >
               {t.featuredProducts.loadMore}
             </Link>
             <p className="mt-3 text-xs text-zinc-400">
-              {t.featuredProducts.showing} {filtered.length} {t.featuredProducts.of} {products.length} {t.featuredProducts.products}
+              {t.featuredProducts.showing} {filtered.length} {t.featuredProducts.of}{' '}
+              {products.length} {t.featuredProducts.products}
             </p>
           </div>
         </div>
@@ -412,55 +387,63 @@ export function FeaturedProducts() {
 
       {/* Divider */}
       <div
-        className="h-px"
+        className="h-px mx-auto max-w-[1600px]"
         style={{
           background: 'linear-gradient(to right, transparent, #f3c8dc, transparent)',
         }}
       />
 
-      {/* ── SHOP BY CATEGORY SECTION ── */}
-      <div className="mx-auto max-w-6xl px-4 bg-white py-12 rounded-lg">
-        {/* Section header */}
-        <div className="mb-8 flex items-end justify-between">
-          <div>
-            <p
-              className="mb-1.5 text-xs font-bold uppercase text-pink-600"
-              style={{ letterSpacing: '2.5px' }}
-            >
-              ✦ {t.featuredProducts.explore}
-            </p>
-            <h2
-              className="m-0 text-3xl font-black text-zinc-900"
-              style={{ letterSpacing: '-0.5px' }}
-            >
-              {t.featuredProducts.shopByCategory}
-            </h2>
-          </div>
-          <Link
-            href="/categories"
-            className="rounded-full border-1.5 border-pink-600 px-5 py-2 text-sm font-bold text-pink-600 transition-all duration-200 hover:bg-pink-600 hover:text-white"
-            style={{ letterSpacing: '0.5px' }}
+      {/* ── SHOP BY CATEGORY ── */}
+      <div className="mx-auto max-w-[1600px] px-6 sm:px-10">
+        <div className="bg-white py-12 px-6 sm:px-10 rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)]">
+          <motion.div
+            className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+            variants={sectionHeaderVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
           >
-            {t.featuredProducts.allCategories}
-          </Link>
-        </div>
+            <div>
+              <p className="mb-1.5 text-xs font-bold uppercase text-primary tracking-[3px]">
+                ✦ {t.featuredProducts.explore}
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-black text-zinc-900 tracking-tight">
+                {t.featuredProducts.shopByCategory}
+              </h2>
+            </div>
+            <Link
+              href="/categories"
+              className="rounded-full border-2 border-primary px-6 py-2.5 text-sm font-bold text-primary transition-all duration-300 hover:bg-primary hover:text-white hover:shadow-[0_4px_20px_rgba(240,17,114,0.25)] w-fit"
+            >
+              {t.featuredProducts.allCategories}
+            </Link>
+          </motion.div>
 
-        {/* Category grid */}
-        <div className="grid gap-5 grid-cols-2 sm:grid-cols-4">
-          {activeCategories.slice(0, 4).map((cat: Category) => (
-            <CategoryCard
-              key={cat.id}
-              id={cat.slug}
-              label={cat.name}
-              description={cat.description || t.featuredProducts.exploreCollection}
-              count={`${categoryProductCount.get(cat.id) || 0} ${t.featuredProducts.products}`}
-              image={normalizeImage(cat.imageUrl) || getCategoryFallbackImage(cat.slug, cat.name)}
-              fallbackImage={getCategoryFallbackImage(cat.slug, cat.name)}
-            />
-          ))}
+          <div className="grid gap-5 grid-cols-2 sm:grid-cols-4">
+            {activeCategories.slice(0, 4).map((cat: Category, i: number) => (
+              <motion.div
+                key={cat.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.1 }}
+                transition={{ delay: i * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <CategoryCard
+                  id={cat.slug}
+                  label={cat.name}
+                  description={cat.description || t.featuredProducts.exploreCollection}
+                  count={`${categoryProductCount.get(cat.id) || 0} ${t.featuredProducts.products}`}
+                  image={
+                    normalizeImage(cat.imageUrl) ||
+                    getCategoryFallbackImage(cat.slug, cat.name)
+                  }
+                  fallbackImage={getCategoryFallbackImage(cat.slug, cat.name)}
+                />
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
   );
 }
-

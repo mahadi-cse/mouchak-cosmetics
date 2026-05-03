@@ -91,6 +91,7 @@ router.get("/settings", async (req, res) => {
       return res.json({
         storeName: "Mouchak Cosmetics",
         tagline: "Clean · Cruelty-Free · Bangladesh",
+        primaryColor: "#f01172",
         heroHeadline: "Spring Beauty Collection",
         heroYear: "2026",
         heroDescription: "Discover luxurious skincare and makeup that celebrates your natural glow. Clean, cruelty-free formulas delivered across Bangladesh in 48 hours.",
@@ -110,13 +111,14 @@ router.get("/settings", async (req, res) => {
  */
 router.put("/settings", async (req, res) => {
   try {
-    const { storeName, tagline, heroHeadline, heroYear, heroDescription } = req.body;
+    const { storeName, tagline, primaryColor, heroHeadline, heroYear, heroDescription } = req.body;
 
     const settings = await prisma.siteSettings.upsert({
       where: { id: 1 },
       update: {
         ...(storeName !== undefined && { storeName }),
         ...(tagline !== undefined && { tagline }),
+        ...(primaryColor !== undefined && { primaryColor }),
         ...(heroHeadline !== undefined && { heroHeadline }),
         ...(heroYear !== undefined && { heroYear }),
         ...(heroDescription !== undefined && { heroDescription }),
@@ -125,6 +127,7 @@ router.put("/settings", async (req, res) => {
         id: 1,
         storeName: storeName || "Mouchak Cosmetics",
         tagline: tagline || "Clean · Cruelty-Free · Bangladesh",
+        primaryColor: primaryColor || "#f01172",
         heroHeadline: heroHeadline || "Spring Beauty Collection",
         heroYear: heroYear || "2026",
         heroDescription: heroDescription || "Discover luxurious skincare and makeup that celebrates your natural glow. Clean, cruelty-free formulas delivered across Bangladesh in 48 hours.",

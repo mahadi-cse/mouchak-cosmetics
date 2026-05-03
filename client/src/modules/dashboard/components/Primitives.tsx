@@ -1,5 +1,6 @@
 import React from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
+import { useDashboardLocale } from '../locales/DashboardLocaleContext';
 
 interface ComponentProps {
   children: React.ReactNode;
@@ -104,7 +105,9 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   sub,
   icon,
   accent,
-}) => (
+}) => {
+  const { t } = useDashboardLocale();
+  return (
   <Card className="relative overflow-hidden">
     <div
       className="absolute -top-3 -right-3 w-[70px] h-[70px] rounded-full opacity-70"
@@ -121,7 +124,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
       <div
         className={`text-sm font-semibold mt-1 ${delta >= 0 ? 'text-green-600' : 'text-red-600'}`}
       >
-        {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% vs last month
+        {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% {t.kpi.vsLastMonth}
       </div>
     )}
     {sub && (
@@ -130,4 +133,5 @@ export const KpiCard: React.FC<KpiCardProps> = ({
       </div>
     )}
   </Card>
-);
+  );
+};

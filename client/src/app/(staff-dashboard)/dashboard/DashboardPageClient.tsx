@@ -6,6 +6,7 @@ import {
   DashboardLayout,
   useBreakpoint,
   ResponsiveContext,
+  useDashboardLocale,
   type Product,
   type SellLog,
   type Order as DashboardOrder,
@@ -18,7 +19,7 @@ import { useListManualSales } from '@/modules/manual-sales';
 function DashboardSkeleton() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#f6f7fb]">
-      <aside className="hidden w-56 shrink-0 border-r border-zinc-200 bg-white p-4 md:block">
+      <aside className="hidden w-[260px] shrink-0 border-r border-zinc-200 bg-white p-4 md:block">
         <div className="mb-5 h-10 w-36 animate-pulse rounded-lg bg-zinc-100" />
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -56,6 +57,7 @@ function DashboardSkeleton() {
 export default function DashboardPageClient() {
   const { status } = useSession();
   const bp = useBreakpoint();
+  const { t } = useDashboardLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [sellLog, setSellLog] = useState<SellLog[]>([]);
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
@@ -83,12 +85,12 @@ export default function DashboardPageClient() {
     if (Array.isArray(inventoryItems) && !inventoryLoading) {
       const transformedProducts: Product[] = inventoryItems.map((item: any, index: number) => ({
         id: item.productId || item.product?.id || item.id || index,
-        name: item.name || item.product?.name || 'Unknown Product',
-        sku: item.sku || item.product?.sku || 'N/A',
-        category: item.category || item.product?.category?.name || 'Uncategorized',
+        name: item.name || item.product?.name || t.unknownProduct,
+        sku: item.sku || item.product?.sku || t.na,
+        category: item.category || item.product?.category?.name || t.uncategorized,
         price: Number(item.price ?? item.product?.price ?? 0),
         stock: item.currentStock ?? item.quantity ?? item.availableQty ?? 0,
-        warehouse: item.warehouse || 'N/A',
+        warehouse: item.warehouse || t.na,
         sold: item.unitsSold || 0,
         manualSold: 0,
         status: (item.currentStock ?? item.quantity ?? item.availableQty ?? 0) <= 0
@@ -99,41 +101,41 @@ export default function DashboardPageClient() {
       }));
       setProducts(transformedProducts);
     }
-  }, [inventoryData, lowStockData, inventoryLoading]);
+  }, [inventoryData, lowStockData, inventoryLoading, t]);
 
   useEffect(() => {
     if (Array.isArray(manualSalesData) && !manualSalesLoading) {
       const transformedLog: SellLog[] = manualSalesData.slice(0, 50).map((sale: any, index: number) => ({
         id: sale.saleNumber || String(sale.id || index),
         product: sale.items?.length > 1
-          ? `${sale.items[0]?.productNameSnapshot || 'Sale Item'} +${sale.items.length - 1} more`
-          : sale.items?.[0]?.productNameSnapshot || 'Sale Item',
+          ? `${sale.items[0]?.productNameSnapshot || t.saleItem} +${sale.items.length - 1} ${t.more}`
+          : sale.items?.[0]?.productNameSnapshot || t.saleItem,
         qty: sale.totalQty || 0,
         amount: sale.totalAmount || 0,
-        note: sale.note || `Manual Sale · ${sale.branchName || 'Main'}`,
+        note: sale.note || `${t.manualSale} · ${sale.branchName || t.main}`,
         date: sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
-        by: sale.branchName ? `${sale.soldBy || 'Staff'} · ${sale.branchName}` : (sale.soldBy || 'Staff'),
+        by: sale.branchName ? `${sale.soldBy || t.staff} · ${sale.branchName}` : (sale.soldBy || t.staff),
       }));
 
       setSellLog(transformedLog);
     }
-  }, [manualSalesData, manualSalesLoading]);
+  }, [manualSalesData, manualSalesLoading, t]);
 
   useEffect(() => {
     if (Array.isArray(ordersData) && !ordersLoading) {
       const transformedOrders: DashboardOrder[] = ordersData.slice(0, 50).map((order: any) => ({
         id: `#ORD-${order.orderNumber || order.id}`,
-        customer: order.shippingName || 'Customer',
+        customer: order.shippingName || t.customer,
         amount: order.total || 0,
         status: (['delivered', 'processing', 'shipped', 'pending'].includes(String(order.status || 'PENDING').toLowerCase())
           ? String(order.status || 'PENDING').toLowerCase()
           : 'pending') as DashboardOrder['status'],
         items: order.items?.length || 1,
-        time: order.createdAt ? new Date(order.createdAt).toLocaleString() : 'Now',
+        time: order.createdAt ? new Date(order.createdAt).toLocaleString() : t.now,
       }));
       setOrders(transformedOrders);
     }
-  }, [ordersData, ordersLoading]);
+  }, [ordersData, ordersLoading, t]);
 
   if (status === 'loading' || !mounted) {
     return <DashboardSkeleton />;

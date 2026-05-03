@@ -2,12 +2,14 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { User, LogOut } from 'lucide-react';
 import { useProfileQuery } from '@/modules/auth';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
 import { usePathname, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
@@ -22,6 +24,7 @@ import SettingsView from './views/SettingsView';
 import ProfileView from './views/ProfileView';
 import ManualSaleModal from './ManualSaleModal';
 import { Product, SellLog, Order } from '@/modules/dashboard/data/mockData';
+import { useDashboardLocale } from '../locales/DashboardLocaleContext';
 
 interface DashboardLayoutProps {
   products: Product[];
@@ -60,6 +63,7 @@ const SidebarContent: React.FC<{
   userModuleCodes,
 }) => {
   const settingsRef = useRef<HTMLDivElement>(null);
+  const { t } = useDashboardLocale();
 
   useEffect(() => {
     if (settingsOpen && settingsRef.current) {
@@ -73,16 +77,14 @@ const SidebarContent: React.FC<{
   <>
     {/* Logo */}
     <div
-      className="shrink-0 px-5 pb-2 pt-2"
+      className="shrink-0 px-5 pb-3 pt-4"
       style={{ borderBottom: `1px solid ${Theme.border}` }}
     >
-      <div
-        className="flex items-center justify-between"
-      >
-        <div>
+      <div className="flex items-center justify-between">
+        <Link href="/" className="no-underline cursor-pointer hover:opacity-80 transition-opacity">
           <div
             style={{
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: 900,
               color: Theme.primary,
               letterSpacing: '-0.02em',
@@ -98,11 +100,11 @@ const SidebarContent: React.FC<{
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
             }}
-            className="mt-0.1"
+            className="mt-0.5"
           >
-            Cosmetics · Control Centre
+            {t.sidebar.brandSub}
           </div>
-        </div>
+        </Link>
         {isMobile && (
           <button
             onClick={() => setSidebarOpen(false)}
@@ -116,9 +118,7 @@ const SidebarContent: React.FC<{
     </div>
 
     {/* Nav */}
-    <nav
-      className="flex flex-1 flex-col gap-px px-2 py-1 overflow-y-auto"
-    >
+    <nav className="flex flex-1 flex-col gap-0.5 px-3 py-2 overflow-y-auto">
       {navItems.map((n) => {
         const isSettings = n.id === 'settings';
         const active = activeNav === n.id;
@@ -131,63 +131,71 @@ const SidebarContent: React.FC<{
                   navigate('settings');
                   setSettingsOpen(!settingsOpen);
                 }}
-                className="flex w-full cursor-pointer items-center gap-[5px] rounded-[10px] border-0 px-3 py-[1px] text-left text-[13px] transition-all duration-150"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-xl border-0 px-3.5 py-2.5 text-left text-[13.5px] transition-all duration-200"
                 style={{
                   background: active ? Theme.secondary : 'transparent',
                   color: active ? Theme.primary : Theme.mutedFg,
                   fontWeight: active ? 700 : 500,
                 }}
               >
-                <span style={{ fontSize: 15 }}>⚙️</span>
-                <span className="flex-1">Settings</span>
-                <span
+                <span style={{ fontSize: 16 }}>⚙️</span>
+                <span className="flex-1">{t.sidebar.settings}</span>
+                <motion.span
+                  animate={{ rotate: settingsOpen ? 90 : 0 }}
+                  transition={{ duration: 0.2 }}
                   style={{
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: 800,
-                    transition: 'transform 0.2s',
-                    transform: settingsOpen ? 'rotate(90deg)' : 'rotate(0deg)',
                     color: active ? Theme.primary : Theme.mutedFg,
                   }}
                   className="inline-block"
                 >
                   ›
-                </span>
+                </motion.span>
               </button>
-              {settingsOpen && (
-                <div
-                  className="mb-1 ml-2 border-l-2 pl-2"
-                  style={{ borderLeftColor: Theme.border }}
-                >
-                  {SETTINGS_ITEMS.filter((item) => {
-                    // null means full access (SYSTEM_ADMIN)
-                    if (!userModuleCodes) return true;
-                    return userModuleCodes.has(`settings:${item.id}`);
-                  }).map((item) => {
-                    const subActive = active && settingsTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          setSettingsTab(item.id);
-                          navigate('settings', item.id);
-                          if (isMobile) setSidebarOpen(false);
-                        }}
-                        className="flex w-full cursor-pointer items-center gap-[9px] rounded-lg border-0 px-[10px] py-[7px] text-left text-[13px] transition-colors duration-100"
-                        style={{
-                          background: subActive ? `${Theme.primary}12` : 'transparent',
-                          color: subActive ? Theme.primary : Theme.fg,
-                          fontWeight: subActive ? 700 : 400,
-                        }}
-                      >
-                        <span className="shrink-0 text-sm">
-                          {item.icon}
-                        </span>
-                        <span>{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {settingsOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div
+                      className="mb-1 ml-3 border-l-2 pl-2 pt-1"
+                      style={{ borderLeftColor: Theme.border }}
+                    >
+                      {SETTINGS_ITEMS.filter((item) => {
+                        if (!userModuleCodes) return true;
+                        return userModuleCodes.has(`settings:${item.id}`);
+                      }).map((item) => {
+                        const localizedLabel = (t.settingsItems as any)[item.id] || item.label;
+                        const subActive = active && settingsTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setSettingsTab(item.id);
+                              navigate('settings', item.id);
+                              if (isMobile) setSidebarOpen(false);
+                            }}
+                            className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 px-3 py-2 text-left text-[13px] transition-colors duration-150"
+                            style={{
+                              background: subActive ? `${Theme.primary}12` : 'transparent',
+                              color: subActive ? Theme.primary : Theme.fg,
+                              fontWeight: subActive ? 700 : 400,
+                            }}
+                          >
+                            <span className="shrink-0 text-sm">{item.icon}</span>
+                            <span>{localizedLabel}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         }
@@ -195,19 +203,30 @@ const SidebarContent: React.FC<{
         return (
           <button
             key={n.id}
-            onClick={() => navigate(n.id)}
-            className="flex w-full cursor-pointer items-center gap-[10px] rounded-[10px] border-0 px-3 py-[8px] text-left text-[13px] transition-all duration-150"
+            onClick={() => {
+              navigate(n.id);
+              if (isMobile) setSidebarOpen(false);
+            }}
+            className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl border-0 px-3.5 py-2.5 text-left text-[13.5px] transition-all duration-200"
             style={{
               background: active ? Theme.secondary : 'transparent',
               color: active ? Theme.primary : Theme.mutedFg,
               fontWeight: active ? 700 : 500,
             }}
           >
-            <span style={{ fontSize: 15 }}>{n.icon}</span>
-            <span className="flex-1">{n.label}</span>
+            {active && (
+              <motion.div
+                layoutId="nav-active-pill"
+                className="absolute inset-0 rounded-xl"
+                style={{ background: Theme.secondary }}
+                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              />
+            )}
+            <span className="relative" style={{ fontSize: 16 }}>{n.icon}</span>
+            <span className="relative flex-1">{n.label}</span>
             {n.id === 'inventory' && lowCount > 0 && (
               <span
-                className="rounded-[20px] px-[7px] py-px text-[10px] font-bold text-white"
+                className="relative rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
                 style={{ background: Theme.warning }}
               >
                 {lowCount}
@@ -215,7 +234,7 @@ const SidebarContent: React.FC<{
             )}
             {n.badge && (
               <span
-                className="rounded-[20px] px-[7px] py-px text-[10px] font-semibold"
+                className="relative rounded-full px-2 py-0.5 text-[10px] font-semibold"
                 style={{ background: Theme.muted, color: Theme.mutedFg }}
               >
                 {n.badge}
@@ -227,26 +246,32 @@ const SidebarContent: React.FC<{
     </nav>
 
     {/* Clock */}
-    {(
-      <div className="shrink-0 px-5 py-[14px]" style={{ borderTop: `1px solid ${Theme.border}` }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: Theme.fg }}>
-          {time.toLocaleTimeString('en-BD', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          })}
-        </div>
-        <div className="mt-0.5" style={{ fontSize: 11, color: Theme.mutedFg }}>
-          {time.toLocaleDateString('en-BD', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-          })}
-        </div>
+    <div className="shrink-0 px-5 py-4" style={{ borderTop: `1px solid ${Theme.border}` }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: Theme.fg }}>
+        {time.toLocaleTimeString('en-BD', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })}
       </div>
-    )}
+      <div className="mt-0.5" style={{ fontSize: 11, color: Theme.mutedFg }}>
+        {time.toLocaleDateString('en-BD', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+        })}
+      </div>
+    </div>
   </>
   );
+};
+
+
+// Page transition variants
+const pageVariants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
 };
 
 export default function DashboardLayout({
@@ -257,6 +282,7 @@ export default function DashboardLayout({
   orders,
   time,
 }: DashboardLayoutProps) {
+  const { locale, t, toggleLocale } = useDashboardLocale();
   const { isMobile } = useResponsive();
   const { data: session } = useSession();
   const { data: profileUser } = useProfileQuery();
@@ -306,7 +332,6 @@ export default function DashboardLayout({
         const data = res.data.data;
         if (!data) return;
 
-        // SYSTEM_ADMIN gets everything
         const userTypeCode = data.userType?.code;
         if (userTypeCode === '1x101') {
           setNavItems(NAV);
@@ -331,13 +356,22 @@ export default function DashboardLayout({
   }, [session?.accessToken]);
 
   const lowCount = products.filter((p) => p.status !== 'active').length;
-  const settingsLabel = SETTINGS_ITEMS.find((i) => i.id === settingsTab)?.label || '';
+  const settingsItemsLocalized = SETTINGS_ITEMS.map((item) => ({
+    ...item,
+    label: (t.settingsItems as any)[item.id] || item.label,
+  }));
+  const settingsLabel = settingsItemsLocalized.find((i) => i.id === settingsTab)?.label || '';
+  const navItemsLocalized = navItems.map((n: any) => ({
+    ...n,
+    label: (t.nav as any)[n.id] || n.label,
+    badge: n.badge ? t.nav.soon : n.badge,
+  }));
   const topbarLabel =
     activeNav === 'settings'
-      ? `Settings › ${settingsLabel}`
+      ? `${t.nav.settings} › ${settingsLabel}`
       : activeNav === 'profile'
-        ? 'User Profile'
-        : navItems.find((n: { id: string; label: string }) => n.id === activeNav)?.label || activeNav;
+        ? t.topbar.userProfile
+        : navItemsLocalized.find((n: { id: string; label: string }) => n.id === activeNav)?.label || activeNav;
 
   const views: Record<string, React.ReactNode> = {
     profile: <ProfileView />,
@@ -363,7 +397,6 @@ export default function DashboardLayout({
         setSellLog={setSellLog}
       />
     ),
-
     analytics: <AnalyticsView />,
     branches: <BranchesView />,
     pos: <POSView />,
@@ -378,8 +411,6 @@ export default function DashboardLayout({
     const target = id === 'settings' && tab ? `${path}?tab=${encodeURIComponent(tab)}` : path;
     setActiveNav(id);
     if (id === 'settings' && tab) setSettingsTab(tab);
-    // Use history.pushState to update URL without triggering Next.js page navigation
-    // This prevents the component from unmounting/remounting (screen jump)
     window.history.pushState(null, '', target);
     setSidebarOpen(false);
     if (id !== 'settings') setSettingsOpen(false);
@@ -408,14 +439,12 @@ export default function DashboardLayout({
     setSettingsOpen(activeNav === 'settings');
   }, [activeNav]);
 
-  // Handle clicking outside profile dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setProfileOpen(false);
       }
     };
-
     if (profileOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -425,6 +454,17 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/' });
   };
+
+  const resolvedView = (() => {
+    if (activeNav === 'profile' || !userModuleCodes) return views[activeNav];
+    if (userModuleCodes.has(activeNav)) return views[activeNav];
+    const firstAllowed = navItems[0]?.id;
+    if (firstAllowed && firstAllowed !== activeNav) {
+      setTimeout(() => navigate(firstAllowed), 0);
+      return null;
+    }
+    return views[activeNav];
+  })();
 
   return (
     <div
@@ -436,19 +476,25 @@ export default function DashboardLayout({
       }}
     >
       {/* Toast */}
-      {toast && (
-        <div
-          className="fixed right-5 top-5 z-[9998] rounded-[10px] px-5 py-[14px] text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
-          style={{ background: Theme.success }}
-        >
-          {toast}
-        </div>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: 20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed right-5 top-5 z-[9998] rounded-xl px-5 py-3.5 text-[13px] font-semibold text-white shadow-[0_8px_30px_rgba(0,0,0,0.15)]"
+            style={{ background: Theme.success }}
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Desktop Sidebar */}
       {!isMobile && (
         <aside
-          className="flex w-56 shrink-0 flex-col overflow-y-auto"
+          className="flex w-[260px] shrink-0 flex-col overflow-y-auto"
           style={{
             background: Theme.card,
             borderRight: `1px solid ${Theme.border}`,
@@ -465,43 +511,53 @@ export default function DashboardLayout({
             time={time}
             isMobile={isMobile}
             setSidebarOpen={setSidebarOpen}
-            navItems={navItems}
+            navItems={navItemsLocalized}
             userModuleCodes={userModuleCodes}
           />
         </aside>
       )}
 
       {/* Mobile Sidebar Drawer */}
-      {isMobile && sidebarOpen && (
-        <>
-          <div
-            onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 z-[1000] bg-black/40"
-          />
-          <div
-            className="fixed bottom-0 left-0 top-0 z-[1001] flex w-[272px] flex-col overflow-y-auto shadow-[4px_0_20px_rgba(0,0,0,0.15)]"
-            style={{
-              background: Theme.card,
-              borderRight: `1px solid ${Theme.border}`,
-            }}
-          >
-            <SidebarContent
-              activeNav={activeNav}
-              settingsOpen={settingsOpen}
-              settingsTab={settingsTab}
-              navigate={navigate}
-              setSettingsTab={setSettingsTab}
-              setSettingsOpen={setSettingsOpen}
-              lowCount={lowCount}
-              time={time}
-              isMobile={isMobile}
-              setSidebarOpen={setSidebarOpen}
-              navItems={navItems}
-              userModuleCodes={userModuleCodes}
+      <AnimatePresence>
+        {isMobile && sidebarOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setSidebarOpen(false)}
+              className="fixed inset-0 z-[1000] bg-black/40"
             />
-          </div>
-        </>
-      )}
+            <motion.div
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed bottom-0 left-0 top-0 z-[1001] flex w-[280px] flex-col overflow-y-auto shadow-[4px_0_24px_rgba(0,0,0,0.12)]"
+              style={{
+                background: Theme.card,
+                borderRight: `1px solid ${Theme.border}`,
+              }}
+            >
+              <SidebarContent
+                activeNav={activeNav}
+                settingsOpen={settingsOpen}
+                settingsTab={settingsTab}
+                navigate={navigate}
+                setSettingsTab={setSettingsTab}
+                setSettingsOpen={setSettingsOpen}
+                lowCount={lowCount}
+                time={time}
+                isMobile={isMobile}
+                setSidebarOpen={setSidebarOpen}
+                navItems={navItemsLocalized}
+                userModuleCodes={userModuleCodes}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main content area */}
       <main
@@ -509,13 +565,13 @@ export default function DashboardLayout({
       >
         {/* Topbar */}
         <header
-          className={`sticky top-0 z-10 flex shrink-0 items-center justify-between ${isMobile ? 'h-[52px] px-4' : 'h-[58px] px-[26px]'}`}
+          className={`sticky top-0 z-10 flex shrink-0 items-center justify-between ${isMobile ? 'h-[52px] px-4' : 'h-[58px] px-8'}`}
           style={{
             background: Theme.card,
             borderBottom: `1px solid ${Theme.border}`,
           }}
         >
-          <div className="flex items-center gap-[10px]">
+          <div className="flex items-center gap-2.5">
             {isMobile && (
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -532,13 +588,13 @@ export default function DashboardLayout({
             )}
             {!isMobile && (
               <>
-                <span style={{ fontSize: 12, color: Theme.mutedFg }}>Dashboard</span>
+                <span style={{ fontSize: 12, color: Theme.mutedFg }}>{t.topbar.dashboard}</span>
                 <span style={{ color: Theme.border }}>›</span>
               </>
             )}
             <span
               style={{
-                fontSize: isMobile ? 14 : 14,
+                fontSize: 14,
                 fontWeight: 700,
                 color: Theme.fg,
                 overflow: 'hidden',
@@ -551,11 +607,26 @@ export default function DashboardLayout({
             </span>
           </div>
           <div className={`flex items-center ${isMobile ? 'gap-[10px]' : 'gap-4'}`}>
-            {/* Profile Dropdown - AdminLTE Style */}
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLocale}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              style={{
+                background: locale === 'bn' ? Theme.primary : Theme.secondary,
+                color: locale === 'bn' ? '#fff' : Theme.fg,
+                border: `1px solid ${locale === 'bn' ? Theme.primary : Theme.border}`,
+              }}
+              title={locale === 'en' ? 'বাংলায় পরিবর্তন করুন' : 'Switch to English'}
+            >
+              <span style={{ fontSize: 14 }}>🌐</span>
+              <span>{locale === 'en' ? 'বাংলা' : 'English'}</span>
+            </button>
+
+            {/* Profile Dropdown */}
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 px-1.5 py-1 shrink-0 cursor-pointer rounded-full transition-all hover:shadow-md"
+                className="flex items-center gap-2.5 px-2 py-1.5 shrink-0 cursor-pointer rounded-full transition-all duration-200 hover:shadow-md"
                 style={{
                   background: Theme.secondary,
                   border: `1px solid ${Theme.border}`,
@@ -571,114 +642,104 @@ export default function DashboardLayout({
                     : profileUser?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 {!isMobile && (
-                  <span className="text-[13px] font-bold pr-1" style={{ color: Theme.fg }}>
+                  <span className="text-[13px] font-bold pr-1.5" style={{ color: Theme.fg }}>
                     {profileUser?.name || 'User'}
                   </span>
                 )}
               </button>
 
-              {/* AdminLTE Style Dropdown Menu */}
-              {profileOpen && (
-                <div
-                  className="absolute right-0 top-full mt-3 w-64 rounded-lg shadow-2xl z-50 overflow-hidden"
-                  style={{
-                    background: Theme.card,
-                  }}
-                >
-                  {/* User Header Section */}
-                  <div
-                    className="px-6 py-6 border-b text-center"
-                    style={{
-                      borderColor: Theme.border,
-                      background: `linear-gradient(180deg, ${Theme.secondary}20 0%, transparent 100%)`,
-                    }}
+              {/* Profile Dropdown Menu */}
+              <AnimatePresence>
+                {profileOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute right-0 top-full mt-3 w-64 rounded-xl shadow-2xl z-50 overflow-hidden"
+                    style={{ background: Theme.card, border: `1px solid ${Theme.border}` }}
                   >
-                    <div className="flex flex-col items-center gap-3">
-                      <div
-                        className="flex h-20 w-20 items-center justify-center rounded-full text-[28px] font-black text-white shadow-lg overflow-hidden"
-                        style={{ 
-                          background: `linear-gradient(135deg, ${Theme.primary} 0%, ${Theme.primary}dd 100%)`,
-                          border: `4px solid ${Theme.card}`,
-                        }}
-                      >
-                        {profileUser?.avatarUrl
-                          ? <img src={profileUser.avatarUrl} alt={profileUser.name} className="h-full w-full object-cover" />
-                          : profileUser?.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </div>
-                      <div className="space-y-1">
+                    {/* User Header */}
+                    <div
+                      className="px-6 py-6 border-b text-center"
+                      style={{
+                        borderColor: Theme.border,
+                        background: `linear-gradient(180deg, ${Theme.secondary}20 0%, transparent 100%)`,
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-3">
                         <div
-                          className="text-[16px] font-bold tracking-tight"
-                          style={{ color: Theme.fg }}
+                          className="flex h-20 w-20 items-center justify-center rounded-full text-[28px] font-black text-white shadow-lg overflow-hidden"
+                          style={{ 
+                            background: `linear-gradient(135deg, ${Theme.primary} 0%, ${Theme.primary}dd 100%)`,
+                            border: `4px solid ${Theme.card}`,
+                          }}
                         >
-                          {profileUser?.name || 'User'}
+                          {profileUser?.avatarUrl
+                            ? <img src={profileUser.avatarUrl} alt={profileUser.name} className="h-full w-full object-cover" />
+                            : profileUser?.name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
-                        <div
-                          className="text-[11px] font-medium uppercase tracking-widest opacity-60"
-                          style={{ color: Theme.mutedFg }}
-                        >
-                          {profileUser?.role || 'Administrator'}
+                        <div className="space-y-1">
+                          <div className="text-[16px] font-bold tracking-tight" style={{ color: Theme.fg }}>
+                            {profileUser?.name || t.profile.user}
+                          </div>
+                          <div className="text-[11px] font-medium uppercase tracking-widest opacity-60" style={{ color: Theme.mutedFg }}>
+                            {profileUser?.role || t.profile.administrator}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Button Section - Side by Side */}
-                  <div className="flex gap-3 px-5 py-4" style={{ background: Theme.card }}>
-                    {/* Profile Button */}
-                    <button
-                      onClick={() => {
-                        navigate('profile');
-                        setProfileOpen(false);
-                      }}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-center text-[12px] font-bold transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
-                      style={{
-                        background: Theme.secondary + '40',
-                        color: Theme.primary,
-                        border: `1px solid ${Theme.secondary}`,
-                      }}
-                    >
-                      <User size={15} strokeWidth={2.5} />
-                      <span>Account</span>
-                    </button>
-
-                    {/* Sign Out Button */}
-                    <button
-                      onClick={handleLogout}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-center text-[12px] font-bold transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
-                      style={{
-                        background: '#fff1f2',
-                        color: '#e11d48',
-                        border: '1px solid #ffe4e6',
-                      }}
-                    >
-                      <LogOut size={15} strokeWidth={2.5} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+                    {/* Buttons */}
+                    <div className="flex gap-3 px-5 py-4" style={{ background: Theme.card }}>
+                      <button
+                        onClick={() => { navigate('profile'); setProfileOpen(false); }}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-center text-[12px] font-bold transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                        style={{
+                          background: Theme.secondary + '40',
+                          color: Theme.primary,
+                          border: `1px solid ${Theme.secondary}`,
+                        }}
+                      >
+                        <User size={15} strokeWidth={2.5} />
+                        <span>{t.profile.account}</span>
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-center text-[12px] font-bold transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                        style={{
+                          background: '#fff1f2',
+                          color: '#e11d48',
+                          border: '1px solid #ffe4e6',
+                        }}
+                      >
+                        <LogOut size={15} strokeWidth={2.5} />
+                        <span>{t.profile.logout}</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </header>
 
-        {/* Content */}
+        {/* Content with page transition */}
         <div
-          className={`flex-1 overflow-y-auto ${isMobile ? 'px-[14px] py-4' : 'px-[26px] py-[22px]'}`}
+          className={`flex-1 overflow-y-auto ${isMobile ? 'px-[14px] py-4' : 'px-8 py-6'}`}
         >
-          {(() => {
-            // userModuleCodes === null means SYSTEM_ADMIN (full access)
-            // 'profile' is always accessible
-            if (activeNav === 'profile' || !userModuleCodes) return views[activeNav];
-            if (userModuleCodes.has(activeNav)) return views[activeNav];
-            // Auto-redirect to first permitted module
-            const firstAllowed = navItems[0]?.id;
-            if (firstAllowed && firstAllowed !== activeNav) {
-              // Use setTimeout to navigate after render
-              setTimeout(() => navigate(firstAllowed), 0);
-              return null;
-            }
-            return views[activeNav];
-          })()}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeNav + (activeNav === 'settings' ? settingsTab : '')}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {resolvedView}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 
@@ -692,11 +753,11 @@ export default function DashboardLayout({
           }}
         >
           {[
-            { id: 'overview', label: 'Home', icon: '◈' },
-            { id: 'inventory', label: 'Inventory', icon: '📦' },
-            { id: 'sales', label: 'Sales', icon: '💰' },
-            { id: 'ecommerce', label: 'Orders', icon: '🌐' },
-            { id: 'settings', label: 'Settings', icon: '⚙️' },
+            { id: 'overview', label: t.mobileNav.home, icon: '◈' },
+            { id: 'inventory', label: t.mobileNav.inventory, icon: '📦' },
+            { id: 'sales', label: t.mobileNav.sales, icon: '💰' },
+            { id: 'ecommerce', label: t.mobileNav.orders, icon: '🌐' },
+            { id: 'settings', label: t.mobileNav.settings, icon: '⚙️' },
           ].map((n) => {
             const active = activeNav === n.id;
             return (
@@ -731,48 +792,50 @@ export default function DashboardLayout({
       )}
 
       {/* Manual Sale Modal */}
-      {modal && (
-        <ManualSaleModal
-          products={products}
-          onClose={() => setModal(false)}
-          onConfirm={(product: Product, qty: number, note: string, total: number) => {
-            setProducts(
-              products.map((p: Product) => {
-                if (p.id !== product.id) return p;
-                const ns = p.stock - qty;
-                return {
-                  ...p,
-                  stock: ns,
-                  manualSold: p.manualSold + qty,
-                  sold: p.sold + qty,
-                  status: ns === 0 ? 'out' : ns < 15 ? 'low' : 'active',
-                };
-              })
-            );
-            setSellLog([
-              {
-                id: `MS-${String(sellLog.length + 1).padStart(3, '0')}`,
-                product: product.name,
-                qty,
-                amount: total,
-                note: note || 'Walk-in sale',
-                date: 'Just now',
-                by: 'Manager',
-              },
-              ...sellLog,
-            ]);
-            setToast(`✓ Sold ${qty} × ${product.name}`);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {modal && (
+          <ManualSaleModal
+            products={products}
+            onClose={() => setModal(false)}
+            onConfirm={(product: Product, qty: number, note: string, total: number) => {
+              setProducts(
+                products.map((p: Product) => {
+                  if (p.id !== product.id) return p;
+                  const ns = p.stock - qty;
+                  return {
+                    ...p,
+                    stock: ns,
+                    manualSold: p.manualSold + qty,
+                    sold: p.sold + qty,
+                    status: ns === 0 ? 'out' : ns < 15 ? 'low' : 'active',
+                  };
+                })
+              );
+              setSellLog([
+                {
+                  id: `MS-${String(sellLog.length + 1).padStart(3, '0')}`,
+                  product: product.name,
+                  qty,
+                  amount: total,
+                  note: note || t.walkInSale,
+                  date: t.justNow,
+                  by: t.manager,
+                },
+                ...sellLog,
+              ]);
+              setToast(`✓ ${t.sold} ${qty} × ${product.name}`);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-const POSView: React.FC = () => (
-  <div
-    className="flex min-h-[400px] flex-col items-center justify-center gap-[18px] px-5 py-8 text-center"
-  >
+const POSView: React.FC = () => {
+  const { t } = useDashboardLocale();
+  return (
+  <div className="flex min-h-[400px] flex-col items-center justify-center gap-[18px] px-5 py-8 text-center">
     <div
       className="flex h-20 w-20 items-center justify-center rounded-[22px] text-[40px]"
       style={{ background: Theme.secondary }}
@@ -780,15 +843,15 @@ const POSView: React.FC = () => (
       🖥️
     </div>
     <div style={{ fontSize: 26, fontWeight: 800, color: Theme.fg }}>
-      Point of Sale
+      {t.pos.title}
     </div>
     <div
       className="max-w-[380px] text-sm leading-[1.8]"
       style={{ color: Theme.mutedFg }}
     >
-      Full POS terminal planned for next release. Until then, use{' '}
-      <strong style={{ color: Theme.primary }}>Manual Sell</strong> in Inventory for
-      walk-in sales with real-time stock sync.
+      {t.pos.description}{' '}
+      <strong style={{ color: Theme.primary }}>{t.pos.manualSell}</strong> {t.pos.suffix}
     </div>
   </div>
-);
+  );
+};

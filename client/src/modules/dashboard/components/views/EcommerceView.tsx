@@ -11,6 +11,7 @@ import { useListOrders, useUpdateOrderStatusMutation } from '@/modules/orders';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import type { Customer } from '@/shared/types';
 import type { Order as RealOrder } from '@/shared/types';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 type RealOrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
 
@@ -37,12 +38,12 @@ type TabType = 'orders' | 'products' | 'customers';
 type OrderFilter = 'all' | 'pending' | 'processing' | 'shipped' | 'delivered';
 type ProductFilter = 'all' | 'active' | 'low' | 'out';
 
-const TRACKING_STEPS = [
-  { status: 'PENDING',    label: 'Placed',     icon: '🛒' },
-  { status: 'CONFIRMED',  label: 'Confirmed',  icon: '✅' },
-  { status: 'PROCESSING', label: 'Processing', icon: '⚙️' },
-  { status: 'SHIPPED',    label: 'Shipped',    icon: '🚚' },
-  { status: 'DELIVERED',  label: 'Delivered',  icon: '📦' },
+const getTrackingSteps = (t: any) => [
+  { status: 'PENDING',    label: t.ecommerce.placed,     icon: '🛒' },
+  { status: 'CONFIRMED',  label: t.ecommerce.confirmed,  icon: '✅' },
+  { status: 'PROCESSING', label: t.ecommerce.processing, icon: '⚙️' },
+  { status: 'SHIPPED',    label: t.ecommerce.shipped,    icon: '🚚' },
+  { status: 'DELIVERED',  label: t.ecommerce.delivered,  icon: '📦' },
 ];
 
 const STATUS_ORDER = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
@@ -88,6 +89,8 @@ function getSegmentColor(segment?: string) {
 export default function EcommerceView({ products, orders }: EcommerceViewProps) {
   const router = useRouter();
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
+  const TRACKING_STEPS = useMemo(() => getTrackingSteps(t), [t]);
 
   const [tab, setTab] = useState<TabType>('orders');
   const [orderSearch, setOrderSearch] = useState('');
@@ -164,18 +167,18 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
         className={`flex gap-1 overflow-x-auto rounded-[10px] p-1 ${isMobile ? 'w-full' : 'w-fit'}`}
         style={{ background: Theme.muted }}
       >
-        {(['orders', 'products', 'customers'] as const).map((t) => (
+        {(['orders', 'products', 'customers'] as const).map((tTab) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tTab}
+            onClick={() => setTab(tTab)}
             className={`cursor-pointer whitespace-nowrap rounded-lg border-none px-4 py-2 text-[13px] font-semibold capitalize ${isMobile ? 'flex-1' : ''}`}
             style={{
-              background: tab === t ? '#fff' : 'transparent',
-              color: tab === t ? Theme.primary : Theme.mutedFg,
-              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+              background: tab === tTab ? '#fff' : 'transparent',
+              color: tab === tTab ? Theme.primary : Theme.mutedFg,
+              boxShadow: tab === tTab ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
             }}
           >
-            {t}
+            {t.ecommerce[tTab]}
           </button>
         ))}
       </div>
@@ -183,14 +186,14 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
       {tab === 'orders' && (
         <>
           {/* Stat cards row */}
-          <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
+          <div className="grid grid-cols-3 gap-3 lg:grid-cols-6 2xl:gap-4">
             {[
-              { label: 'Total Orders', value: realOrders.length, icon: '📦', accent: '#f0f4ff', numColor: Theme.fg },
-              { label: 'Pending', value: realOrders.filter(o => String(o.status).toUpperCase() === 'PENDING').length, icon: '⏳', accent: '#fffbeb', numColor: '#b45309' },
-              { label: 'Processing', value: realOrders.filter(o => String(o.status).toUpperCase() === 'PROCESSING').length, icon: '⚙️', accent: '#fff7ed', numColor: '#c2410c' },
-              { label: 'Shipped', value: realOrders.filter(o => String(o.status).toUpperCase() === 'SHIPPED').length, icon: '🚚', accent: '#eff6ff', numColor: '#1d4ed8' },
-              { label: 'Delivered', value: realOrders.filter(o => String(o.status).toUpperCase() === 'DELIVERED').length, icon: '✅', accent: '#f0fdf4', numColor: '#15803d' },
-              { label: 'Avg. Value', value: formatCurrency(realOrders.length > 0 ? realOrders.reduce((s, o) => s + Number(o.total || 0), 0) / realOrders.length : 0), icon: '💳', accent: '#fdf2f8', numColor: Theme.primary },
+              { label: t.ecommerce.totalOrders, value: realOrders.length, icon: '📦', accent: '#f0f4ff', numColor: Theme.fg },
+              { label: t.ecommerce.pending, value: realOrders.filter(o => String(o.status).toUpperCase() === 'PENDING').length, icon: '⏳', accent: '#fffbeb', numColor: '#b45309' },
+              { label: t.ecommerce.processing, value: realOrders.filter(o => String(o.status).toUpperCase() === 'PROCESSING').length, icon: '⚙️', accent: '#fff7ed', numColor: '#c2410c' },
+              { label: t.ecommerce.shipped, value: realOrders.filter(o => String(o.status).toUpperCase() === 'SHIPPED').length, icon: '🚚', accent: '#eff6ff', numColor: '#1d4ed8' },
+              { label: t.ecommerce.delivered, value: realOrders.filter(o => String(o.status).toUpperCase() === 'DELIVERED').length, icon: '✅', accent: '#f0fdf4', numColor: '#15803d' },
+              { label: t.ecommerce.avgValue, value: formatCurrency(realOrders.length > 0 ? realOrders.reduce((s, o) => s + Number(o.total || 0), 0) / realOrders.length : 0), icon: '💳', accent: '#fdf2f8', numColor: Theme.primary },
             ].map(stat => (
               <div
                 key={stat.label}
@@ -209,20 +212,20 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
           <Card pad={0}>
             <div className="flex items-center justify-between border-b px-[18px] py-[14px]" style={{ borderBottomColor: Theme.border }}>
               <div>
-                <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>All Orders</div>
+                <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>{t.ecommerce.allOrders}</div>
                 <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
-                  {realOrders.filter(o => {
+                  {t.ecommerce.ordersShown.replace('{count}', realOrders.filter(o => {
                     const term = orderSearch.trim().toLowerCase();
                     if (!term) return true;
                     return (o.orderNumber || '').toLowerCase().includes(term) || (o.shippingName || '').toLowerCase().includes(term);
-                  }).length} of {realOrders.length} orders shown
+                  }).length.toString()).replace('{total}', realOrders.length.toString())}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <input
                   value={orderSearch}
                   onChange={(e) => setOrderSearch(e.target.value)}
-                  placeholder="Search order or customer"
+                  placeholder={t.ecommerce.searchOrderOrCustomer}
                   className="w-[200px] rounded-lg border px-3 py-1.5 text-xs outline-none"
                   style={{ borderColor: Theme.border, color: Theme.fg }}
                 />
@@ -232,20 +235,20 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                   className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
                   style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
                 >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="all">{t.ecommerce.allStatus}</option>
+                  <option value="pending">{t.ecommerce.pending}</option>
+                  <option value="confirmed">{t.ecommerce.confirmed}</option>
+                  <option value="processing">{t.ecommerce.processing}</option>
+                  <option value="shipped">{t.ecommerce.shipped}</option>
+                  <option value="delivered">{t.ecommerce.delivered}</option>
+                  <option value="cancelled">{t.ecommerce.cancelled}</option>
                 </select>
-                <Btn variant="ghost" size="sm" onClick={() => void refetchOrders()}>Refresh</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => void refetchOrders()}>{t.ecommerce.refresh}</Btn>
               </div>
             </div>
 
             {realOrdersLoading ? (
-              <div className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>Loading orders...</div>
+              <div className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>{t.ecommerce.loadingOrders}</div>
             ) : (
               <div className="divide-y" style={{ borderColor: Theme.border }}>
                 {realOrders.filter(o => {
@@ -254,7 +257,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                   return (o.orderNumber || '').toLowerCase().includes(term) || (o.shippingName || '').toLowerCase().includes(term);
                 }).length === 0 && (
                   <div className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                    No orders found.
+                    {t.ecommerce.noOrdersFound}
                   </div>
                 )}
                 {realOrders
@@ -285,7 +288,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                               <Badge label={currentStatus} bg={statusStyle.bg} color={statusStyle.color} />
                             </div>
                             <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
-                              {order.items?.length ?? 0} item(s) · {formatCurrency(Number(order.total || 0))} · {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                              {order.items?.length ?? 0} {order.items?.length === 1 ? t.ecommerce.item : t.ecommerce.items} · {formatCurrency(Number(order.total || 0))} · {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) : t.na}
                             </div>
                           </div>
                           <span style={{ color: Theme.mutedFg, fontSize: 14, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'none' }}>▶</span>
@@ -382,9 +385,9 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                                       onClick={async () => {
                                         if (selected === currentStatus) return;
                                         const confirmed = await confirmDialog({
-                                          title: 'Update Order Status?',
-                                          text: `Change #${order.orderNumber} to ${selected}?`,
-                                          confirmButtonText: 'Yes, update',
+                                          title: t.ecommerce.updateOrderStatus,
+                                          text: t.ecommerce.changeStatusMsg.replace('{orderNumber}', order.orderNumber).replace('{status}', selected),
+                                          confirmButtonText: t.ecommerce.update,
                                           icon: 'question',
                                         });
                                         if (confirmed) {
@@ -393,7 +396,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                                       }}
                                       disabled={selected === currentStatus || isSaving}
                                     >
-                                      {isSaving ? '...' : 'Update'}
+                                      {isSaving ? t.ecommerce.updating : t.ecommerce.update}
                                     </Btn>
                                   </div>
                                 )}
@@ -418,10 +421,10 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
           >
             <div>
               <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>
-                Product Catalogue
+                {t.ecommerce.productCatalogue}
               </div>
               <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
-                {filteredProducts.length} of {products.length} products shown
+                {t.ecommerce.productsShown.replace('{count}', filteredProducts.length.toString()).replace('{total}', products.length.toString())}
               </div>
             </div>
 
@@ -429,7 +432,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
               <input
                 value={productSearch}
                 onChange={(event) => setProductSearch(event.target.value)}
-                placeholder="Search name or SKU"
+                placeholder={t.ecommerce.searchNameOrSku}
                 className="w-[200px] rounded-lg border px-3 py-1.5 text-xs outline-none"
                 style={{ borderColor: Theme.border, color: Theme.fg }}
               />
@@ -439,13 +442,13 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                 className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
                 style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
               >
-                <option value="all">All Stock</option>
-                <option value="active">In Stock</option>
-                <option value="low">Low Stock</option>
-                <option value="out">Out of Stock</option>
+                <option value="all">{t.ecommerce.allStock}</option>
+                <option value="active">{t.ecommerce.inStock}</option>
+                <option value="low">{t.ecommerce.lowStock}</option>
+                <option value="out">{t.ecommerce.outOfStock}</option>
               </select>
               <Btn variant="primary" size="sm" onClick={() => router.push('/dashboard/settings?tab=products')}>
-                + Add Product
+                {t.products.addProduct}
               </Btn>
             </div>
           </div>
@@ -454,7 +457,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
             <table className="w-full min-w-[600px] border-collapse">
               <thead>
                 <tr>
-                  {['Product', 'SKU', 'Price', 'Stock', 'Status', ''].map((h) => (
+                  {[t.returns.product, t.modal.sku, t.ecommerce.price, t.returns.stock, t.inventory.status, ''].map((h) => (
                     <th
                       key={h}
                       className="whitespace-nowrap px-4 py-[11px] text-left text-[11px] font-bold uppercase tracking-[0.06em]"
@@ -469,14 +472,14 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                   {filteredProducts.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                        No products matched your filters.
+                        {t.products.noProducts}
                       </td>
                     </tr>
                   )}
 
                   {filteredProducts.map((p, i) => {
                     const stockStyle = stockStatusStyle(p.status);
-                    const stockLabel = p.status === 'out' ? 'Out of Stock' : p.status === 'low' ? 'Low Stock' : 'In Stock';
+                    const stockLabel = p.status === 'out' ? t.ecommerce.outOfStock : p.status === 'low' ? t.ecommerce.lowStock : t.ecommerce.inStock;
 
                     return (
                       <tr key={p.sku} style={{ background: i % 2 === 0 ? '#fff' : Theme.muted }}>
@@ -497,7 +500,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                         </td>
                         <td className="px-4 py-3 text-[13px]">
                           <Btn variant="ghost" size="sm" onClick={() => router.push('/dashboard/settings?tab=products')}>
-                            Edit
+                            {t.inventory.edit}
                           </Btn>
                         </td>
                       </tr>
@@ -512,12 +515,12 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
       {tab === 'customers' && (
         <div className="flex flex-col gap-[14px]">
           {/* Stat cards row */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:gap-4">
             {[
-              { label: 'Total Customers', value: totalCustomers, icon: '👥', accent: '#fdf2f8', numColor: Theme.primary },
-              { label: 'Active', value: activeCustomers, icon: '🟢', accent: '#f0fdf4', numColor: '#15803d' },
-              { label: 'Returning', value: `${totalCustomers > 0 ? ((returningCustomers / totalCustomers) * 100).toFixed(1) : '0.0'}%`, icon: '↩️', accent: '#eff6ff', numColor: '#1d4ed8' },
-              { label: 'Avg. LTV', value: formatCurrency(averageLtv), icon: '💎', accent: '#f0f4ff', numColor: Theme.fg },
+              { label: t.ecommerce.totalCustomers, value: totalCustomers, icon: '👥', accent: '#fdf2f8', numColor: Theme.primary },
+              { label: t.ecommerce.active, value: activeCustomers, icon: '🟢', accent: '#f0fdf4', numColor: '#15803d' },
+              { label: t.ecommerce.returning, value: `${totalCustomers > 0 ? ((returningCustomers / totalCustomers) * 100).toFixed(1) : '0.0'}%`, icon: '↩️', accent: '#eff6ff', numColor: '#1d4ed8' },
+              { label: t.ecommerce.avgLtv, value: formatCurrency(averageLtv), icon: '💎', accent: '#f0f4ff', numColor: Theme.fg },
             ].map(stat => (
               <div
                 key={stat.label}
@@ -537,10 +540,10 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
             <div className="flex items-center justify-between border-b px-[18px] py-[14px]" style={{ borderBottomColor: Theme.border }}>
               <div>
                 <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>
-                  Customer Directory
+                  {t.ecommerce.customerDirectory}
                 </div>
                 <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
-                  {filteredCustomers.length} of {customers.length} customers shown
+                  {t.ecommerce.customersShown.replace('{count}', filteredCustomers.length.toString()).replace('{total}', customers.length.toString())}
                 </div>
               </div>
 
@@ -548,28 +551,28 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                 <input
                   value={customerSearch}
                   onChange={(event) => setCustomerSearch(event.target.value)}
-                  placeholder="Search name, email, segment"
+                  placeholder={t.ecommerce.searchCustomer}
                   className="w-[220px] rounded-lg border px-3 py-1.5 text-xs outline-none"
                   style={{ borderColor: Theme.border, color: Theme.fg }}
                 />
                 <Btn variant="ghost" size="sm" onClick={() => void refetchCustomers()}>
-                  Refresh
+                  {t.ecommerce.refresh}
                 </Btn>
               </div>
             </div>
 
             {customersLoading ? (
               <div className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                Loading customers...
+                {t.ecommerce.loadingCustomers}
               </div>
             ) : customersError ? (
               <div className="px-4 py-8 text-center">
                 <p className="text-sm" style={{ color: Theme.danger }}>
-                  {(customersErrorData as { message?: string })?.message || 'Failed to load customers'}
+                  {(customersErrorData as { message?: string })?.message || t.ecommerce.failedLoadCustomers}
                 </p>
                 <div className="mt-3">
                   <Btn variant="primary" size="sm" onClick={() => void refetchCustomers()}>
-                    Retry
+                    {t.ecommerce.retry}
                   </Btn>
                 </div>
               </div>
@@ -578,7 +581,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                 <table className="w-full min-w-[700px] border-collapse">
                   <thead>
                     <tr>
-                      {['Customer', 'Segment', 'Orders', 'Total Spent', 'Loyalty', 'Last Order'].map((h) => (
+                      {[t.ecommerce.customer, t.ecommerce.segment, t.ecommerce.orders, t.ecommerce.totalSpent, t.ecommerce.loyalty, t.ecommerce.lastOrder].map((h) => (
                         <th
                           key={h}
                           className="whitespace-nowrap px-4 py-[11px] text-left text-[11px] font-bold uppercase tracking-[0.06em]"
@@ -593,7 +596,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                     {filteredCustomers.length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                          No customers matched your search.
+                          {t.ecommerce.noCustomersMatched}
                         </td>
                       </tr>
                     )}

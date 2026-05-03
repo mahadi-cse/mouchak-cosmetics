@@ -6,6 +6,7 @@ export type SiteSettings = {
   id: number;
   storeName: string;
   tagline: string;
+  primaryColor: string;
   heroHeadline: string;
   heroYear: string;
   heroDescription: string;

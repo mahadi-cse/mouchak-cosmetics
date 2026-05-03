@@ -17,4 +17,7 @@ router.get('/wishlist', customerDashboardController.listMyWishlist);
 router.post('/wishlist', customerDashboardController.addMyWishlistItem);
 router.delete('/wishlist/:productId', customerDashboardController.removeMyWishlistItem);
 
+router.get('/returns', customerDashboardController.listMyReturns);
+router.post('/returns', customerDashboardController.createMyReturnRequest);
+
 export default router;
