@@ -10,6 +10,18 @@ export const orderStatusEnum = z.enum([
   'REFUNDED',
 ]);
 
+export const returnReasonEnum = z.enum([
+  'DEFECTIVE',
+  'WRONG_ITEM',
+  'COLOR_MISMATCH',
+  'NOT_AS_DESCRIBED',
+  'CUSTOMER_CHANGED_MIND',
+  'DAMAGED_IN_TRANSIT',
+  'EXPIRED',
+  'QUALITY_ISSUE',
+  'OTHER',
+]);
+
 export const listMyOrdersSchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().max(50).optional(),
@@ -42,6 +54,18 @@ export const wishlistProductParamSchema = z.object({
   productId: z.coerce.number().int().positive(),
 });
 
+export const createReturnRequestSchema = z.object({
+  orderItemId: z.number().int().positive(),
+  reason: returnReasonEnum,
+  returnedQuantity: z.number().int().positive(),
+  notes: z.string().trim().max(500).optional(),
+});
+
+export const returnIdParamSchema = z.object({
+  returnId: z.coerce.number().int().positive(),
+});
+
 export type ListMyOrdersInput = z.infer<typeof listMyOrdersSchema>;
 export type UpdateMyProfileInput = z.infer<typeof updateMyProfileSchema>;
 export type WishlistItemInput = z.infer<typeof wishlistItemSchema>;
+export type CreateReturnRequestInput = z.infer<typeof createReturnRequestSchema>;

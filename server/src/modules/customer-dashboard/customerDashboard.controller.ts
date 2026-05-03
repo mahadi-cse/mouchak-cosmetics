@@ -4,6 +4,7 @@ import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { UnauthorizedError, ValidationError } from '../../shared/utils/AppError';
 import customerDashboardService from './customerDashboard.service';
 import {
+  createReturnRequestSchema,
   listMyOrdersSchema,
   orderIdParamSchema,
   updateMyProfileSchema,
@@ -97,6 +98,26 @@ export const removeMyWishlistItem: RequestHandler = asyncHandler(async (req, res
   res.json(ok(result, 'Wishlist item removed'));
 });
 
+export const listMyReturns: RequestHandler = asyncHandler(async (req, res) => {
+  const userId = requireUserId(req);
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const result = await customerDashboardService.listMyReturns(userId, page, limit);
+  res.json(paginate(result.data, result.total, result.page, result.limit));
+});
+
+export const createMyReturnRequest: RequestHandler = asyncHandler(async (req, res) => {
+  const userId = requireUserId(req);
+
+  const parsed = createReturnRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid return request payload');
+  }
+
+  const returnRecord = await customerDashboardService.createReturnRequest(userId, parsed.data);
+  res.status(201).json(ok(returnRecord, 'Return request submitted successfully'));
+});
+
 export default {
   getMySummary,
   getMyProfile,
@@ -106,4 +127,6 @@ export default {
   listMyWishlist,
   addMyWishlistItem,
   removeMyWishlistItem,
+  listMyReturns,
+  createMyReturnRequest,
 };

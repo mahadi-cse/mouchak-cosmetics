@@ -5,6 +5,7 @@ import type {
   CustomerDashboardProfile,
   CustomerDashboardSummary,
   CustomerOrderTracking,
+  CustomerReturnsResult,
   ListMyOrdersParams,
   WishlistItem,
 } from './types';
@@ -18,6 +19,7 @@ export const CUSTOMER_DASHBOARD_QUERY_KEYS = {
   tracking: (orderId?: number) =>
     [...CUSTOMER_DASHBOARD_QUERY_KEYS.all, 'tracking', orderId || 0] as const,
   wishlist: () => [...CUSTOMER_DASHBOARD_QUERY_KEYS.all, 'wishlist'] as const,
+  returns: (page?: number) => [...CUSTOMER_DASHBOARD_QUERY_KEYS.all, 'returns', page || 1] as const,
 };
 
 export const useCustomerDashboardSummary = (
@@ -74,6 +76,18 @@ export const useCustomerWishlist = (
     queryKey: CUSTOMER_DASHBOARD_QUERY_KEYS.wishlist(),
     queryFn: () => customerDashboardAPI.listWishlist(),
     staleTime: 2 * 60 * 1000,
+    ...options,
+  });
+};
+
+export const useCustomerReturns = (
+  page?: number,
+  options?: any
+): UseQueryResult<CustomerReturnsResult, Error> => {
+  return useQuery<CustomerReturnsResult, Error>({
+    queryKey: CUSTOMER_DASHBOARD_QUERY_KEYS.returns(page),
+    queryFn: () => customerDashboardAPI.listMyReturns({ page: page ?? 1, limit: 10 }),
+    staleTime: 60 * 1000,
     ...options,
   });
 };
