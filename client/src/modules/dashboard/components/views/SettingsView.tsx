@@ -479,7 +479,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   }, [staffUsers, staffSearch]);
   // ─── End staff management ───────────────────────────────────────────────────
 
-  const updateSiteSettingsMutation = useMutation({
+  const updateSiteSettingsMutation = useMutation<any, any, any>({
     mutationFn: (data: any) => homepageAPI.updateSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['homepage', 'settings'] });
