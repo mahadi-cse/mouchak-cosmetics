@@ -1,6 +1,12 @@
-import { useQuery, UseQueryResult, useMutation, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, UseQueryResult, useMutation, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { homepageAPI, HeroSlider, SiteSettings } from "./api";
 import type { Category, Product } from "@/shared/types";
+
+export type PaymentMethodOption = {
+  id: number;
+  name: string;
+  isActive: boolean;
+};
 
 export type HomepageStats = {
   id: number;
@@ -11,6 +17,7 @@ export type HomepageStats = {
   currentOfferText: string;
   currentOfferPercentage: number;
   isOfferActive: boolean;
+  paymentMethods: PaymentMethodOption[];
   lastUpdated: string;
 };
 
@@ -128,5 +135,36 @@ export const useUpdateSlider = () => {
 export const useDeleteSlider = () => {
   return useMutation({
     mutationFn: (id: number) => homepageAPI.deleteSlider(id),
+  });
+};
+
+export const useCreatePaymentMethod = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => homepageAPI.createPaymentMethod(name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: HOMEPAGE_QUERY_KEYS.stats() });
+    },
+  });
+};
+
+export const useUpdatePaymentMethod = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<PaymentMethodOption> }) =>
+      homepageAPI.updatePaymentMethod(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: HOMEPAGE_QUERY_KEYS.stats() });
+    },
+  });
+};
+
+export const useDeletePaymentMethod = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => homepageAPI.deletePaymentMethod(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: HOMEPAGE_QUERY_KEYS.stats() });
+    },
   });
 };

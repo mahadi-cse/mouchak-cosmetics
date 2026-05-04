@@ -1061,6 +1061,11 @@ model SiteSettings {
   heroYear              String    @default("2026")
   heroDescription       String    @default("Discover luxurious skincare and makeup that celebrates your natural glow. Clean, cruelty-free formulas delivered across Bangladesh in 48 hours.")
   
+  // Contact Info
+  contactAddress        String    @default("Dhaka, Bangladesh")
+  contactPhone          String    @default("+880 1XXX-XXXXXX")
+  contactEmail          String    @default("hello@mouchakcosmetics.com")
+  
   // Metadata
   lastUpdated           DateTime  @default(now()) @updatedAt
   
@@ -1111,6 +1116,16 @@ model Promotion {
   updatedAt     DateTime  @updatedAt
 
   @@map("promotions")
+}
+
+model PaymentMethodOption {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_method_options")
 }
 
 

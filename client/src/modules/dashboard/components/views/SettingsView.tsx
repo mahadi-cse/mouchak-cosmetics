@@ -22,7 +22,8 @@ import {
 import { useListBranches } from '@/modules/branches/queries';
 import { toast } from 'react-hot-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { homepageAPI, useHomepageStats, useSiteSettings } from '@/modules/homepage';
+import { confirmDialog } from '@/shared/lib/confirmDialog';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 import { useSession } from 'next-auth/react';
 import apiClient from '@/shared/lib/apiClient';
 import StaffFormPageClient from '@/app/(staff-dashboard)/dashboard/settings/staff/_components/StaffFormPageClient';
@@ -36,8 +37,14 @@ import {
 import type { Promotion as APIPromotion } from '@/modules/promotions';
 import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
-import { confirmDialog } from '@/shared/lib/confirmDialog';
-import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
+import {
+  homepageAPI,
+  useHomepageStats,
+  useSiteSettings,
+  useCreatePaymentMethod,
+  useUpdatePaymentMethod,
+  useDeletePaymentMethod
+} from '@/modules/homepage';
 
 interface SettingsViewProps {
   products: any[];
@@ -129,6 +136,9 @@ interface SettingsState {
     card: boolean;
     cash: boolean;
   };
+  contactAddress: string;
+  contactPhone: string;
+  contactEmail: string;
 }
 
 const DASHBOARD_SETTINGS_KEY = 'mouchak.dashboard.settings.v1';
@@ -156,6 +166,9 @@ const DEFAULT_SETTINGS: SettingsState = {
   smsDelivery: true,
   storeLogo: '',
   acceptedPayments: { bkash: true, nagad: true, card: true, cash: true },
+  contactAddress: 'Dhaka, Bangladesh',
+  contactPhone: '+880 1XXX-XXXXXX',
+  contactEmail: 'hello@mouchakcosmetics.com',
 };
 
 const STAFF_LIST: StaffMember[] = [
@@ -243,6 +256,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const productImageRef = useRef<ImageUploaderRef>(null);
   const categoryImageRef = useRef<ImageUploaderRef>(null);
+  const [newPaymentMethod, setNewPaymentMethod] = useState('');
 
   const { data: siteSettingsData } = useSiteSettings();
   const { data: homepageStatsData } = useHomepageStats();
@@ -279,6 +293,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const updateProductStatus = useUpdateProductStatus();
+
+  const createPaymentMethod = useCreatePaymentMethod();
+  const updatePaymentMethod = useUpdatePaymentMethod();
+  const deletePaymentMethod = useDeletePaymentMethod();
 
   // ─── Staff / User management ───────────────────────────────────────────────
   // These endpoints are pending backend implementation.
@@ -562,7 +580,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       ...prev,
       ...(siteSettingsData ? { 
         storeName: siteSettingsData.storeName || prev.storeName,
-        primaryColor: siteSettingsData.primaryColor || prev.primaryColor
+        primaryColor: siteSettingsData.primaryColor || prev.primaryColor,
+        contactAddress: siteSettingsData.contactAddress || prev.contactAddress,
+        contactPhone: siteSettingsData.contactPhone || prev.contactPhone,
+        contactEmail: siteSettingsData.contactEmail || prev.contactEmail,
       } : {}),
       ...(homepageStatsData
         ? {
@@ -883,6 +904,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         currency: DEFAULT_SETTINGS.currency,
         taxRate: DEFAULT_SETTINGS.taxRate,
         timezone: DEFAULT_SETTINGS.timezone,
+        contactAddress: siteSettingsData?.contactAddress || DEFAULT_SETTINGS.contactAddress,
+        contactPhone: siteSettingsData?.contactPhone || DEFAULT_SETTINGS.contactPhone,
+        contactEmail: siteSettingsData?.contactEmail || DEFAULT_SETTINGS.contactEmail,
         storeLogo: '',
       }));
     }
@@ -941,9 +965,12 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         await updateSiteSettingsMutation.mutateAsync({
           storeName: settings.storeName.trim() || DEFAULT_SETTINGS.storeName,
           primaryColor: settings.primaryColor || DEFAULT_SETTINGS.primaryColor,
+          contactAddress: settings.contactAddress || DEFAULT_SETTINGS.contactAddress,
+          contactPhone: settings.contactPhone || DEFAULT_SETTINGS.contactPhone,
+          contactEmail: settings.contactEmail || DEFAULT_SETTINGS.contactEmail,
         });
       }
-
+      
       if (targetTab === 'shipping') {
         await updateHomepageStatsMutation.mutateAsync({
           minFreeDeliveryAmount: Number(settings.freeShippingOver) || 0,
@@ -1041,7 +1068,38 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               </select>
             </div>
           </div>
-          <div>
+          
+          <div className="mt-4 grid gap-[14px] grid-cols-1 md:grid-cols-3">
+            <div>
+              <label className={labelClass}>Contact Address</label>
+              <input
+                value={settings.contactAddress}
+                onChange={(e) => setSettings({ ...settings, contactAddress: e.target.value })}
+                className={inputClass}
+                placeholder="e.g. Dhaka, Bangladesh"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Contact Phone</label>
+              <input
+                value={settings.contactPhone}
+                onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
+                className={inputClass}
+                placeholder="e.g. +880 1XXX-XXXXXX"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Contact Email</label>
+              <input
+                value={settings.contactEmail}
+                onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
+                className={inputClass}
+                placeholder="e.g. hello@mouchak.com"
+              />
+            </div>
+          </div>
+          
+          <div className="mt-4">
             <label className={labelClass}>{t.settings.storeLogo}</label>
             <div
               onClick={() => logoInputRef.current?.click()}
@@ -1082,10 +1140,87 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           </div>
         </FormSection>
         <FormSection title={t.settings.acceptedPaymentMethods}>
-          <Toggle val={settings.acceptedPayments.bkash} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, bkash: !settings.acceptedPayments.bkash } })} label="bKash 🔴" />
-          <Toggle val={settings.acceptedPayments.nagad} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, nagad: !settings.acceptedPayments.nagad } })} label="Nagad 🟠" />
-          <Toggle val={settings.acceptedPayments.card} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, card: !settings.acceptedPayments.card } })} label="Card (Visa/Mastercard) 💳" />
-          <Toggle val={settings.acceptedPayments.cash} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, cash: !settings.acceptedPayments.cash } })} label="Cash 💵" />
+          <div className="flex flex-col gap-3 mb-5">
+            {homepageStatsData?.paymentMethods?.map((method) => (
+              <div 
+                key={method.id}
+                className="flex items-center justify-between p-3 rounded-xl border border-border bg-zinc-50/50 hover:bg-white transition-colors"
+                style={{ opacity: method.isActive ? 1 : 0.6 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ background: method.isActive ? Theme.success : Theme.border }}
+                  />
+                  <span className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
+                    {method.name}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updatePaymentMethod.mutate({ id: method.id, data: { isActive: !method.isActive } })}
+                    className="relative h-5 w-9 shrink-0 cursor-pointer rounded-full border-none transition-colors"
+                    style={{ background: method.isActive ? Theme.primary : Theme.border }}
+                  >
+                    <div
+                      className="absolute top-[2px] h-[16px] w-[16px] rounded-full bg-white shadow-sm transition-all"
+                      style={{ left: method.isActive ? 18 : 2 }}
+                    />
+                  </button>
+                  
+                  <button
+                    onClick={async () => {
+                      const confirmed = await confirmDialog({
+                        title: 'Delete Payment Method?',
+                        text: `Are you sure you want to remove "${method.name}"?`,
+                        confirmButtonText: 'Yes, delete',
+                        icon: 'warning'
+                      });
+                      if (confirmed) deletePaymentMethod.mutate(method.id);
+                    }}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+            {(!homepageStatsData?.paymentMethods || homepageStatsData.paymentMethods.length === 0) && (
+              <div className="py-4 text-center text-xs italic" style={{ color: Theme.mutedFg }}>
+                No payment methods configured.
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-2 p-1 rounded-xl bg-zinc-100/50 border border-border">
+            <input
+              value={newPaymentMethod}
+              onChange={(e) => setNewPaymentMethod(e.target.value)}
+              placeholder="e.g. Rocket"
+              className={`${inputClass} border-none bg-transparent h-10`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newPaymentMethod.trim()) {
+                  e.preventDefault();
+                  createPaymentMethod.mutate(newPaymentMethod.trim());
+                  setNewPaymentMethod('');
+                }
+              }}
+            />
+            <Btn 
+              variant="primary" 
+              size="sm" 
+              className="h-10 px-6"
+              onClick={() => {
+                if (newPaymentMethod.trim()) {
+                  createPaymentMethod.mutate(newPaymentMethod.trim());
+                  setNewPaymentMethod('');
+                }
+              }}
+            >
+              Add Method
+            </Btn>
+          </div>
         </FormSection>
       </div>
     ),

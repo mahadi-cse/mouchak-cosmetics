@@ -12,6 +12,9 @@ export {
   useUpdateSlider,
   useDeleteSlider,
   useSearchProducts,
+  useCreatePaymentMethod,
+  useUpdatePaymentMethod,
+  useDeletePaymentMethod,
   HOMEPAGE_QUERY_KEYS
 } from './queries';
 

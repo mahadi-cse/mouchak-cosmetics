@@ -2,8 +2,9 @@
 
 import { Mail, MapPin, Phone } from "lucide-react";
 import { motion } from "framer-motion";
-import { footerContent, paymentMethods } from "./data";
+import { footerContent } from "./data";
 import { useHomepageLocale } from "../locales/HomepageLocaleContext";
+import { useHomepageStats, useSiteSettings } from "@/modules/homepage";
 import Link from "next/link";
 
 const containerVariants = {
@@ -18,6 +19,35 @@ const itemVariants = {
 
 export function Footer() {
   const { t } = useHomepageLocale();
+  const { data: stats, isLoading: statsLoading } = useHomepageStats();
+  const { data: settings, isLoading: settingsLoading } = useSiteSettings();
+  
+  const isLoading = statsLoading || settingsLoading;
+  
+  const paymentMethods = (stats?.paymentMethods || [])
+    .filter(m => m.isActive)
+    .map(m => m.name);
+  
+  // Show nothing or a skeleton while loading to avoid jump
+  if (isLoading) {
+    return (
+      <footer className="bg-zinc-950 text-zinc-400">
+        <div className="mx-auto max-w-[1600px] px-6 py-16 sm:px-10">
+          <div className="animate-pulse flex flex-col gap-8">
+            <div className="h-20 bg-zinc-900/50 rounded-xl w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+              {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-zinc-900/30 rounded-xl" />)}
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
+  // Only use fallback if data is fetched and definitely empty
+  const displayMethods = paymentMethods.length > 0 
+    ? paymentMethods 
+    : (stats ? ["bKash", "Nagad", "Visa", "MC"] : []);
 
   return (
     <footer className="bg-zinc-950 text-zinc-400">
@@ -93,27 +123,27 @@ export function Footer() {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <h4 className="mb-5 text-sm font-bold tracking-widest text-white uppercase">
-            {t.footer.sections.contact}
-          </h4>
-          <div className="space-y-4 text-sm">
+          <p className="mb-6 text-sm font-bold uppercase tracking-wider text-white">
+            {t.footer.contactTitle}
+          </p>
+          <div className="space-y-4 text-[13px]">
             <p className="inline-flex items-center gap-3">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-800/80">
                 <MapPin size={14} className="text-primary" />
               </span>
-              {t.footer.contact.address}
+              {settings?.contactAddress || "Dhaka, Bangladesh"}
             </p>
             <p className="inline-flex items-center gap-3">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-800/80">
                 <Phone size={14} className="text-primary" />
               </span>
-              {footerContent.contact.phone}
+              {settings?.contactPhone || "+880 1XXX-XXXXXX"}
             </p>
             <p className="inline-flex items-center gap-3">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-800/80">
                 <Mail size={14} className="text-primary" />
               </span>
-              {footerContent.contact.email}
+              {settings?.contactEmail || "hello@mouchakcosmetics.com"}
             </p>
           </div>
         </motion.div>
@@ -124,7 +154,7 @@ export function Footer() {
           <p className="text-zinc-500">{t.footer.copyright}</p>
           <div className="flex items-center gap-2">
             <span className="text-zinc-500">{t.footer.paymentLabel}</span>
-            {paymentMethods.map((pay) => (
+            {displayMethods.map((pay) => (
               <span
                 key={pay}
                 className="rounded-md bg-zinc-800/80 px-2.5 py-1 text-zinc-300 text-[11px] font-medium"
