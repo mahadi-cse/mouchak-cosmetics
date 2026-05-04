@@ -49,8 +49,8 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   
-  const slug = searchParams.get('slug') || '';
-  const initialQty = parseInt(searchParams.get('qty') || '1', 10);
+  const slug = searchParams?.get('slug') || '';
+  const initialQty = parseInt(searchParams?.get('qty') || '1', 10);
   
 
   const [quantity, setQuantity] = useState(initialQty > 0 ? initialQty : 1);

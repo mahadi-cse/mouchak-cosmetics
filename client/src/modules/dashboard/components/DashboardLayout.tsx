@@ -288,10 +288,10 @@ export default function DashboardLayout({
   const { data: profileUser } = useProfileQuery();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const pathSection = pathname.split('/')[2] || 'overview';
+  const pathSection = (pathname || '').split('/')[2] || 'overview';
   const allowedNavIds = useMemo(() => new Set([...NAV.map((n) => n.id), 'profile']), []);
   const [activeNav, setActiveNav] = useState(allowedNavIds.has(pathSection) ? pathSection : 'overview');
-  const [settingsTab, setSettingsTab] = useState(searchParams.get('tab') || 'general');
+  const [settingsTab, setSettingsTab] = useState(searchParams?.get('tab') || 'general');
   const [settingsOpen, setSettingsOpen] = useState(activeNav === 'settings');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modal, setModal] = useState(false);

@@ -26,12 +26,12 @@ function ShopPageContent() {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const params = useMemo(() => {
-    const search = searchParams.get('search')?.trim();
-    const category = searchParams.get('category')?.trim();
+    const search = searchParams?.get('search')?.trim();
+    const category = searchParams?.get('category')?.trim();
 
     return {
-      page: parsePositiveInt(searchParams.get('page'), 1),
-      limit: parsePositiveInt(searchParams.get('limit'), 12),
+      page: parsePositiveInt(searchParams?.get('page') ?? null, 1),
+      limit: parsePositiveInt(searchParams?.get('limit') ?? null, 12),
       ...(search ? { search } : {}),
       ...(category ? { category } : {}),
     };

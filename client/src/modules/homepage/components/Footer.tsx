@@ -124,7 +124,7 @@ export function Footer() {
 
         <motion.div variants={itemVariants}>
           <p className="mb-6 text-sm font-bold uppercase tracking-wider text-white">
-            {t.footer.contactTitle}
+            {t.footer.sections.contact}
           </p>
           <div className="space-y-4 text-[13px]">
             <p className="inline-flex items-center gap-3">
