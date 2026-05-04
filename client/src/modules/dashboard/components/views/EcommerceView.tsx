@@ -351,6 +351,18 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                                   <span>{(order.items || []).map((item: any) => `${item.productName || item.product?.name || 'Item'} ×${item.quantity}`).join(', ')}</span>
                                 </div>
 
+                                {/* Payment Info */}
+                                <div className="mt-1.5 flex items-center gap-2">
+                                  <span className="flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-zinc-600 border border-zinc-200">
+                                    <span className="opacity-50">Method:</span> {order.payment?.method || 'CASH'}
+                                  </span>
+                                  {order.payment?.tranId && (
+                                    <span className="flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-emerald-700 border border-emerald-100">
+                                      <span className="opacity-50">TXN:</span> {order.payment.tranId}
+                                    </span>
+                                  )}
+                                </div>
+
                                 {/* Timeline pills */}
                                 {order.trackingEvents && order.trackingEvents.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-1.5">

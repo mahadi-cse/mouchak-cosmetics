@@ -39,6 +39,8 @@ export interface CreateCodOrderRequest {
   shippingPostal?: string;
   shippingCountry?: string;
   notes?: string;
+  paymentMethod?: 'CASH' | 'BKASH' | 'NAGAD' | 'ROCKET';
+  transactionId?: string;
 }
 
 export interface UpdateOrderStatusRequest {

@@ -34,6 +34,12 @@ export interface Order {
   notes?: string;
   trackingNumber?: string;
   trackingEvents?: OrderTrackingEvent[];
+  payment?: {
+    id: number;
+    method: string;
+    status: string;
+    tranId?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

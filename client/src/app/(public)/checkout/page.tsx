@@ -8,10 +8,11 @@ import { useProductBySlug } from '@/modules/products';
 import { ordersAPI, type CreateCodOrderRequest } from '@/modules/orders/api';
 import { useMutation } from '@tanstack/react-query';
 import { SkeletonCard, ErrorMessage, LoadingSpinner } from '@/shared/components';
-import { Clock, ShieldCheck } from 'lucide-react';
+import { Clock, ShieldCheck, Check, Wallet } from 'lucide-react';
 
 import { Header } from '@/modules/homepage/components/Header';
 import { Footer } from '@/modules/homepage/components/Footer';
+import { useHomepageStats } from '@/modules/homepage';
 
 const BANGLADESH_PHONE_REGEX = /^(?:\+?88)?01[3-9]\d{8}$/;
 
@@ -62,6 +63,19 @@ function CheckoutContent() {
     shippingCountry: 'Bangladesh',
     notes: '',
   });
+
+  const { data: stats } = useHomepageStats();
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BKASH' | 'NAGAD' | 'ROCKET'>('CASH');
+  const [transactionId, setTransactionId] = useState('');
+
+  const activeMethods = useMemo(() => {
+    // Always allow CASH as a fallback or if no other methods are active
+    const methods = stats?.paymentMethods?.filter(m => m.isActive) || [];
+    if (!methods.find(m => m.name === 'CASH')) {
+      methods.unshift({ id: -1, name: 'CASH', isActive: true } as any);
+    }
+    return methods;
+  }, [stats]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -139,6 +153,11 @@ function CheckoutContent() {
       toast.error('Please enter a valid Bangladeshi phone number.');
       return;
     }
+    
+    if (paymentMethod !== 'CASH' && !transactionId.trim()) {
+      toast.error('Please enter the Transaction ID for your payment.');
+      return;
+    }
 
     await codMutation.mutateAsync({
       productId: product.id,
@@ -150,6 +169,8 @@ function CheckoutContent() {
       shippingPostal: form.shippingPostal.trim() || undefined,
       shippingCountry: form.shippingCountry.trim() || 'Bangladesh',
       notes: form.notes.trim() || undefined,
+      paymentMethod,
+      transactionId: paymentMethod !== 'CASH' ? transactionId.trim() : undefined,
     });
   };
 
@@ -238,7 +259,8 @@ function CheckoutContent() {
             <div className="bg-zinc-900 text-white p-5 flex items-center justify-between">
               <h3 className="font-bold text-lg">Order Summary</h3>
               <div className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full text-xs font-semibold border border-emerald-500/30">
-                <Clock size={14} /> Cash on Delivery
+                {paymentMethod === 'CASH' ? <Clock size={14} /> : <Wallet size={14} />} 
+                {paymentMethod === 'CASH' ? 'Cash on Delivery' : paymentMethod}
               </div>
             </div>
             
@@ -272,6 +294,57 @@ function CheckoutContent() {
                   <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#9ca3af' }}>Total Amount</span>
                   <span style={{ fontSize: 24, fontWeight: 900, color: PINK }}>{formatMoney(subtotal)}</span>
                 </div>
+              </div>
+
+              {/* Payment Method Selection */}
+              <div className="space-y-4">
+                <label style={{ fontSize: 13, fontWeight: 700, color: DARK, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  Select Payment Method
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {activeMethods.map((m) => (
+                    <button
+                      key={m.name}
+                      type="button"
+                      onClick={() => setPaymentMethod(m.name as any)}
+                      className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 transition-all ${
+                        paymentMethod === m.name
+                          ? 'border-[#e91e8c] bg-[#fce7f3]/30'
+                          : 'border-zinc-100 bg-zinc-50 hover:border-zinc-200'
+                      }`}
+                    >
+                      <span className="text-xs font-bold uppercase tracking-tight">{m.name}</span>
+                      {paymentMethod === m.name && (
+                        <div className="absolute -right-2 -top-2 rounded-full bg-[#e91e8c] p-0.5 text-white shadow-sm">
+                          <Check size={12} strokeWidth={4} />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {paymentMethod !== 'CASH' && (
+                  <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                    <label style={{ marginBottom: 6, display: 'block', fontSize: 13, fontWeight: 600, color: DARK }}>
+                      Transaction ID <span className="text-[#e91e8c]">*</span>
+                    </label>
+                    <input
+                      required
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      placeholder="Enter TXN ID"
+                      style={{
+                        width: '100%',
+                        borderRadius: 12,
+                        border: `1.5px solid ${PINK_LIGHT}`,
+                        background: '#fff',
+                        padding: '12px 14px',
+                        fontSize: 14,
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

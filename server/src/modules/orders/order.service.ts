@@ -181,6 +181,7 @@ export class OrderService {
         method: data.paymentMethod || 'CASH',
         status: data.paymentMethod === 'SSLCOMMERZ' ? 'INITIATED' : 'PENDING',
         amount: total,
+        tranId: (data as any).transactionId || undefined,
       },
     });
 
@@ -195,7 +196,8 @@ export class OrderService {
     return this.createOrder({
       customerId,
       channel: 'ONLINE',
-      paymentMethod: 'CASH',
+      paymentMethod: data.paymentMethod || 'CASH',
+      transactionId: (data as any).transactionId,
       discountAmount: 0,
       shippingCharge: 0,
       taxAmount: 0,

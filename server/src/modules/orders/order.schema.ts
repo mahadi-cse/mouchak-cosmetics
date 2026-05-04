@@ -30,6 +30,8 @@ export const createCodOrderSchema = z.object({
   shippingPostal: z.string().optional(),
   shippingCountry: z.string().default('Bangladesh'),
   notes: z.string().optional(),
+  paymentMethod: z.enum(['CASH', 'BKASH', 'NAGAD', 'ROCKET']).default('CASH'),
+  transactionId: z.string().optional(),
 });
 
 export const updateOrderSchema = z.object({
