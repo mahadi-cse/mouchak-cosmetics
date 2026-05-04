@@ -139,6 +139,9 @@ interface SettingsState {
   contactAddress: string;
   contactPhone: string;
   contactEmail: string;
+  heroHeadline: string;
+  heroYear: string;
+  heroDescription: string;
 }
 
 const DASHBOARD_SETTINGS_KEY = 'mouchak.dashboard.settings.v1';
@@ -169,6 +172,9 @@ const DEFAULT_SETTINGS: SettingsState = {
   contactAddress: 'Dhaka, Bangladesh',
   contactPhone: '+880 1XXX-XXXXXX',
   contactEmail: 'hello@mouchakcosmetics.com',
+  heroHeadline: 'Spring Beauty',
+  heroYear: '2026',
+  heroDescription: 'Discover luxurious skincare and makeup that celebrates your natural glow.',
 };
 
 const STAFF_LIST: StaffMember[] = [
@@ -260,7 +266,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
   const { data: siteSettingsData } = useSiteSettings();
   const { data: homepageStatsData } = useHomepageStats();
-  
+
   const { data: apiCategories = [], isLoading: isLoadingCats } = useListCategories(
     filterBranchId ? { includeInactive: true, branchId: Number(filterBranchId) } : { includeInactive: true },
     { queryKey: ['categories', 'list', 'settings', { branchId: filterBranchId || null, includeInactive: true }] }
@@ -275,10 +281,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     }
   );
   const { data: apiProducts = [], isLoading: isLoadingProducts } = useListProducts(
-    { 
-      limit: 100, 
+    {
+      limit: 100,
       includeInactive: true, // Display everything in settings
-      ...(filterBranchId ? { branchId: Number(filterBranchId) } : {}) 
+      ...(filterBranchId ? { branchId: Number(filterBranchId) } : {})
     } as any,
     { queryKey: ['products', 'list', { branchId: filterBranchId, includeInactive: true }] }
   );
@@ -473,7 +479,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   }, [staffUsers, staffSearch]);
   // ─── End staff management ───────────────────────────────────────────────────
 
-  const updateSiteSettingsMutation = useMutation({    mutationFn: (data: Partial<{ storeName: string; primaryColor: string }>) => homepageAPI.updateSettings(data),
+  const updateSiteSettingsMutation = useMutation({
+    mutationFn: (data: any) => homepageAPI.updateSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['homepage', 'settings'] });
     },
@@ -578,18 +585,21 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     setSettings((prev) => ({
       ...prev,
-      ...(siteSettingsData ? { 
+      ...(siteSettingsData ? {
         storeName: siteSettingsData.storeName || prev.storeName,
         primaryColor: siteSettingsData.primaryColor || prev.primaryColor,
         contactAddress: siteSettingsData.contactAddress || prev.contactAddress,
         contactPhone: siteSettingsData.contactPhone || prev.contactPhone,
         contactEmail: siteSettingsData.contactEmail || prev.contactEmail,
+        heroHeadline: siteSettingsData.heroHeadline || prev.heroHeadline,
+        heroYear: siteSettingsData.heroYear || prev.heroYear,
+        heroDescription: siteSettingsData.heroDescription || prev.heroDescription,
       } : {}),
       ...(homepageStatsData
         ? {
-            freeShippingOver: homepageStatsData.minFreeDeliveryAmount ?? prev.freeShippingOver,
-            deliveryEstimate: homepageStatsData.deliveryTimeframe || prev.deliveryEstimate,
-          }
+          freeShippingOver: homepageStatsData.minFreeDeliveryAmount ?? prev.freeShippingOver,
+          deliveryEstimate: homepageStatsData.deliveryTimeframe || prev.deliveryEstimate,
+        }
         : {}),
     }));
   }, [homepageStatsData, siteSettingsData]);
@@ -907,6 +917,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         contactAddress: siteSettingsData?.contactAddress || DEFAULT_SETTINGS.contactAddress,
         contactPhone: siteSettingsData?.contactPhone || DEFAULT_SETTINGS.contactPhone,
         contactEmail: siteSettingsData?.contactEmail || DEFAULT_SETTINGS.contactEmail,
+        heroHeadline: siteSettingsData?.heroHeadline || DEFAULT_SETTINGS.heroHeadline,
+        heroYear: siteSettingsData?.heroYear || DEFAULT_SETTINGS.heroYear,
+        heroDescription: siteSettingsData?.heroDescription || DEFAULT_SETTINGS.heroDescription,
         storeLogo: '',
       }));
     }
@@ -968,9 +981,12 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           contactAddress: settings.contactAddress || DEFAULT_SETTINGS.contactAddress,
           contactPhone: settings.contactPhone || DEFAULT_SETTINGS.contactPhone,
           contactEmail: settings.contactEmail || DEFAULT_SETTINGS.contactEmail,
+          heroHeadline: settings.heroHeadline || DEFAULT_SETTINGS.heroHeadline,
+          heroYear: settings.heroYear || DEFAULT_SETTINGS.heroYear,
+          heroDescription: settings.heroDescription || DEFAULT_SETTINGS.heroDescription,
         });
       }
-      
+
       if (targetTab === 'shipping') {
         await updateHomepageStatsMutation.mutateAsync({
           minFreeDeliveryAmount: Number(settings.freeShippingOver) || 0,
@@ -1022,19 +1038,27 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             </div>
             <div>
               <label className={labelClass}>Primary Brand Color</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  className="h-9 w-12 cursor-pointer rounded border border-border p-1 outline-none"
-                  value={settings.primaryColor}
-                  onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
-                />
-                <input
-                  value={settings.primaryColor}
-                  onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    className="h-9 w-12 cursor-pointer rounded border border-border p-1 outline-none"
+                    value={settings.primaryColor}
+                    onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                  />
+                  <input
+                    value={settings.primaryColor}
+                    onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                    className={inputClass}
+                  />
+                  <Btn
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 whitespace-nowrap"
+                    onClick={() => setSettings({ ...settings, primaryColor: '#f01172' })}
+                  >
+                    Reset
+                  </Btn>
+                </div>
             </div>
             <div>
               <label className={labelClass}>{t.settings.currency}</label>
@@ -1068,7 +1092,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               </select>
             </div>
           </div>
-          
+
           <div className="mt-4 grid gap-[14px] grid-cols-1 md:grid-cols-3">
             <div>
               <label className={labelClass}>Contact Address</label>
@@ -1098,8 +1122,41 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               />
             </div>
           </div>
+
+          <div className="mt-8 border-t border-border pt-8">
+            <h4 className="mb-4 text-[13px] font-bold uppercase tracking-widest text-zinc-400">Hero Section Content</h4>
+            <div className="grid gap-[14px] grid-cols-1 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>Hero Headline</label>
+                <input
+                  value={settings.heroHeadline}
+                  onChange={(e) => setSettings({ ...settings, heroHeadline: e.target.value })}
+                  className={inputClass}
+                  placeholder="e.g. Spring Beauty"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Hero Year / Sub-label</label>
+                <input
+                  value={settings.heroYear}
+                  onChange={(e) => setSettings({ ...settings, heroYear: e.target.value })}
+                  className={inputClass}
+                  placeholder="e.g. 2026"
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className={labelClass}>Hero Description</label>
+              <textarea
+                value={settings.heroDescription}
+                onChange={(e) => setSettings({ ...settings, heroDescription: e.target.value })}
+                className={`${inputClass} min-h-[80px] py-3`}
+                placeholder="Describe your collection..."
+              />
+            </div>
+          </div>
           
-          <div className="mt-4">
+          <div className="mt-8 border-t border-border pt-8">
             <label className={labelClass}>{t.settings.storeLogo}</label>
             <div
               onClick={() => logoInputRef.current?.click()}
@@ -1142,21 +1199,21 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         <FormSection title={t.settings.acceptedPaymentMethods}>
           <div className="flex flex-col gap-3 mb-5">
             {homepageStatsData?.paymentMethods?.map((method) => (
-              <div 
+              <div
                 key={method.id}
                 className="flex items-center justify-between p-3 rounded-xl border border-border bg-zinc-50/50 hover:bg-white transition-colors"
                 style={{ opacity: method.isActive ? 1 : 0.6 }}
               >
                 <div className="flex items-center gap-3">
-                  <div 
-                    className="w-2 h-2 rounded-full" 
+                  <div
+                    className="w-2 h-2 rounded-full"
                     style={{ background: method.isActive ? Theme.success : Theme.border }}
                   />
                   <span className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
                     {method.name}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => updatePaymentMethod.mutate({ id: method.id, data: { isActive: !method.isActive } })}
@@ -1168,7 +1225,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                       style={{ left: method.isActive ? 18 : 2 }}
                     />
                   </button>
-                  
+
                   <button
                     onClick={async () => {
                       const confirmed = await confirmDialog({
@@ -1192,7 +1249,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               </div>
             )}
           </div>
-          
+
           <div className="flex gap-2 p-1 rounded-xl bg-zinc-100/50 border border-border">
             <input
               value={newPaymentMethod}
@@ -1207,9 +1264,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                 }
               }}
             />
-            <Btn 
-              variant="primary" 
-              size="sm" 
+            <Btn
+              variant="primary"
+              size="sm"
               className="h-10 px-6"
               onClick={() => {
                 if (newPaymentMethod.trim()) {
@@ -1507,16 +1564,14 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       <div>
         {showPromotionEditor && (
           <div
-            className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${
-              isMobile ? 'items-end p-0' : 'items-center p-4'
-            }`}
+            className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${isMobile ? 'items-end p-0' : 'items-center p-4'
+              }`}
             onClick={() => { setShowPromotionEditor(false); setEditingPromotionId(null); }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className={`max-h-[92vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${
-                isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'
-              }`}
+              className={`max-h-[92vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'
+                }`}
             >
               <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5">
                 <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
@@ -1677,23 +1732,23 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
       <Card className={`${isMobile ? 'p-[18px]' : 'p-7'}`}>
         {tab !== 'staff' && (
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-          <div className="text-base font-bold" style={{ color: Theme.fg }}>
-            {currentLabel}
-          </div>
-          {['trending', 'discounts'].includes(tab) && (
-            <div className="flex items-center gap-2">
-              {saved && (
-                <span className="text-xs font-semibold" style={{ color: Theme.success }}>
-                  {t.settings.saved}
-                </span>
-              )}
-              <Btn variant="primary" size="sm" onClick={() => handleSave(tab)}>
-                {isSaving ? t.settings.saving : t.settings.saveAndPublish}
-              </Btn>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-base font-bold" style={{ color: Theme.fg }}>
+              {currentLabel}
             </div>
-          )}
-        </div>
+            {['trending', 'discounts'].includes(tab) && (
+              <div className="flex items-center gap-2">
+                {saved && (
+                  <span className="text-xs font-semibold" style={{ color: Theme.success }}>
+                    {t.settings.saved}
+                  </span>
+                )}
+                <Btn variant="primary" size="sm" onClick={() => handleSave(tab)}>
+                  {isSaving ? t.settings.saving : t.settings.saveAndPublish}
+                </Btn>
+              </div>
+            )}
+          </div>
         )}
 
         {panels[tab] || (

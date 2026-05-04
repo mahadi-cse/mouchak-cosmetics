@@ -124,17 +124,17 @@ export function Hero() {
 
   const displayStats = stats
     ? [
-        { value: `${(stats.totalHappyCustomers / 1000).toFixed(0)}K+`, label: t.hero.happyCustomers },
-        ...(stats.isFreeDeliveryActive
-          ? [{ value: `৳${stats.minFreeDeliveryAmount}+`, label: t.hero.freeDelivery }]
-          : []),
-        { value: stats.deliveryTimeframe, label: t.hero.deliveryBD },
-      ]
+      { value: `${(stats.totalHappyCustomers / 1000).toFixed(0)}K+`, label: t.hero.happyCustomers },
+      ...(stats.isFreeDeliveryActive
+        ? [{ value: `৳${stats.minFreeDeliveryAmount}+`, label: t.hero.freeDelivery }]
+        : []),
+      { value: stats.deliveryTimeframe, label: t.hero.deliveryBD },
+    ]
     : [
-        { value: "10K+", label: t.hero.happyCustomers },
-        { value: "৳999+", label: t.hero.freeDelivery },
-        { value: "48hr", label: t.hero.deliveryBD },
-      ];
+      { value: "10K+", label: t.hero.happyCustomers },
+      { value: "৳999+", label: t.hero.freeDelivery },
+      { value: "48hr", label: t.hero.deliveryBD },
+    ];
 
   const isOfferActive = !!activePromotion;
   const currentSliderImage = sliders[currentSlide] || null;
@@ -340,11 +340,10 @@ export function Hero() {
                       setDirection(index > currentSlide ? 1 : -1);
                       setCurrentSlide(index);
                     }}
-                    className={`rounded-full transition-all duration-300 cursor-pointer ${
-                      index === currentSlide
+                    className={`rounded-full transition-all duration-300 cursor-pointer ${index === currentSlide
                         ? "bg-primary w-7 h-2.5"
                         : "bg-white/50 hover:bg-white/75 w-2.5 h-2.5"
-                    }`}
+                      }`}
                     aria-label={`${t.hero.goToSlide} ${index + 1}`}
                   />
                 ))}
