@@ -10,7 +10,7 @@ import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Heart } from 'lucide-react';
 
-function parsePositiveInt(value: string | null, fallback: number) {
+function parsePositiveInt(value: string | null | undefined, fallback: number) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return fallback;
@@ -26,12 +26,12 @@ function ShopPageContent() {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const params = useMemo(() => {
-    const search = searchParams.get('search')?.trim();
-    const category = searchParams.get('category')?.trim();
+    const search = searchParams?.get('search')?.trim();
+    const category = searchParams?.get('category')?.trim();
 
     return {
-      page: parsePositiveInt(searchParams.get('page'), 1),
-      limit: parsePositiveInt(searchParams.get('limit'), 12),
+      page: parsePositiveInt(searchParams?.get('page'), 1),
+      limit: parsePositiveInt(searchParams?.get('limit'), 12),
       ...(search ? { search } : {}),
       ...(category ? { category } : {}),
     };
