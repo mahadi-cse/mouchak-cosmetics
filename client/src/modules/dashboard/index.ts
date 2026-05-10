@@ -1,5 +1,7 @@
 // Dashboard Module - Exports
 export { default as DashboardLayout } from './components/DashboardLayout';
+export { default as DashboardPageView } from './components/DashboardPageView';
+export { default as StaffFormView } from './components/settings/StaffFormView';
 
 // Views
 export { default as OverviewView } from './components/views/OverviewView';

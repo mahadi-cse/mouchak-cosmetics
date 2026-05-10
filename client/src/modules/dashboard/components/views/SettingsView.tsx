@@ -26,7 +26,7 @@ import { confirmDialog } from '@/shared/lib/confirmDialog';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 import { useSession } from 'next-auth/react';
 import apiClient from '@/shared/lib/apiClient';
-import StaffFormPageClient from '@/app/(staff-dashboard)/dashboard/settings/staff/_components/StaffFormPageClient';
+import StaffFormView from '../settings/StaffFormView';
 import {
   usePromotions,
   useCreatePromotion,
@@ -1396,7 +1396,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             {t.settings.adminOnly}
           </div>
         ) : staffFormView !== 'list' ? (
-          <StaffFormPageClient
+          <StaffFormView
             userId={staffFormView === 'edit' ? staffEditId : null}
             onBack={() => { setStaffFormView('list'); refetchStaff(); }}
           />
