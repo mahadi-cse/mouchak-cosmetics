@@ -2,13 +2,14 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, Suspense, useMemo } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import toast from 'react-hot-toast';
-import { ordersAPI, type CreateCodOrderRequest } from '@/modules/orders/api';
+import { ordersAPI, type CreateOrderRequest } from '@/modules/orders/api';
+import type { Order } from '@/shared/types';
 import { useMutation } from '@tanstack/react-query';
 import { SkeletonCard, ErrorMessage, LoadingSpinner } from '@/shared/components';
-import { Clock, ShieldCheck, Trash2 } from 'lucide-react';
-import { useCart, type CartItem } from '@/shared/contexts/CartContext';
+import { Clock, ShieldCheck } from 'lucide-react';
+import { useCart } from '@/shared/contexts/CartContext';
 import { Header } from '@/modules/homepage/components/Header';
 import { Footer } from '@/modules/homepage/components/Footer';
 
@@ -63,35 +64,37 @@ function CartCheckoutContent() {
     }
   }, [status, cartItems.length, router]);
 
-  const codMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      // Create orders for each cart item
-      const orderPromises = cartItems.map((item) =>
-        ordersAPI.createCodOrder({
+  const codMutation = useMutation<Order, Error, void>({
+    mutationFn: async () => {
+      // Build a single order containing all cart items
+      const payload: CreateOrderRequest = {
+        channel: 'ONLINE',
+        paymentMethod: 'CASH',
+        items: cartItems.map((item) => ({
           productId: Number(item.id),
           quantity: item.quantity,
-          shippingName: form.shippingName.trim(),
-          shippingPhone: form.shippingPhone.replace(/\s+/g, ''),
-          shippingAddress: form.shippingAddress.trim(),
-          shippingCity: form.shippingCity.trim(),
-          shippingPostal: form.shippingPostal.trim() || undefined,
-          shippingCountry: form.shippingCountry.trim() || 'Bangladesh',
-          notes: form.notes.trim() || undefined,
-        })
-      );
-      return Promise.all(orderPromises);
+        })),
+        shippingName: form.shippingName.trim(),
+        shippingPhone: form.shippingPhone.replace(/\s+/g, ''),
+        shippingAddress: form.shippingAddress.trim(),
+        shippingCity: form.shippingCity.trim(),
+        shippingPostal: form.shippingPostal.trim() || undefined,
+        shippingCountry: form.shippingCountry.trim() || 'Bangladesh',
+        notes: form.notes.trim() || undefined,
+      };
+      return ordersAPI.createOrder(payload);
     },
     onSuccess: () => {
       clearCart();
-      toast.success('Orders placed! Track them in your dashboard.');
+      toast.success('Order placed! Track it in your dashboard.');
       router.push('/dashboard?tab=order');
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { message?: string; error?: string } } }) => {
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         error?.message ||
-        'Failed to place orders';
+        'Failed to place order';
       toast.error(message);
     },
   });
@@ -127,7 +130,7 @@ function CartCheckoutContent() {
       return;
     }
 
-    await codMutation.mutateAsync({});
+    await codMutation.mutateAsync();
   };
 
   if (status === 'loading') {
