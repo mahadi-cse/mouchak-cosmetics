@@ -27,3 +27,7 @@ export { NAV, SETTINGS_ITEMS } from './utils/constants';
 
 // Types
 export type { Product, SellLog, Order } from './data/mockData';
+
+// Locales
+export { DashboardLocaleProvider, useDashboardLocale } from './locales/DashboardLocaleContext';
+export type { Locale, DashboardTranslations } from './locales/types';

@@ -1,9 +1,9 @@
 // Homepage Module - Exports
 
 // Hooks (React Query)
-export { 
-  useHomepageStats, 
-  useSiteSettings, 
+export {
+  useHomepageStats,
+  useSiteSettings,
   useHomepageCategories,
   useHomepageFeaturedProducts,
   useSliders,
@@ -12,6 +12,9 @@ export {
   useUpdateSlider,
   useDeleteSlider,
   useSearchProducts,
+  useCreatePaymentMethod,
+  useUpdatePaymentMethod,
+  useDeletePaymentMethod,
   HOMEPAGE_QUERY_KEYS
 } from './queries';
 
@@ -27,3 +30,8 @@ export { FeaturedProducts } from './components/FeaturedProducts';
 export { Newsletter } from './components/Newsletter';
 export { Footer } from './components/Footer';
 export { ProductCard } from './components/ProductCard';
+export { LanguageToggle } from './components/LanguageToggle';
+
+// Localization
+export { HomepageLocaleProvider, useHomepageLocale } from './locales/HomepageLocaleContext';
+export type { Locale, HomepageTranslations } from './locales/types';

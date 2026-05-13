@@ -3,6 +3,7 @@ import { auth, getRoleFromAccessToken } from '@/auth';
 import { isCustomerRole, isStaffRole } from '@/shared/constants';
 import DashboardPageClient from './DashboardPageClient';
 import CustomerDashboardClient from './CustomerDashboardClient';
+import { DashboardLocaleProvider } from '@/modules/dashboard';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -20,5 +21,9 @@ export default async function DashboardPage() {
     redirect('/');
   }
 
-  return <DashboardPageClient />;
+  return (
+    <DashboardLocaleProvider>
+      <DashboardPageClient />
+    </DashboardLocaleProvider>
+  );
 }

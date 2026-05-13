@@ -22,7 +22,8 @@ import {
 import { useListBranches } from '@/modules/branches/queries';
 import { toast } from 'react-hot-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { homepageAPI, useHomepageStats, useSiteSettings } from '@/modules/homepage';
+import { confirmDialog } from '@/shared/lib/confirmDialog';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 import { useSession } from 'next-auth/react';
 import apiClient from '@/shared/lib/apiClient';
 import StaffFormPageClient from '@/app/(staff-dashboard)/dashboard/settings/staff/_components/StaffFormPageClient';
@@ -36,7 +37,14 @@ import {
 import type { Promotion as APIPromotion } from '@/modules/promotions';
 import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
-import { confirmDialog } from '@/shared/lib/confirmDialog';
+import {
+  homepageAPI,
+  useHomepageStats,
+  useSiteSettings,
+  useCreatePaymentMethod,
+  useUpdatePaymentMethod,
+  useDeletePaymentMethod
+} from '@/modules/homepage';
 
 interface SettingsViewProps {
   products: any[];
@@ -103,6 +111,7 @@ interface StaffMember {
 
 interface SettingsState {
   storeName: string;
+  primaryColor: string;
   currency: string;
   taxRate: number;
   timezone: string;
@@ -127,6 +136,12 @@ interface SettingsState {
     card: boolean;
     cash: boolean;
   };
+  contactAddress: string;
+  contactPhone: string;
+  contactEmail: string;
+  heroHeadline: string;
+  heroYear: string;
+  heroDescription: string;
 }
 
 const DASHBOARD_SETTINGS_KEY = 'mouchak.dashboard.settings.v1';
@@ -134,6 +149,7 @@ const DASHBOARD_STAFF_KEY = 'mouchak.dashboard.staff.v1';
 
 const DEFAULT_SETTINGS: SettingsState = {
   storeName: 'Mouchak Cosmetics',
+  primaryColor: '#f01172',
   currency: 'BDT',
   taxRate: 15,
   timezone: 'Asia/Dhaka',
@@ -153,6 +169,12 @@ const DEFAULT_SETTINGS: SettingsState = {
   smsDelivery: true,
   storeLogo: '',
   acceptedPayments: { bkash: true, nagad: true, card: true, cash: true },
+  contactAddress: 'Dhaka, Bangladesh',
+  contactPhone: '+880 1XXX-XXXXXX',
+  contactEmail: 'hello@mouchakcosmetics.com',
+  heroHeadline: 'Spring Beauty',
+  heroYear: '2026',
+  heroDescription: 'Discover luxurious skincare and makeup that celebrates your natural glow.',
 };
 
 const STAFF_LIST: StaffMember[] = [
@@ -227,6 +249,7 @@ const categoryEmojis: any = {
 
 export default function SettingsView({ products: _products, tab, setTab }: SettingsViewProps) {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const isAdmin = true; // Staff dashboard is already protected by middleware; role-based UI gating can be added once role values are confirmed
@@ -239,10 +262,11 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const productImageRef = useRef<ImageUploaderRef>(null);
   const categoryImageRef = useRef<ImageUploaderRef>(null);
+  const [newPaymentMethod, setNewPaymentMethod] = useState('');
 
   const { data: siteSettingsData } = useSiteSettings();
   const { data: homepageStatsData } = useHomepageStats();
-  
+
   const { data: apiCategories = [], isLoading: isLoadingCats } = useListCategories(
     filterBranchId ? { includeInactive: true, branchId: Number(filterBranchId) } : { includeInactive: true },
     { queryKey: ['categories', 'list', 'settings', { branchId: filterBranchId || null, includeInactive: true }] }
@@ -257,10 +281,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     }
   );
   const { data: apiProducts = [], isLoading: isLoadingProducts } = useListProducts(
-    { 
-      limit: 100, 
+    {
+      limit: 100,
       includeInactive: true, // Display everything in settings
-      ...(filterBranchId ? { branchId: Number(filterBranchId) } : {}) 
+      ...(filterBranchId ? { branchId: Number(filterBranchId) } : {})
     } as any,
     { queryKey: ['products', 'list', { branchId: filterBranchId, includeInactive: true }] }
   );
@@ -275,6 +299,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const updateProductStatus = useUpdateProductStatus();
+
+  const createPaymentMethod = useCreatePaymentMethod();
+  const updatePaymentMethod = useUpdatePaymentMethod();
+  const deletePaymentMethod = useDeletePaymentMethod();
 
   // ─── Staff / User management ───────────────────────────────────────────────
   // These endpoints are pending backend implementation.
@@ -451,7 +479,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   }, [staffUsers, staffSearch]);
   // ─── End staff management ───────────────────────────────────────────────────
 
-  const updateSiteSettingsMutation = useMutation({    mutationFn: (data: Partial<{ storeName: string }>) => homepageAPI.updateSettings(data),
+  const updateSiteSettingsMutation = useMutation<any, any, any>({
+    mutationFn: (data: any) => homepageAPI.updateSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['homepage', 'settings'] });
     },
@@ -556,12 +585,21 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     setSettings((prev) => ({
       ...prev,
-      ...(siteSettingsData ? { storeName: siteSettingsData.storeName || prev.storeName } : {}),
+      ...(siteSettingsData ? {
+        storeName: siteSettingsData.storeName || prev.storeName,
+        primaryColor: siteSettingsData.primaryColor || prev.primaryColor,
+        contactAddress: siteSettingsData.contactAddress || prev.contactAddress,
+        contactPhone: siteSettingsData.contactPhone || prev.contactPhone,
+        contactEmail: siteSettingsData.contactEmail || prev.contactEmail,
+        heroHeadline: siteSettingsData.heroHeadline || prev.heroHeadline,
+        heroYear: siteSettingsData.heroYear || prev.heroYear,
+        heroDescription: siteSettingsData.heroDescription || prev.heroDescription,
+      } : {}),
       ...(homepageStatsData
         ? {
-            freeShippingOver: homepageStatsData.minFreeDeliveryAmount ?? prev.freeShippingOver,
-            deliveryEstimate: homepageStatsData.deliveryTimeframe || prev.deliveryEstimate,
-          }
+          freeShippingOver: homepageStatsData.minFreeDeliveryAmount ?? prev.freeShippingOver,
+          deliveryEstimate: homepageStatsData.deliveryTimeframe || prev.deliveryEstimate,
+        }
         : {}),
     }));
   }, [homepageStatsData, siteSettingsData]);
@@ -872,9 +910,16 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       setSettings((prev) => ({
         ...prev,
         storeName: siteSettingsData?.storeName || DEFAULT_SETTINGS.storeName,
+        primaryColor: siteSettingsData?.primaryColor || DEFAULT_SETTINGS.primaryColor,
         currency: DEFAULT_SETTINGS.currency,
         taxRate: DEFAULT_SETTINGS.taxRate,
         timezone: DEFAULT_SETTINGS.timezone,
+        contactAddress: siteSettingsData?.contactAddress || DEFAULT_SETTINGS.contactAddress,
+        contactPhone: siteSettingsData?.contactPhone || DEFAULT_SETTINGS.contactPhone,
+        contactEmail: siteSettingsData?.contactEmail || DEFAULT_SETTINGS.contactEmail,
+        heroHeadline: siteSettingsData?.heroHeadline || DEFAULT_SETTINGS.heroHeadline,
+        heroYear: siteSettingsData?.heroYear || DEFAULT_SETTINGS.heroYear,
+        heroDescription: siteSettingsData?.heroDescription || DEFAULT_SETTINGS.heroDescription,
         storeLogo: '',
       }));
     }
@@ -932,6 +977,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       if (targetTab === 'general') {
         await updateSiteSettingsMutation.mutateAsync({
           storeName: settings.storeName.trim() || DEFAULT_SETTINGS.storeName,
+          primaryColor: settings.primaryColor || DEFAULT_SETTINGS.primaryColor,
+          contactAddress: settings.contactAddress || DEFAULT_SETTINGS.contactAddress,
+          contactPhone: settings.contactPhone || DEFAULT_SETTINGS.contactPhone,
+          contactEmail: settings.contactEmail || DEFAULT_SETTINGS.contactEmail,
+          heroHeadline: settings.heroHeadline || DEFAULT_SETTINGS.heroHeadline,
+          heroYear: settings.heroYear || DEFAULT_SETTINGS.heroYear,
+          heroDescription: settings.heroDescription || DEFAULT_SETTINGS.heroDescription,
         });
       }
 
@@ -974,10 +1026,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const panels: any = {
     general: (
       <div>
-        <FormSection title="Store Identity">
+        <FormSection title={t.settings.storeIdentity}>
           <div className={`mb-[14px] grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label className={labelClass}>Store Name</label>
+              <label className={labelClass}>{t.settings.storeName}</label>
               <input
                 value={settings.storeName}
                 onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
@@ -985,7 +1037,31 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               />
             </div>
             <div>
-              <label className={labelClass}>Currency</label>
+              <label className={labelClass}>Primary Brand Color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    className="h-9 w-12 cursor-pointer rounded border border-border p-1 outline-none"
+                    value={settings.primaryColor}
+                    onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                  />
+                  <input
+                    value={settings.primaryColor}
+                    onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                    className={inputClass}
+                  />
+                  <Btn
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 whitespace-nowrap"
+                    onClick={() => setSettings({ ...settings, primaryColor: '#f01172' })}
+                  >
+                    Reset
+                  </Btn>
+                </div>
+            </div>
+            <div>
+              <label className={labelClass}>{t.settings.currency}</label>
               <select
                 value={settings.currency}
                 onChange={(e) => setSettings({ ...settings, currency: e.target.value })}
@@ -996,7 +1072,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               </select>
             </div>
             <div>
-              <label className={labelClass}>Tax Rate (%)</label>
+              <label className={labelClass}>{t.settings.taxRate}</label>
               <input
                 type="number"
                 value={settings.taxRate}
@@ -1005,7 +1081,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               />
             </div>
             <div>
-              <label className={labelClass}>Timezone</label>
+              <label className={labelClass}>{t.settings.timezone}</label>
               <select
                 value={settings.timezone}
                 onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
@@ -1016,8 +1092,72 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               </select>
             </div>
           </div>
-          <div>
-            <label className={labelClass}>Store Logo</label>
+
+          <div className="mt-4 grid gap-[14px] grid-cols-1 md:grid-cols-3">
+            <div>
+              <label className={labelClass}>Contact Address</label>
+              <input
+                value={settings.contactAddress}
+                onChange={(e) => setSettings({ ...settings, contactAddress: e.target.value })}
+                className={inputClass}
+                placeholder="e.g. Dhaka, Bangladesh"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Contact Phone</label>
+              <input
+                value={settings.contactPhone}
+                onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
+                className={inputClass}
+                placeholder="e.g. +880 1XXX-XXXXXX"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Contact Email</label>
+              <input
+                value={settings.contactEmail}
+                onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
+                className={inputClass}
+                placeholder="e.g. hello@mouchak.com"
+              />
+            </div>
+          </div>
+
+          <div className="mt-8 border-t border-border pt-8">
+            <h4 className="mb-4 text-[13px] font-bold uppercase tracking-widest text-zinc-400">Hero Section Content</h4>
+            <div className="grid gap-[14px] grid-cols-1 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>Hero Headline</label>
+                <input
+                  value={settings.heroHeadline}
+                  onChange={(e) => setSettings({ ...settings, heroHeadline: e.target.value })}
+                  className={inputClass}
+                  placeholder="e.g. Spring Beauty"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Hero Year / Sub-label</label>
+                <input
+                  value={settings.heroYear}
+                  onChange={(e) => setSettings({ ...settings, heroYear: e.target.value })}
+                  className={inputClass}
+                  placeholder="e.g. 2026"
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className={labelClass}>Hero Description</label>
+              <textarea
+                value={settings.heroDescription}
+                onChange={(e) => setSettings({ ...settings, heroDescription: e.target.value })}
+                className={`${inputClass} min-h-[80px] py-3`}
+                placeholder="Describe your collection..."
+              />
+            </div>
+          </div>
+          
+          <div className="mt-8 border-t border-border pt-8">
+            <label className={labelClass}>{t.settings.storeLogo}</label>
             <div
               onClick={() => logoInputRef.current?.click()}
               className="cursor-pointer rounded-[10px] border-2 border-dashed border-border px-5 py-5 text-center"
@@ -1029,7 +1169,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                 <div className="mb-1.5 text-2xl">🖼️</div>
               )}
               <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
-                {settings.storeLogo ? 'Click to replace logo · PNG or SVG · Max 2MB' : 'Click to upload logo · PNG or SVG · Max 2MB'}
+                {settings.storeLogo ? t.settings.clickToReplaceLogo : t.settings.clickToUploadLogo}
               </div>
             </div>
             <input ref={logoInputRef} type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" onChange={handleLogoFileChange} className="hidden" />
@@ -1040,37 +1180,114 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     payment: (
       <div>
-        <FormSection title="SSLCommerz Configuration">
+        <FormSection title={t.settings.paymentConfig}>
           <div className={`mb-[14px] grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label className={labelClass}>Store ID</label>
+              <label className={labelClass}>{t.settings.storeId}</label>
               <input value={settings.sslStoreId} onChange={(e) => setSettings({ ...settings, sslStoreId: e.target.value })} className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>Refund Policy (days)</label>
+              <label className={labelClass}>{t.settings.refundPolicy}</label>
               <input type="number" value={settings.refundDays} onChange={(e) => setSettings({ ...settings, refundDays: Number(e.target.value) })} className={inputClass} />
             </div>
           </div>
           <div>
-            <label className={labelClass}>Store Signature (API Secret)</label>
-            <input type="password" value={settings.sslStoreSecret} onChange={(e) => setSettings({ ...settings, sslStoreSecret: e.target.value })} className={inputClass} placeholder="Enter API secret" />
+            <label className={labelClass}>{t.settings.storeSignature}</label>
+            <input type="password" value={settings.sslStoreSecret} onChange={(e) => setSettings({ ...settings, sslStoreSecret: e.target.value })} className={inputClass} placeholder={t.settings.enterApiSecret} />
           </div>
         </FormSection>
-        <FormSection title="Accepted Payment Methods">
-          <Toggle val={settings.acceptedPayments.bkash} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, bkash: !settings.acceptedPayments.bkash } })} label="bKash 🔴" />
-          <Toggle val={settings.acceptedPayments.nagad} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, nagad: !settings.acceptedPayments.nagad } })} label="Nagad 🟠" />
-          <Toggle val={settings.acceptedPayments.card} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, card: !settings.acceptedPayments.card } })} label="Card (Visa/Mastercard) 💳" />
-          <Toggle val={settings.acceptedPayments.cash} onToggle={() => setSettings({ ...settings, acceptedPayments: { ...settings.acceptedPayments, cash: !settings.acceptedPayments.cash } })} label="Cash 💵" />
+        <FormSection title={t.settings.acceptedPaymentMethods}>
+          <div className="flex flex-col gap-3 mb-5">
+            {homepageStatsData?.paymentMethods?.map((method) => (
+              <div
+                key={method.id}
+                className="flex items-center justify-between p-3 rounded-xl border border-border bg-zinc-50/50 hover:bg-white transition-colors"
+                style={{ opacity: method.isActive ? 1 : 0.6 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: method.isActive ? Theme.success : Theme.border }}
+                  />
+                  <span className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
+                    {method.name}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updatePaymentMethod.mutate({ id: method.id, data: { isActive: !method.isActive } })}
+                    className="relative h-5 w-9 shrink-0 cursor-pointer rounded-full border-none transition-colors"
+                    style={{ background: method.isActive ? Theme.primary : Theme.border }}
+                  >
+                    <div
+                      className="absolute top-[2px] h-[16px] w-[16px] rounded-full bg-white shadow-sm transition-all"
+                      style={{ left: method.isActive ? 18 : 2 }}
+                    />
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      const confirmed = await confirmDialog({
+                        title: 'Delete Payment Method?',
+                        text: `Are you sure you want to remove "${method.name}"?`,
+                        confirmButtonText: 'Yes, delete',
+                        icon: 'warning'
+                      });
+                      if (confirmed) deletePaymentMethod.mutate(method.id);
+                    }}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+            {(!homepageStatsData?.paymentMethods || homepageStatsData.paymentMethods.length === 0) && (
+              <div className="py-4 text-center text-xs italic" style={{ color: Theme.mutedFg }}>
+                No payment methods configured.
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 p-1 rounded-xl bg-zinc-100/50 border border-border">
+            <input
+              value={newPaymentMethod}
+              onChange={(e) => setNewPaymentMethod(e.target.value)}
+              placeholder="e.g. Rocket"
+              className={`${inputClass} border-none bg-transparent h-10`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newPaymentMethod.trim()) {
+                  e.preventDefault();
+                  createPaymentMethod.mutate(newPaymentMethod.trim());
+                  setNewPaymentMethod('');
+                }
+              }}
+            />
+            <Btn
+              variant="primary"
+              size="sm"
+              className="h-10 px-6"
+              onClick={() => {
+                if (newPaymentMethod.trim()) {
+                  createPaymentMethod.mutate(newPaymentMethod.trim());
+                  setNewPaymentMethod('');
+                }
+              }}
+            >
+              Add Method
+            </Btn>
+          </div>
         </FormSection>
       </div>
     ),
 
     shipping: (
       <div>
-        <FormSection title="Shipping Rates">
+        <FormSection title={t.settings.shippingRates}>
           <div className={`mb-[14px] grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label className={labelClass}>Default Shipping Cost (৳)</label>
+              <label className={labelClass}>{t.settings.defaultShipping}</label>
               <input
                 type="number"
                 value={settings.defaultShipping}
@@ -1079,7 +1296,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               />
             </div>
             <div>
-              <label className={labelClass}>Free Shipping Over (৳)</label>
+              <label className={labelClass}>{t.settings.freeShippingOver}</label>
               <input
                 type="number"
                 value={settings.freeShippingOver}
@@ -1091,7 +1308,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             </div>
           </div>
           <div>
-            <label className={labelClass}>Delivery Time Estimate</label>
+            <label className={labelClass}>{t.settings.deliveryTimeEstimate}</label>
             <input
               value={settings.deliveryEstimate}
               onChange={(e) => setSettings({ ...settings, deliveryEstimate: e.target.value })}
@@ -1104,10 +1321,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     inventory: (
       <div>
-        <FormSection title="Stock Thresholds">
+        <FormSection title={t.settings.stockThresholds}>
           <div className={`grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div>
-              <label className={labelClass}>Low Stock Alert Threshold</label>
+              <label className={labelClass}>{t.settings.lowStockAlert}</label>
               <input
                 type="number"
                 value={settings.lowStockThreshold}
@@ -1119,18 +1336,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             </div>
           </div>
         </FormSection>
-        <FormSection title="Inventory Behaviour">
+        <FormSection title={t.settings.inventoryBehaviour}>
           <Toggle
             val={settings.autoReserve}
             onToggle={() => setSettings({ ...settings, autoReserve: !settings.autoReserve })}
-            label="Auto-reserve stock on checkout"
+            label={t.settings.autoReserve}
           />
           <Toggle
             val={settings.barcodeEnabled}
             onToggle={() =>
               setSettings({ ...settings, barcodeEnabled: !settings.barcodeEnabled })
             }
-            label="Enable barcode scanning"
+            label={t.settings.enableBarcode}
           />
         </FormSection>
       </div>
@@ -1138,35 +1355,35 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     notifications: (
       <div>
-        <FormSection title="Email Notifications">
+        <FormSection title={t.settings.emailNotifications}>
           <Toggle
             val={settings.emailOrders}
             onToggle={() => setSettings({ ...settings, emailOrders: !settings.emailOrders })}
-            label="New order placed"
+            label={t.settings.newOrderPlaced}
           />
           <Toggle
             val={settings.emailStock}
             onToggle={() => setSettings({ ...settings, emailStock: !settings.emailStock })}
-            label="Low stock alert"
+            label={t.settings.lowStockAlertEmail}
           />
           <Toggle
             val={settings.emailNewCustomer}
             onToggle={() =>
               setSettings({ ...settings, emailNewCustomer: !settings.emailNewCustomer })
             }
-            label="New customer registered"
+            label={t.settings.newCustomerRegistered}
           />
         </FormSection>
-        <FormSection title="SMS Notifications">
+        <FormSection title={t.settings.smsNotifications}>
           <Toggle
             val={settings.smsOrders}
             onToggle={() => setSettings({ ...settings, smsOrders: !settings.smsOrders })}
-            label="Order confirmation SMS"
+            label={t.settings.orderConfSms}
           />
           <Toggle
             val={settings.smsDelivery}
             onToggle={() => setSettings({ ...settings, smsDelivery: !settings.smsDelivery })}
-            label="Delivery status SMS"
+            label={t.settings.deliveryStatusSms}
           />
         </FormSection>
       </div>
@@ -1176,7 +1393,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       <div>
         {!isAdmin ? (
           <div className="rounded-xl border p-6 text-center text-sm font-semibold" style={{ borderColor: Theme.border, color: Theme.mutedFg }}>
-            🔒 Only system administrators can manage users and permissions.
+            {t.settings.adminOnly}
           </div>
         ) : staffFormView !== 'list' ? (
           <StaffFormPageClient
@@ -1191,23 +1408,23 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                 <input
                   value={staffSearch}
                   onChange={(e) => setStaffSearch(e.target.value)}
-                  placeholder="Search by name, email or type…"
+                  placeholder={t.settings.searchStaff}
                   className={inputClass}
                   style={{ maxWidth: 280 }}
                 />
                 <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
-                  {isLoadingStaff ? 'Loading…' : `${filteredStaffUsers.length} user${filteredStaffUsers.length !== 1 ? 's' : ''}`}
+                  {isLoadingStaff ? 'Loading…' : `${filteredStaffUsers.length} ${filteredStaffUsers.length !== 1 ? t.settings.users : t.settings.user}`}
                 </div>
-                <Btn variant="ghost" size="sm" onClick={() => refetchStaff()}>↻ Refresh</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => refetchStaff()}>↻ {t.ecommerce.refresh}</Btn>
               </div>
-              <Btn variant="primary" size="sm" onClick={() => setStaffFormView('new')}>＋ Add User</Btn>
+              <Btn variant="primary" size="sm" onClick={() => setStaffFormView('new')}>{t.settings.addUser}</Btn>
             </div>
 
             {/* User list */}
             {isLoadingStaff ? (
               <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>Loading users…</div>
             ) : filteredStaffUsers.length === 0 ? (
-              <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>No staff users found.</div>
+              <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>{t.settings.noStaffFound}</div>
             ) : (
               <div className="flex flex-col gap-2.5">
                 {filteredStaffUsers.map((u) => {
@@ -1219,18 +1436,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-bold" style={{ color: Theme.fg }}>{u.firstName} {u.lastName}</span>
-                          {!u.isActive && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-500">Inactive</span>}
+                          {!u.isActive && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-500">{t.settings.inactive}</span>}
                         </div>
                         <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
                           {u.email}
-                          {u.userModules && u.userModules.length > 0 && <span className="ml-2 opacity-70">· {u.userModules.length} module{u.userModules.length !== 1 ? 's' : ''}</span>}
+                          {u.userModules && u.userModules.length > 0 && <span className="ml-2 opacity-70">· {u.userModules.length} {t.settings.modules}</span>}
                         </div>
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                         <Badge label={typeName} bg={Theme.secondary} color={Theme.primary} />
-                        <Btn variant="ghost" size="sm" onClick={() => { setStaffEditId(u.id); setStaffFormView('edit'); }}>Edit</Btn>
-                        <Btn variant="ghost" size="sm" onClick={() => handleToggleUserActive(u)}>{u.isActive ? 'Deactivate' : 'Activate'}</Btn>
-                        <Btn variant="ghost" size="sm" onClick={() => handleForceLogout(u)}>Force Logout</Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => { setStaffEditId(u.id); setStaffFormView('edit'); }}>{t.settings.edit}</Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => handleToggleUserActive(u)}>{u.isActive ? t.settings.deactivate : t.settings.activate}</Btn>
+                        <Btn variant="ghost" size="sm" onClick={() => handleForceLogout(u)}>{t.settings.forceLogout}</Btn>
                       </div>
                     </div>
                   );
@@ -1244,18 +1461,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
     trending: (
       <div>
-        <FormSection title="Trending Products on Homepage">
+        <FormSection title={t.settings.trendingProducts}>
           <div className="mb-[14px] text-[13px]" style={{ color: Theme.mutedFg }}>
-            Select products to feature in the homepage slider and trending section.
+            {t.settings.trendingDesc}
             <span className="ml-1 font-semibold" style={{ color: Theme.primary }}>
-              {productsList.filter((p: any) => p.isFeatured).length} featured
+              {productsList.filter((p: any) => p.isFeatured).length} {t.settings.featured}
             </span>
           </div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <input
               value={trendingSearch}
               onChange={(e) => setTrendingSearch(e.target.value)}
-              placeholder="Search products…"
+              placeholder={t.settings.searchProducts}
               className={inputClass}
               style={{ maxWidth: 240 }}
             />
@@ -1265,7 +1482,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
               onChange={(e) => setTrendingBranchId(e.target.value)}
               style={{ minWidth: 140 }}
             >
-              <option value="">All Branches</option>
+              <option value="">{t.settings.allBranches}</option>
               {branches.map((b: any) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -1275,7 +1492,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           </div>
           <div className="flex flex-col gap-2.5">
             {isLoadingProducts ? (
-              <div className="py-4 text-center text-sm">Loading products...</div>
+              <div className="py-4 text-center text-sm">{t.settings.loadingProducts}</div>
             ) : (() => {
               const q = trendingSearch.trim().toLowerCase();
               const filtered = productsList.filter((p: any) => {
@@ -1283,7 +1500,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                 if (q && !p.name.toLowerCase().includes(q) && !p.sku.toLowerCase().includes(q) && !(p.category?.name || '').toLowerCase().includes(q)) return false;
                 return true;
               });
-              if (filtered.length === 0) return <div className="py-4 text-center text-sm">No products found</div>;
+              if (filtered.length === 0) return <div className="py-4 text-center text-sm">{t.settings.noProductsFound}</div>;
               // Show featured first, then the rest
               const sorted = [...filtered].sort((a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
               return sorted.map((p: any) => (
@@ -1327,7 +1544,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                       </span>
                       {p.isFeatured && (
                         <span className="rounded bg-pink-50 px-1.5 py-0.5 text-[9px] font-bold text-pink-600 border border-pink-100">
-                          Featured
+                          {t.settings.featured}
                         </span>
                       )}
                     </div>
@@ -1347,20 +1564,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       <div>
         {showPromotionEditor && (
           <div
-            className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${
-              isMobile ? 'items-end p-0' : 'items-center p-4'
-            }`}
+            className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${isMobile ? 'items-end p-0' : 'items-center p-4'
+              }`}
             onClick={() => { setShowPromotionEditor(false); setEditingPromotionId(null); }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className={`max-h-[92vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${
-                isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'
-              }`}
+              className={`max-h-[92vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'
+                }`}
             >
               <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5">
                 <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
-                  {editingPromotionId !== null ? 'Edit Promotion' : 'Create Promotion'}
+                  {editingPromotionId !== null ? t.settings.editPromotion : t.settings.createPromotion}
                 </div>
                 <button
                   onClick={() => { setShowPromotionEditor(false); setEditingPromotionId(null); }}
@@ -1373,7 +1588,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
               <div className="flex flex-col gap-4 p-6">
                 <div>
-                  <label className={labelClass}>Promotion Name *</label>
+                  <label className={labelClass}>{t.settings.promotionName}</label>
                   <input
                     className={inputClass}
                     value={promotionForm.label}
@@ -1382,7 +1597,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Discount Percentage *</label>
+                  <label className={labelClass}>{t.settings.discountPct}</label>
                   <input
                     type="number"
                     className={inputClass}
@@ -1394,7 +1609,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Banner Text *</label>
+                  <label className={labelClass}>{t.settings.bannerText}</label>
                   <textarea
                     className={`${inputClass} h-20 resize-y`}
                     value={promotionForm.banner}
@@ -1403,7 +1618,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Offer End Date (label)</label>
+                  <label className={labelClass}>{t.settings.offerEndDate}</label>
                   <input
                     className={inputClass}
                     value={promotionForm.ends}
@@ -1420,14 +1635,14 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                     }
                     style={{ accentColor: Theme.primary }}
                   />
-                  Mark as active offer
+                  {t.settings.markActive}
                 </label>
                 <div className="flex justify-end gap-2 pt-2">
                   <Btn variant="ghost" onClick={() => { setShowPromotionEditor(false); setEditingPromotionId(null); }}>
-                    Cancel
+                    {t.settings.cancel}
                   </Btn>
                   <Btn variant="primary" onClick={handleSavePromotion}>
-                    Save Promotion
+                    {t.settings.savePromotion}
                   </Btn>
                 </div>
               </div>
@@ -1435,10 +1650,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           </div>
         )}
 
-        <FormSection title="Active Promotions">
+        <FormSection title={t.settings.activePromotions}>
           <div className="flex flex-col gap-3">
             {isLoadingPromotions ? (
-              <div className="text-xs" style={{ color: Theme.mutedFg }}>Loading promotions…</div>
+              <div className="text-xs" style={{ color: Theme.mutedFg }}>{t.settings.loadingPromotions}</div>
             ) : promotions.map((d) => (
               <div
                 key={d.id}
@@ -1453,9 +1668,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                     {d.label}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Badge label={`${d.pct}% OFF`} bg={Theme.primary} color="#fff" />
+                    <Badge label={`${d.pct}% ${t.settings.off}`} bg={Theme.primary} color="#fff" />
                     <Badge
-                      label={d.isActive ? 'Live' : 'Paused'}
+                      label={d.isActive ? t.settings.live : t.settings.paused}
                       bg={d.isActive ? '#dcfce7' : '#f5f5f5'}
                       color={d.isActive ? '#166534' : Theme.mutedFg}
                     />
@@ -1463,14 +1678,14 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                 </div>
                 <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
                   {d.banner}
-                  {d.endsAt ? ` · Ends ${d.endsAt}` : ''}
+                  {d.endsAt ? ` · ${t.settings.ends} ${d.endsAt}` : ''}
                 </div>
                 <div className="flex gap-2">
                   <Btn variant="ghost" size="sm" onClick={() => handleTogglePromotionActive(d.id)}>
-                    {d.isActive ? 'Pause' : 'Activate'}
+                    {d.isActive ? t.settings.pause : t.settings.activate}
                   </Btn>
                   <Btn variant="ghost" size="sm" onClick={() => openPromotionEditor(d)}>
-                    Edit
+                    {t.settings.edit}
                   </Btn>
                   <Btn
                     variant="ghost"
@@ -1484,13 +1699,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                       }
                     }}
                   >
-                    Remove
+                    {t.settings.remove}
                   </Btn>
                 </div>
               </div>
             ))}
             <Btn variant="secondary" size="sm" onClick={() => openPromotionEditor()}>
-              ＋ Create New Promotion
+              {t.settings.createNewPromotion}
             </Btn>
           </div>
         </FormSection>
@@ -1517,28 +1732,28 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
       <Card className={`${isMobile ? 'p-[18px]' : 'p-7'}`}>
         {tab !== 'staff' && (
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-          <div className="text-base font-bold" style={{ color: Theme.fg }}>
-            {currentLabel}
-          </div>
-          {['trending', 'discounts'].includes(tab) && (
-            <div className="flex items-center gap-2">
-              {saved && (
-                <span className="text-xs font-semibold" style={{ color: Theme.success }}>
-                  ✓ Saved
-                </span>
-              )}
-              <Btn variant="primary" size="sm" onClick={() => handleSave(tab)}>
-                {isSaving ? 'Saving...' : 'Save & Publish'}
-              </Btn>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-base font-bold" style={{ color: Theme.fg }}>
+              {currentLabel}
             </div>
-          )}
-        </div>
+            {['trending', 'discounts'].includes(tab) && (
+              <div className="flex items-center gap-2">
+                {saved && (
+                  <span className="text-xs font-semibold" style={{ color: Theme.success }}>
+                    {t.settings.saved}
+                  </span>
+                )}
+                <Btn variant="primary" size="sm" onClick={() => handleSave(tab)}>
+                  {isSaving ? t.settings.saving : t.settings.saveAndPublish}
+                </Btn>
+              </div>
+            )}
+          </div>
         )}
 
         {panels[tab] || (
           <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
-            Select a setting from the menu.
+            {t.settings.selectSetting}
           </div>
         )}
 
@@ -1547,14 +1762,14 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
             <div className="flex items-center gap-2">
               {saved && (
                 <span className="text-xs font-semibold" style={{ color: Theme.success }}>
-                  ✓ Saved
+                  {t.settings.saved}
                 </span>
               )}
               <Btn variant="ghost" size="sm" onClick={handleResetCurrentTab}>
-                Reset
+                {t.settings.reset}
               </Btn>
               <Btn variant="primary" size="sm" onClick={() => handleSave(tab)}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? t.settings.saving : t.settings.saveChanges}
               </Btn>
             </div>
           </div>

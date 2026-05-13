@@ -400,8 +400,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user = {
         ...session.user,
         id: String(token.userId || token.sub || ''),
-        role: typeof token.role === 'string' ? token.role : undefined,
-        typeId: typeof token.typeId === 'number' ? token.typeId : undefined,
       };
 
       session.accessToken = typeof token.accessToken === 'string' ? token.accessToken : undefined;

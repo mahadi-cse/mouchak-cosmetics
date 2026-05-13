@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { getSession, signOut } from 'next-auth/react';
 import type { Session } from 'next-auth';
+import toast from 'react-hot-toast';
 import { API_CONFIG } from '../constants/config';
 import { parseApiError, formatErrorLog } from '../utils/errors';
 
@@ -168,6 +169,9 @@ apiClient.interceptors.response.use(
     // Handle 429 - Rate Limit
     if (error.response?.status === 429) {
       console.warn('[API] Rate Limit - Too many requests');
+      if (typeof window !== 'undefined') {
+        toast.error('Too many requests. Please try again later.', { id: 'rate-limit' });
+      }
     }
 
     // Handle 500+ - Server Errors

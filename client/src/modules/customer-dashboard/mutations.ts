@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerDashboardAPI } from './api';
 import { CUSTOMER_DASHBOARD_QUERY_KEYS } from './queries';
-import type { AddWishlistPayload, UpdateProfilePayload } from './types';
+import type { AddWishlistPayload, CreateReturnPayload, UpdateProfilePayload } from './types';
 
 export const useUpdateCustomerDashboardProfile = (options?: any) => {
   const queryClient = useQueryClient();
@@ -37,6 +37,18 @@ export const useRemoveCustomerWishlistItem = (options?: any) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CUSTOMER_DASHBOARD_QUERY_KEYS.wishlist() });
       queryClient.invalidateQueries({ queryKey: CUSTOMER_DASHBOARD_QUERY_KEYS.summary() });
+    },
+    ...options,
+  });
+};
+
+export const useCreateReturnRequest = (options?: any) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateReturnPayload) => customerDashboardAPI.createReturnRequest(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CUSTOMER_DASHBOARD_QUERY_KEYS.returns() });
     },
     ...options,
   });

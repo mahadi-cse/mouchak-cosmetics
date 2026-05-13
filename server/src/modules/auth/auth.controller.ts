@@ -219,7 +219,7 @@ export const createUser: RequestHandler = asyncHandler(async (req, res) => {
   const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
   if (existing) throw new ValidationError('Email already exists');
 
-  const { hashPassword } = await import('./auth.service');
+  const { hashPassword } = await import('./auth.service.js');
   const hashed = await hashPassword(password);
 
   const user = await prisma.user.create({
@@ -268,7 +268,7 @@ export const updateUser: RequestHandler = asyncHandler(async (req, res) => {
   if (isActive !== undefined) data.isActive = Boolean(isActive);
   if (typeId !== undefined) data.userTypeId = Number(typeId);
   if (password && typeof password === 'string' && password.trim().length >= 8) {
-    const { hashPassword } = await import('./auth.service');
+    const { hashPassword } = await import('./auth.service.js');
     data.password = await hashPassword(password);
   }
 

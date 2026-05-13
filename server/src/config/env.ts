@@ -4,7 +4,8 @@ import 'dotenv/config';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
-  CLIENT_URL: z.string().url(),
+  CLIENT_URL: z.string(),
+  CLIENT_URL_EXTRA: z.string().optional(), // comma-separated extra allowed origins
   
   // Database
   DATABASE_URL: z.string().url(),

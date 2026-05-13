@@ -23,13 +23,14 @@ export function CategoryCard({ id, label, description, count, image, fallbackIma
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="relative h-48 overflow-hidden rounded-2xl border-2 border-transparent transition-all duration-300 cursor-pointer"
+        className="relative h-52 sm:h-56 overflow-hidden rounded-2xl cursor-pointer group"
         style={{
-          borderColor: hovered ? '#e91e8c' : 'transparent',
-          transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+          border: `2px solid ${hovered ? 'var(--primary)' : 'transparent'}`,
+          transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
+          transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
           boxShadow: hovered
-            ? '0 14px 36px rgba(233,30,140,0.18)'
-            : '0 4px 14px rgba(0,0,0,0.08)',
+            ? '0 20px 40px rgba(240,17,114,0.15), 0 8px 16px rgba(0,0,0,0.06)'
+            : '0 4px 16px rgba(0,0,0,0.08)',
         }}
       >
         {/* Background image */}
@@ -37,60 +38,62 @@ export function CategoryCard({ id, label, description, count, image, fallbackIma
           src={imageSrc}
           alt={label}
           fill
-          className="object-cover transition-transform duration-400"
+          className="object-cover"
           onError={() => {
             if (fallbackImage && imageSrc !== fallbackImage) {
               setImageSrc(fallbackImage);
             }
           }}
           style={{
-            transform: hovered ? 'scale(1.08)' : 'scale(1)',
+            transform: hovered ? 'scale(1.1)' : 'scale(1)',
+            transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         />
 
         {/* Gradient overlay */}
         <div
-          className="absolute inset-0 transition-all duration-300"
+          className="absolute inset-0"
           style={{
             background: hovered
-              ? 'linear-gradient(to top, rgba(194,24,91,0.82) 0%, rgba(233,30,140,0.28) 60%, transparent 100%)'
-              : 'linear-gradient(to top, rgba(30,10,20,0.72) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)',
+              ? 'linear-gradient(to top, var(--primary-dark) 0%, var(--primary) 55%, transparent 100%)'
+              : 'linear-gradient(to top, rgba(20,10,15,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)',
+            opacity: hovered ? 0.85 : 1,
+            transition: 'all 0.4s ease',
           }}
         />
 
         {/* Product count pill */}
-        <div
-          className="absolute right-3 top-3 rounded-full bg-white bg-opacity-92 px-2.5 py-1 text-center text-xs font-bold text-pink-700"
-          style={{ letterSpacing: '0.5px' }}
-        >
+        <div className="absolute right-3 top-3 rounded-full bg-white/95 backdrop-blur-sm px-3 py-1 text-[10px] font-bold text-primary tracking-wide">
           {count}
         </div>
 
         {/* Text bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="absolute bottom-0 left-0 right-0 p-5">
           <p
-            className="mb-0.5 text-xs font-semibold uppercase"
-            style={{
-              color: 'rgba(255,220,240,0.9)',
-              letterSpacing: '1.5px',
-            }}
+            className="mb-1 text-[10px] font-semibold uppercase tracking-[2px]"
+            style={{ color: 'rgba(255,220,240,0.9)' }}
           >
             {description}
           </p>
           <div className="flex items-center justify-between">
-            <h3
-              className="m-0 text-2xl font-black text-white"
-              style={{ letterSpacing: '-0.5px' }}
-            >
+            <h3 className="text-2xl font-black text-white tracking-tight">
               {label}
             </h3>
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-full border-1.5 border-white border-opacity-50 transition-all duration-300"
+              className="flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-white/40"
               style={{
-                background: hovered ? '#e91e8c' : 'rgba(255,255,255,0.2)',
+                background: hovered ? 'var(--primary)' : 'rgba(255,255,255,0.15)',
+                transition: 'all 0.3s ease',
               }}
             >
-              <ChevronRight size={14} className="text-white" />
+              <ChevronRight
+                size={15}
+                className="text-white"
+                style={{
+                  transform: hovered ? 'translateX(2px)' : 'translateX(0)',
+                  transition: 'transform 0.3s ease',
+                }}
+              />
             </div>
           </div>
         </div>

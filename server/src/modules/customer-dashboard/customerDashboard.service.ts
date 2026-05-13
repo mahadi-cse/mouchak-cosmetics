@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { NotFoundError, ValidationError } from '../../shared/utils/AppError';
 import { parsePagination } from '../../shared/utils/pagination';
-import { ListMyOrdersInput, UpdateMyProfileInput } from './customerDashboard.schema';
+import { CreateReturnRequestInput, ListMyOrdersInput, UpdateMyProfileInput } from './customerDashboard.schema';
 
 class CustomerDashboardService {
   private async getCustomerByUserId(userId: number) {
@@ -302,6 +302,125 @@ class CustomerDashboardService {
       removed: deleted.count > 0,
       productId,
     };
+  }
+
+  async listMyReturns(userId: number, page = 1, limit = 10) {
+    const customer = await this.getCustomerByUserId(userId);
+    const { skip, take } = parsePagination({ page, limit });
+
+    const where = {
+      orderItem: {
+        order: {
+          customerId: customer.id,
+        },
+      },
+    };
+
+    const [returns, total] = await Promise.all([
+      prisma.return.findMany({
+        where,
+        include: {
+          orderItem: {
+            include: {
+              order: {
+                select: {
+                  id: true,
+                  orderNumber: true,
+                  status: true,
+                  createdAt: true,
+                },
+              },
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  images: true,
+                  sku: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.return.count({ where }),
+    ]);
+
+    return { data: returns, total, page, limit };
+  }
+
+  async createReturnRequest(userId: number, input: CreateReturnRequestInput) {
+    const customer = await this.getCustomerByUserId(userId);
+
+    // Verify the order item belongs to this customer
+    const orderItem = await prisma.orderItem.findFirst({
+      where: {
+        id: input.orderItemId,
+        order: {
+          customerId: customer.id,
+          status: 'DELIVERED',
+        },
+      },
+      include: {
+        order: true,
+        return: true,
+      },
+    });
+
+    if (!orderItem) {
+      throw new NotFoundError(
+        'Order item not found, does not belong to you, or the order has not been delivered yet.',
+      );
+    }
+
+    if (orderItem.return) {
+      throw new ValidationError('A return request already exists for this item.');
+    }
+
+    if (input.returnedQuantity > orderItem.quantity) {
+      throw new ValidationError(
+        `Cannot return more than the ordered quantity (${orderItem.quantity}).`,
+      );
+    }
+
+    const refundAmount = (Number(orderItem.unitPrice) * input.returnedQuantity).toFixed(2);
+
+    const returnRecord = await prisma.return.create({
+      data: {
+        orderItemId: input.orderItemId,
+        reason: input.reason,
+        returnedQuantity: input.returnedQuantity,
+        refundAmount: parseFloat(refundAmount),
+        notes: input.notes || null,
+        status: 'REQUESTED',
+      },
+      include: {
+        orderItem: {
+          include: {
+            order: {
+              select: {
+                id: true,
+                orderNumber: true,
+                status: true,
+                createdAt: true,
+              },
+            },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                images: true,
+                sku: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return returnRecord;
   }
 }
 

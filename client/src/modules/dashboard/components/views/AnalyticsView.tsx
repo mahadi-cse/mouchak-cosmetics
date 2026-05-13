@@ -15,9 +15,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 export default function AnalyticsView() {
   const { isMobile } = useResponsive();
+  const { t } = useDashboardLocale();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b: any) => b.active);
   const [branch, setBranch] = useState('');
@@ -91,12 +93,12 @@ export default function AnalyticsView() {
   const topProducts = overview?.topProducts || [];
 
   const trendSubText = period === 'daily'
-    ? 'Today performance'
+    ? t.analytics.todayPerformance
     : period === 'weekly'
-      ? 'Latest week performance'
+      ? t.analytics.latestWeekPerformance
       : period === 'custom'
         ? `${customStart} to ${customEnd}`
-        : 'Latest month performance';
+        : t.analytics.latestMonthPerformance;
 
   const comparisonLabel = overview?.range?.comparisonLabel || 'previous period';
   const totalSales = overview?.manualSales?.totalSales || 0;
@@ -123,7 +125,7 @@ export default function AnalyticsView() {
   return (
     <div className="flex flex-col gap-3">
       <div className={`flex items-center justify-between gap-3 ${isMobile ? 'flex-wrap' : ''}`}>
-        <div className="text-[20px] font-extrabold shrink-0" style={{ color: Theme.fg }}>Analytics</div>
+        <div className="text-[20px] font-extrabold shrink-0" style={{ color: Theme.fg }}>{t.analytics.analyticsTitle}</div>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={branch}
@@ -131,7 +133,7 @@ export default function AnalyticsView() {
             className="cursor-pointer rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold outline-none"
             style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
           >
-            <option value="">All Branches</option>
+            <option value="">{t.analytics.allBranches}</option>
             {activeBranches.map((b: any) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
@@ -148,7 +150,7 @@ export default function AnalyticsView() {
                   boxShadow: period === p ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                 }}
               >
-                {p.charAt(0).toUpperCase() + p.slice(1)}
+                {p === 'daily' ? t.analytics.daily : p === 'weekly' ? t.analytics.weekly : p === 'monthly' ? t.analytics.monthly : t.analytics.custom}
               </button>
             ))}
           </div>
@@ -169,7 +171,7 @@ export default function AnalyticsView() {
  
       <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
         <Card>
-          <SecHead title="Cost vs Revenue Trend" sub={trendSubText} />
+          <SecHead title={t.analytics.costVsRevenue} sub={trendSubText} />
           <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
             <LineChart data={trendData}>
               <CartesianGrid strokeDasharray="3 3" stroke={Theme.border} />
@@ -218,31 +220,31 @@ export default function AnalyticsView() {
           <div className="mt-3 flex flex-wrap justify-center gap-4">
             <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
               <div className="h-3 w-3 rounded-sm" style={{ background: Theme.primary }} />
-              Revenue (৳)
+              {t.analytics.revenue} (৳)
             </div>
             <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
               <div className="h-1 w-3" style={{ background: Theme.warning }} />
-              Cost (৳)
+              {t.analytics.cost} (৳)
             </div>
             <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
               <div className="h-1 w-3" style={{ background: Theme.success }} />
-              Net Profit (৳)
+              {t.analytics.netProfit} (৳)
             </div>
           </div>
 
           {isLoading && (
             <div className="mt-2 text-center text-xs" style={{ color: Theme.mutedFg }}>
-              Loading trend...
+              {t.analytics.loadingTrend}
             </div>
           )}
         </Card>
 
         <Card>
-          <SecHead title="Top Products by Revenue" sub="From current analytics range" action="Export CSV" />
+          <SecHead title={t.analytics.topProductsByRevenue} sub={t.analytics.fromCurrentAnalyticsRange} action={t.analytics.exportCSV} />
           {isLoading ? (
-            <div className="py-6 text-center text-sm" style={{ color: Theme.mutedFg }}>Loading top products...</div>
+            <div className="py-6 text-center text-sm" style={{ color: Theme.mutedFg }}>{t.analytics.loadingTopProducts}</div>
           ) : topProducts.length === 0 ? (
-            <div className="py-6 text-center text-sm" style={{ color: Theme.mutedFg }}>No sales data found for this range.</div>
+            <div className="py-6 text-center text-sm" style={{ color: Theme.mutedFg }}>{t.analytics.noSalesData}</div>
           ) : (
             topProducts.slice(0, 6).map((p: any, i: number) => {
               const maxRev = topProducts[0]?.revenue || 1;
@@ -281,7 +283,7 @@ export default function AnalyticsView() {
                       />
                     </div>
                     <div className="mt-1 text-[10px]" style={{ color: Theme.mutedFg }}>
-                      {p.unitsSold} sold · SKU {p.sku}
+                      {p.unitsSold} {t.analytics.sold} · {t.modal.sku} {p.sku}
                     </div>
                   </div>
                 </div>
@@ -295,12 +297,12 @@ export default function AnalyticsView() {
         <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
           <div className="text-[9px] font-bold uppercase tracking-wide shrink-0" style={{ color: Theme.mutedFg }}>📊</div>
           {[
-            { label: 'Revenue', value: formatCurrency(totalSales), color: Theme.primary },
-            { label: 'Cost', value: formatCurrency(trendTotals.cost), color: Theme.warning },
-            { label: 'Profit', value: formatCurrency(trendTotals.netProfit), color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' },
-            { label: 'Qty Sold', value: `${overview?.manualSales?.totalQty ?? 0}`, color: Theme.fg },
-            { label: 'Transactions', value: `${transactions}`, color: Theme.fg },
-            { label: 'Avg Ticket', value: formatCurrency(avgTicket), color: Theme.fg },
+            { label: t.analytics.revenue, value: formatCurrency(totalSales), color: Theme.primary },
+            { label: t.analytics.cost, value: formatCurrency(trendTotals.cost), color: Theme.warning },
+            { label: t.analytics.netProfit, value: formatCurrency(trendTotals.netProfit), color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' },
+            { label: t.analytics.qtySold, value: `${overview?.manualSales?.totalQty ?? 0}`, color: Theme.fg },
+            { label: t.analytics.transactions, value: `${transactions}`, color: Theme.fg },
+            { label: t.analytics.avgTicket, value: formatCurrency(avgTicket), color: Theme.fg },
           ].map((s) => (
             <div key={s.label} className="flex items-center gap-1.5 rounded px-2.5 py-1" style={{ background: Theme.muted }}>
               <span className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>{s.label}</span>

@@ -182,3 +182,70 @@ export interface ListMyOrdersParams {
 export interface AddWishlistPayload {
   productId: number;
 }
+
+export type ReturnReason =
+  | 'DEFECTIVE'
+  | 'WRONG_ITEM'
+  | 'COLOR_MISMATCH'
+  | 'NOT_AS_DESCRIBED'
+  | 'CUSTOMER_CHANGED_MIND'
+  | 'DAMAGED_IN_TRANSIT'
+  | 'EXPIRED'
+  | 'QUALITY_ISSUE'
+  | 'OTHER';
+
+export type ReturnStatus =
+  | 'REQUESTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RETURNED_RECEIVED'
+  | 'INSPECTED'
+  | 'REFUND_PROCESSED'
+  | 'CLOSED';
+
+export interface CustomerReturn {
+  id: number;
+  orderItemId: number;
+  reason: ReturnReason;
+  returnedQuantity: number;
+  returnedAt: string | null;
+  status: ReturnStatus;
+  refundAmount: number;
+  refundedAt: string | null;
+  notes: string | null;
+  photosUrl: string[];
+  createdAt: string;
+  updatedAt: string;
+  orderItem: {
+    id: number;
+    productName: string;
+    productSku: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    order: {
+      id: number;
+      orderNumber: string;
+      status: DashboardOrderStatus;
+      createdAt: string;
+    };
+    product: {
+      id: number;
+      name: string;
+      images: string[];
+      sku: string;
+    };
+  };
+}
+
+export interface CreateReturnPayload {
+  orderItemId: number;
+  reason: ReturnReason;
+  returnedQuantity: number;
+  notes?: string;
+}
+
+export interface CustomerReturnsResult {
+  returns: CustomerReturn[];
+  meta: PaginationMeta;
+}
