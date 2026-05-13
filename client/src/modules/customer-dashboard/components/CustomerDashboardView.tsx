@@ -4,15 +4,15 @@ import React, { useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useCustomerDashboardProfile, useCustomerDashboardSummary } from '@/modules/customer-dashboard';
-import { DESIGN } from './customer-tabs/tokens';
+import { DESIGN } from '../tokens';
 
 // Tab components — each owns its own queries and local state
-import OverviewTab  from './customer-tabs/OverviewTab';
-import ProfileTab   from './customer-tabs/ProfileTab';
-import OrdersTab    from './customer-tabs/OrdersTab';
-import WishlistTab  from './customer-tabs/WishlistTab';
-import TrackingTab  from './customer-tabs/TrackingTab';
-import ReturnsTab   from './customer-tabs/ReturnsTab';
+import OverviewTab  from './tabs/OverviewTab';
+import ProfileTab   from './tabs/ProfileTab';
+import OrdersTab    from './tabs/OrdersTab';
+import WishlistTab  from './tabs/WishlistTab';
+import TrackingTab  from './tabs/TrackingTab';
+import ReturnsTab   from './tabs/ReturnsTab';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,7 +96,7 @@ function Sidebar({
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function CustomerDashboardClient() {
+export default function CustomerDashboardView() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const { data: session } = useSession();

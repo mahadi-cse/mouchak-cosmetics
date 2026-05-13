@@ -2,12 +2,12 @@ import { prisma } from '../../config/database';
 import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
 import { parsePagination } from '../../shared/utils/pagination';
 import { AdjustStockInput, TransferStockInput, ReconcileStockInput } from './inventory.schema';
-import { InventoryTransactionType } from '@prisma/client';
+import { InventoryTransactionType, Prisma } from '@prisma/client';
 
 export class InventoryService {
-  private async ensureBranchId(warehouseId?: number) {
+  private async ensureBranchId(warehouseId?: number, tx: Prisma.TransactionClient = prisma) {
     if (warehouseId) return warehouseId;
-    const branch = await prisma.branch.findFirst({
+    const branch = await tx.branch.findFirst({
       where: { isActive: true },
       orderBy: { id: 'asc' },
       select: { id: true },
@@ -100,108 +100,124 @@ export class InventoryService {
   }
 
   async adjustStock(data: AdjustStockInput) {
-    const warehouseId = await this.ensureBranchId(data.warehouseId);
-    const existing = await prisma.inventory.findUnique({
-      where: {
-        productId_warehouseId: {
+    return await prisma.$transaction(async (tx) => {
+      const warehouseId = await this.ensureBranchId(data.warehouseId, tx);
+
+      // Ensure inventory record exists
+      await tx.inventory.upsert({
+        where: {
+          productId_warehouseId: {
+            productId: data.productId,
+            warehouseId,
+          },
+        },
+        update: {},
+        create: {
           productId: data.productId,
           warehouseId,
+          quantity: 0,
+          reservedQty: 0,
         },
-      },
-      include: { branch: true },
-    });
-    const inventory = existing || await prisma.inventory.create({
-      data: {
-        productId: data.productId,
-        warehouseId,
-        quantity: 0,
-        reservedQty: 0,
-      },
-      include: { branch: true },
-    });
+      });
 
-    const newBalance = inventory.quantity + data.quantity;
+      // Lock the record for update
+      const lockedRows = await tx.$queryRaw<any[]>`
+        SELECT * FROM inventory 
+        WHERE "productId" = ${data.productId} AND "warehouseId" = ${warehouseId}
+        FOR UPDATE
+      `;
+      const inventory = lockedRows[0];
 
-    const transaction = await prisma.inventoryTransaction.create({
-      data: {
-        inventoryId: inventory.id,
-        type: data.type as InventoryTransactionType,
-        quantity: data.quantity,
-        balanceBefore: inventory.quantity,
-        balanceAfter: newBalance,
-        reference: data.reference,
-        notes: `${data.notes || ''} [Branch:${warehouseId}]`.trim(),
-        batchName: data.batchName,
-        manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : undefined,
-        expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
-        sizeName: data.sizeName || null,
-      },
+      if (!inventory) throw new NotFoundError('Inventory record not found');
+
+      const beforeQty = inventory.quantity;
+      const newBalance = beforeQty + data.quantity;
+
+      const transaction = await tx.inventoryTransaction.create({
+        data: {
+          inventoryId: inventory.id,
+          type: data.type as InventoryTransactionType,
+          quantity: data.quantity,
+          balanceBefore: beforeQty,
+          balanceAfter: newBalance,
+          reference: data.reference,
+          notes: `${data.notes || ''} [Branch:${warehouseId}]`.trim(),
+          batchName: data.batchName,
+          manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : undefined,
+          expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+          sizeName: data.sizeName || null,
+        },
+      });
+
+      await tx.inventory.update({
+        where: { id: inventory.id },
+        data: {
+          quantity: newBalance,
+        },
+      });
+
+      return transaction;
     });
-
-    await prisma.inventory.update({
-      where: { id: inventory.id },
-      data: {
-        quantity: newBalance,
-        warehouseId,
-      },
-    });
-
-    return transaction;
   }
 
   async transferStock(data: TransferStockInput) {
     if (!data.fromWarehouseId) {
       throw new ConflictError('Source branch is required for transfer');
     }
-    const fromInventory = await prisma.inventory.findUnique({
-      where: {
-        productId_warehouseId: {
+
+    return await prisma.$transaction(async (tx) => {
+      // Lock source inventory
+      const lockedRows = await tx.$queryRaw<any[]>`
+        SELECT * FROM inventory 
+        WHERE "productId" = ${data.productId} AND "warehouseId" = ${data.fromWarehouseId}
+        FOR UPDATE
+      `;
+      const fromInventory = lockedRows[0];
+
+      if (!fromInventory) throw new NotFoundError('Source inventory not found');
+      if (fromInventory.quantity < data.quantity) {
+        throw new ConflictError('Insufficient stock for transfer');
+      }
+
+      const transfer = await tx.stockTransfer.create({
+        data: {
           productId: data.productId,
-          warehouseId: data.fromWarehouseId,
+          inventoryId: fromInventory.id,
+          fromWarehouseId: data.fromWarehouseId,
+          toWarehouseId: data.toWarehouseId,
+          quantity: data.quantity,
+          notes: data.notes,
+          referenceNumber: `ST-${Date.now()}`,
+          initiatedBy: 1, // TODO: Get from auth context
         },
-      },
+      });
+
+      const beforeQty = fromInventory.quantity;
+      const afterQty = beforeQty - data.quantity;
+
+      // Deduct from source inventory
+      await tx.inventory.update({
+        where: { id: fromInventory.id },
+        data: {
+          quantity: afterQty,
+        },
+      });
+
+      // Record transaction
+      await tx.inventoryTransaction.create({
+        data: {
+          inventoryId: fromInventory.id,
+          type: 'ADJUSTMENT',
+          quantity: -data.quantity,
+          balanceBefore: beforeQty,
+          balanceAfter: afterQty,
+          reference: transfer.referenceNumber,
+          notes: `Transfer to warehouse ${data.toWarehouseId}: ${data.notes}`,
+        },
+      });
+
+      return transfer;
     });
-
-    if (!fromInventory) throw new NotFoundError('Inventory not found');
-    if (fromInventory.quantity < data.quantity) {
-      throw new ConflictError('Insufficient stock for transfer');
-    }
-
-    const transfer = await prisma.stockTransfer.create({
-      data: {
-        productId: data.productId,
-        inventoryId: fromInventory.id,
-        fromWarehouseId: data.fromWarehouseId,
-        toWarehouseId: data.toWarehouseId,
-        quantity: data.quantity,
-        notes: data.notes,
-        referenceNumber: `ST-${Date.now()}`,
-        initiatedBy: 1, // TODO: Get from auth context
-      },
-    });
-
-    // Deduct from source inventory
-    await prisma.inventory.update({
-      where: { id: fromInventory.id },
-      data: {
-        quantity: { decrement: data.quantity },
-      },
-    });
-
-    // Record transaction
-    await prisma.inventoryTransaction.create({
-      data: {
-        inventoryId: fromInventory.id,
-        type: 'ADJUSTMENT',
-        quantity: -data.quantity,
-        balanceBefore: fromInventory.quantity,
-        balanceAfter: fromInventory.quantity - data.quantity,
-        reference: transfer.referenceNumber,
-        notes: `Transfer to warehouse ${data.toWarehouseId}: ${data.notes}`,
-      },
-    });
-
-    return transfer;
   }
 
   async getLowStockItems(filters: {
@@ -285,53 +301,54 @@ export class InventoryService {
   async reconcileStock(data: ReconcileStockInput) {
     const results = { reconciled: 0, errors: [] as any[] };
 
-    for (const item of data.items) {
-      try {
-        const inventory = await prisma.inventory.findUnique({
-          where: {
-            productId_warehouseId: {
-              productId: item.productId,
-              warehouseId: data.warehouseId,
-            },
-          },
-        });
+    return await prisma.$transaction(async (tx) => {
+      for (const item of data.items) {
+        try {
+          // Lock record for update
+          const lockedRows = await tx.$queryRaw<any[]>`
+            SELECT * FROM inventory 
+            WHERE "productId" = ${item.productId} AND "warehouseId" = ${data.warehouseId}
+            FOR UPDATE
+          `;
+          const inventory = lockedRows[0];
 
-        if (!inventory) {
-          results.errors.push({ productId: item.productId, error: 'Inventory not found' });
-          continue;
+          if (!inventory) {
+            results.errors.push({ productId: item.productId, error: 'Inventory not found' });
+            continue;
+          }
+
+          const difference = item.physicalCount - inventory.quantity;
+
+          if (difference !== 0) {
+            await tx.inventoryTransaction.create({
+              data: {
+                inventoryId: inventory.id,
+                type: 'ADJUSTMENT',
+                quantity: difference,
+                balanceBefore: inventory.quantity,
+                balanceAfter: item.physicalCount,
+                reference: `RECONCILE-${data.warehouseId}`,
+                notes: data.notes || 'Stock reconciliation',
+              },
+            });
+
+            await tx.inventory.update({
+              where: { id: inventory.id },
+              data: {
+                quantity: item.physicalCount,
+                lastCountedAt: new Date(),
+              },
+            });
+          }
+
+          results.reconciled++;
+        } catch (error: any) {
+          results.errors.push({ productId: item.productId, error: error.message });
         }
-
-        const difference = item.physicalCount - inventory.quantity;
-
-        if (difference !== 0) {
-          await prisma.inventoryTransaction.create({
-            data: {
-              inventoryId: inventory.id,
-              type: 'ADJUSTMENT',
-              quantity: difference,
-              balanceBefore: inventory.quantity,
-              balanceAfter: item.physicalCount,
-              reference: `RECONCILE-${data.warehouseId}`,
-              notes: data.notes || 'Stock reconciliation',
-            },
-          });
-
-          await prisma.inventory.update({
-            where: { id: inventory.id },
-            data: {
-              quantity: item.physicalCount,
-              lastCountedAt: new Date(),
-            },
-          });
-        }
-
-        results.reconciled++;
-      } catch (error: any) {
-        results.errors.push({ productId: item.productId, error: error.message });
       }
-    }
 
-    return results;
+      return results;
+    });
   }
 
   async getInventoryReports(filters: {

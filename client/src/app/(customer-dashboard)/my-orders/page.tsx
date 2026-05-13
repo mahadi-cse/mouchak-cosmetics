@@ -1,1 +1,5 @@
-﻿export default function MyOrdersPage() { return <></> }
+﻿import { redirect } from 'next/navigation';
+
+export default function MyOrdersPage() {
+  redirect('/dashboard?tab=order');
+}

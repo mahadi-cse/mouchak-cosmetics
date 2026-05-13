@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth, getRoleFromAccessToken } from '@/auth';
 import { isCustomerRole, isStaffRole } from '@/shared/constants';
-import DashboardPageClient from '../DashboardPageClient';
-import { DashboardLocaleProvider } from '@/modules/dashboard';
+import { DashboardPageView, DashboardLocaleProvider } from '@/modules/dashboard';
 
 export default async function DashboardSectionPage() {
   const session = await auth();
@@ -22,7 +21,7 @@ export default async function DashboardSectionPage() {
 
   return (
     <DashboardLocaleProvider>
-      <DashboardPageClient />
+      <DashboardPageView />
     </DashboardLocaleProvider>
   );
 }

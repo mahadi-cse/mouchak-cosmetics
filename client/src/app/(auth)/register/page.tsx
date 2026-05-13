@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import RegisterPageClient from './RegisterPageClient';
+import { RegisterView } from '@/modules/auth';
 
 interface RegisterPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -12,7 +12,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
 
   return (
     <Suspense fallback={<div className="p-6 text-sm text-zinc-500">Loading registration page...</div>}>
-      <RegisterPageClient callbackUrl={callbackUrl || '/dashboard'} />
+      <RegisterView callbackUrl={callbackUrl || '/dashboard'} />
     </Suspense>
   );
 }
