@@ -4,12 +4,12 @@ import { authenticate, authorize } from '../../middleware/authenticate';
 
 const router = Router();
 
-// Public routes - Customers can view
-router.get('/', authenticate, inventoryController.getInventorySummary);
-router.get('/low-stock', authenticate, inventoryController.getLowStockItems);
+// Protected routes - Only Staff/Admin can view internal inventory details
+router.get('/', authenticate, authorize('ADMIN', 'STAFF'), inventoryController.getInventorySummary);
+router.get('/low-stock', authenticate, authorize('ADMIN', 'STAFF'), inventoryController.getLowStockItems);
 router.get('/reports', authenticate, authorize('ADMIN', 'STAFF'), inventoryController.getInventoryReports);
-router.get('/:productId', authenticate, inventoryController.getProductStockDetails);
-router.get('/:productId/history', authenticate, inventoryController.getInventoryHistory);
+router.get('/:productId', authenticate, authorize('ADMIN', 'STAFF'), inventoryController.getProductStockDetails);
+router.get('/:productId/history', authenticate, authorize('ADMIN', 'STAFF'), inventoryController.getInventoryHistory);
 
 // Protected routes - ADMIN/STAFF
 router.post('/adjust', authenticate, authorize('ADMIN', 'STAFF'), inventoryController.adjustStock);

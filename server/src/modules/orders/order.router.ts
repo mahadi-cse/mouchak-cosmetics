@@ -9,7 +9,7 @@ router.post('/cod', authenticate, authorize('CUSTOMER'), orderController.createC
 
 // Protected routes - All require auth
 router.get('/', authenticate, orderController.listOrders);
-router.post('/', authenticate, orderController.createOrder);
+router.post('/', authenticate, authorize('ADMIN', 'STAFF'), orderController.createOrder);
 router.get('/:id', authenticate, orderController.getOrderDetails);
 router.get('/:id/tracking', authenticate, orderController.getOrderTracking);
 router.put('/:id', authenticate, orderController.updateOrder);

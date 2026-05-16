@@ -3,6 +3,7 @@ import multer from 'multer';
 import cloudinary from '../../config/cloudinary';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { ok } from '../../shared/utils/apiResponse';
+import { authenticate, authorize } from '../../middleware/authenticate';
 
 const router = Router();
 
@@ -23,6 +24,8 @@ const upload = multer({
  */
 router.post(
   '/image',
+  authenticate,
+  authorize('ADMIN', 'STAFF'),
   upload.single('image'),
   asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -30,7 +33,11 @@ router.post(
       return;
     }
 
-    const folder = (req.query.folder as string) || 'mouchak/products';
+    const requestedFolder = (req.query.folder as string) || 'mouchak/products';
+    
+    // Whitelist allowed folders to prevent asset injection
+    const allowedFolders = ['mouchak/products', 'mouchak/categories', 'mouchak/users', 'mouchak/promotions'];
+    const folder = allowedFolders.includes(requestedFolder) ? requestedFolder : 'mouchak/products';
 
     // Upload buffer to Cloudinary via stream
     const result = await new Promise<any>((resolve, reject) => {
