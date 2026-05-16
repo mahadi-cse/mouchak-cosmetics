@@ -4,6 +4,7 @@ import cloudinary from '../../config/cloudinary';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { ok } from '../../shared/utils/apiResponse';
 import { authenticate, authorize } from '../../middleware/authenticate';
+import { USER_TYPE_CODES } from '../../shared/types/auth.types';
 
 const router = Router();
 
@@ -25,7 +26,7 @@ const upload = multer({
 router.post(
   '/image',
   authenticate,
-  authorize('ADMIN', 'STAFF'),
+  authorize(USER_TYPE_CODES.SYSTEM_ADMIN, USER_TYPE_CODES.MANAGER, USER_TYPE_CODES.SALES_STAFF, USER_TYPE_CODES.CASHIER),
   upload.single('image'),
   asyncHandler(async (req, res) => {
     if (!req.file) {
