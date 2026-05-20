@@ -51,114 +51,138 @@ src/
 │   ├── layout.tsx                    # Root layout + providers
 │   ├── page.tsx                      # Home → renders modules/homepage
 │   ├── globals.css
-│   ├── (auth)/
-│   │   └── login/
-│   │       └── page.tsx
-│   ├── (public)/
+│   ├── (auth)/                       # Public Authentication routes
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   ├── register/
+│   │   │   └── page.tsx
+│   │   └── redirect/
+│   │       └── page.tsx              # Post-login session router
+│   ├── (public)/                     # Storefront public views
 │   │   ├── layout.tsx
 │   │   ├── shop/
 │   │   │   └── page.tsx
-│   │   └── product/[slug]/
-│   │       └── page.tsx
-│   ├── (customer-dashboard)/
-│   │   ├── layout.tsx
-│   │   ├── checkout/
-│   │   │   └── page.tsx
-│   │   ├── my-orders/
-│   │   │   ├── page.tsx
-│   │   │   └── [id]/
-│   │   │       └── page.tsx
-│   │   ├── profile/
-│   │   │   └── page.tsx
-│   │   └── wishlist/
-│   │       └── page.tsx
-│   ├── (staff-dashboard)/
-│   │   ├── layout.tsx
+│   │   ├── categories/
+│   │   │   ├── page.tsx              # All categories overview
+│   │   │   └── [slug]/
+│   │   │       └── page.tsx          # Filtered by category
+│   │   ├── product/[slug]/
+│   │   │   └── page.tsx              # Detail view
+│   │   └── support/                  # FAQ, Contact, Shipping Policy
+│   │       ├── faq/
+│   │       │   └── page.tsx
+│   │       └── ...
+│   ├── (dashboard)/                  # User & Admin dashboards
+│   │   ├── layout.tsx                # Session guard & sidebar skeleton
 │   │   ├── dashboard/
-│   │   │   └── page.tsx
-│   │   ├── analytics/
-│   │   │   └── page.tsx
-│   │   └── inventory/
-│   │       └── page.tsx
+│   │   │   ├── page.tsx              # /dashboard (Customer Home OR Staff Hub redirect)
+│   │   │   └── [section]/
+│   │   │       └── page.tsx          # Admin sections (inventory, orders, customers, etc.)
+│   │   └── ...
 │   └── api/
-│       └── payment/
-│           └── ipn/
-│               └── route.ts
+│       └── auth/                     # NextAuth configurations
 │
 ├── modules/                          # ALL business domain modules
-│   ├── products/
+│   ├── products/                     # Products & Shop catalog
 │   │   ├── api.ts
 │   │   ├── queries.ts
 │   │   ├── mutations.ts
 │   │   ├── components/
-│   │   │   ├── ProductCard.tsx
-│   │   │   ├── ProductGrid.tsx
-│   │   │   └── ProductDetail.tsx
+│   │   │   ├── ProductDetailView.tsx
+│   │   │   └── ShopView.tsx
 │   │   └── index.ts
-│   ├── orders/
+│   ├── orders/                       # Customer and Admin Orders
 │   │   ├── api.ts
 │   │   ├── queries.ts
 │   │   ├── mutations.ts
 │   │   ├── components/
-│   │   │   ├── OrderCard.tsx
-│   │   │   └── OrderTimeline.tsx
+│   │   │   └── OrdersTable.tsx
 │   │   └── index.ts
-│   ├── cart/
+│   ├── cart/                         # Cart and Checkout
 │   │   ├── api.ts
 │   │   ├── queries.ts
 │   │   ├── mutations.ts
 │   │   ├── components/
 │   │   │   ├── CartDrawer.tsx
-│   │   │   └── CartItem.tsx
+│   │   │   ├── CheckoutView.tsx
+│   │   │   └── ProductCheckoutView.tsx
 │   │   └── index.ts
-│   ├── customers/
+│   ├── customers/                    # Admin Customers View
 │   │   ├── api.ts
 │   │   ├── queries.ts
 │   │   ├── mutations.ts
 │   │   ├── components/
-│   │   │   ├── CustomerProfile.tsx
-│   │   │   └── AddressBook.tsx
+│   │   │   └── CustomersTable.tsx
 │   │   └── index.ts
-│   ├── categories/
+│   ├── categories/                   # Category collections
 │   │   ├── api.ts
 │   │   ├── queries.ts
 │   │   ├── components/
-│   │   │   └── CategoryGrid.tsx
+│   │   │   └── CategoriesView.tsx
 │   │   └── index.ts
-│   ├── inventory/
+│   ├── inventory/                    # Stock and Adjustments
 │   │   ├── api.ts
 │   │   ├── queries.ts
 │   │   ├── mutations.ts
 │   │   ├── components/
 │   │   │   ├── InventoryTable.tsx
-│   │   │   └── LowStockAlert.tsx
+│   │   │   └── StockAdjustmentModal.tsx
 │   │   └── index.ts
-│   ├── analytics/
+│   ├── analytics/                    # Dashboard metrics
+│   │   ├── api.ts
+│   │   ├── queries.ts
+│   │   └── index.ts
+│   ├── auth/                         # User Session, Auth State
 │   │   ├── api.ts
 │   │   ├── queries.ts
 │   │   ├── components/
-│   │   │   ├── RevenueChart.tsx
-│   │   │   └── SalesSummary.tsx
+│   │   │   └── RegisterView.tsx
 │   │   └── index.ts
-│   ├── auth/
-│   │   ├── api.ts
-│   │   ├── queries.ts
+│   ├── homepage/                     # Storefront landing page
 │   │   ├── components/
-│   │   │   └── LoginForm.tsx
-│   │   └── index.ts
-│   ├── homepage/
-│   │   ├── components/
-│   │   │   ├── Hero.tsx
+│   │   │   ├── Features.tsx
 │   │   │   ├── FeaturedProducts.tsx
-│   │   │   ├── OfferBanner.tsx
-│   │   │   └── Testimonials.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   ├── Header.tsx
+│   │   │   ├── Hero.tsx
+│   │   │   ├── LanguageToggle.tsx
+│   │   │   └── Newsletter.tsx
+│   │   ├── locales/
+│   │   │   ├── HomepageLocaleContext.tsx
+│   │   │   └── types.ts
 │   │   └── index.ts
-│   └── dashboard/
-│       ├── components/
-│       │   ├── StatCard.tsx
-│       │   ├── RecentOrders.tsx
-│       │   └── DashboardLayout.tsx
-│       └── index.ts
+│   ├── dashboard/                    # Core Admin Hub
+│   │   ├── components/
+│   │   │   ├── DashboardLayout.tsx
+│   │   │   ├── DashboardPageView.tsx
+│   │   │   ├── ManualSaleModal.tsx
+│   │   │   ├── Primitives.tsx
+│   │   │   ├── Table.tsx
+│   │   │   ├── settings/             # StaffFormView, etc.
+│   │   │   └── views/                # Subviews for dashboard sections (SalesView, SuppliersView, etc.)
+│   │   ├── locales/
+│   │   │   └── DashboardLocaleContext.tsx
+│   │   └── index.ts
+│   ├── customer-dashboard/           # Consolidated User Dashboard
+│   │   ├── api.ts
+│   │   ├── queries.ts
+│   │   ├── mutations.ts
+│   │   ├── tokens.ts
+│   │   ├── types.ts
+│   │   ├── components/
+│   │   │   ├── CustomerDashboardView.tsx
+│   │   │   ├── WishlistDrawer.tsx
+│   │   │   ├── shared.tsx
+│   │   │   └── tabs/                 # Subviews (OverviewTab, OrdersTab, ProfileTab, etc.)
+│   │   └── index.ts
+│   │
+│   │   # Pure Business Data Modules (Consumed by dashboard orchestration)
+│   ├── branches/                     # Branches domain (api.ts, queries.ts, mutations.ts, index.ts)
+│   ├── suppliers/                    # Suppliers domain (api.ts, queries.ts, mutations.ts, index.ts)
+│   ├── promotions/                   # Promotions domain (api.ts, queries.ts, mutations.ts, index.ts)
+│   ├── manual-sales/                 # Manual sales domain (api.ts, queries.ts, mutations.ts, index.ts)
+│   ├── manual-returns/               # Manual returns domain (api.ts, queries.ts, mutations.ts, index.ts)
+│   └── payment-methods/              # Custom payment methods (api.ts, queries.ts, mutations.ts, index.ts)
 │
 ├── shared/                           # Generic, domain-agnostic
 │   ├── lib/
@@ -175,6 +199,11 @@ src/
 │   │   ├── config.ts
 │   │   ├── patterns.ts
 │   │   ├── enums.ts
+│   │   ├── roles.ts                  # User roles and access control constants
+│   │   └── index.ts
+│   ├── contexts/                     # Application-wide React Contexts
+│   │   ├── CartContext.tsx
+│   │   ├── WishlistContext.tsx
 │   │   └── index.ts
 │   ├── utils/
 │   │   ├── formatters.ts
@@ -184,6 +213,8 @@ src/
 │   │   ├── errors.ts
 │   │   └── index.ts
 │   ├── components/
+│   │   ├── CategoryCard.tsx          # Shared collections/categories card
+│   │   ├── ProductCard.tsx           # Shared storefront product card
 │   │   ├── ErrorBoundary.tsx
 │   │   ├── Skeletons.tsx
 │   │   ├── LoadingStates.tsx
@@ -207,10 +238,10 @@ Pages are thin. They import from `modules/` and render. Zero business logic live
 
 ```tsx
 // ✅ app/(public)/shop/page.tsx
-import { ProductGrid } from '@/modules/products'
+import { ShopView } from '@/modules/products'
 
 export default function ShopPage() {
-  return <ProductGrid />
+  return <ShopView />
 }
 
 // ❌ Never — business logic inside a page
@@ -221,18 +252,32 @@ export default function ShopPage() {
 }
 ```
 
-Layouts handle auth guards and shared chrome (Navbar, Sidebar). They also live in `app/` and import from `modules/`.
+#### Shared Dashboard Routing Strategy (`src/app/(dashboard)/dashboard/page.tsx`)
+Rather than separating dashboards into distinct layouts/routes, `/dashboard` is role-guarded. If a Customer lands on this page, they are rendered the consolidated `<CustomerDashboardView />`. If a Staff member lands here, they are shown the `<DashboardPageView />` (the admin hub overview):
 
 ```tsx
-// app/(customer-dashboard)/layout.tsx
-import { DashboardLayout } from '@/modules/dashboard'
-import { getSession }      from '@/modules/auth'
-import { redirect }        from 'next/navigation'
+// ✅ Roles-guarded page router in app/(dashboard)/dashboard/page.tsx
+import { auth, getRoleFromAccessToken } from '@/auth';
+import { isCustomerRole, isStaffRole } from '@/shared/constants';
+import { CustomerDashboardView } from '@/modules/customer-dashboard';
+import { DashboardLocaleProvider, DashboardPageView } from '@/modules/dashboard';
 
-export default async function CustomerLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession()
-  if (!session) redirect('/login')
-  return <DashboardLayout>{children}</DashboardLayout>
+export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/login?callbackUrl=/dashboard');
+  
+  const role = getRoleFromAccessToken(session.accessToken);
+  if (isCustomerRole(role)) {
+    return <CustomerDashboardView />;
+  }
+  if (isStaffRole(role)) {
+    return (
+      <DashboardLocaleProvider>
+        <DashboardPageView />
+      </DashboardLocaleProvider>
+    );
+  }
+  redirect('/');
 }
 ```
 
@@ -244,7 +289,7 @@ Every domain lives here as a self-contained module. A module owns its API calls,
 
 ```ts
 // ✅ Consuming a module — only the barrel
-import { ProductGrid, useProducts } from '@/modules/products'
+import { ShopView, useProducts } from '@/modules/products'
 
 // ❌ Reaching into module internals — forbidden
 import { productAPI }  from '@/modules/products/api'
@@ -289,7 +334,8 @@ modules/<domain>/
 └── index.ts        # Public barrel — the ONLY import surface
 ```
 
-Modules with no server interaction (`homepage/`, `dashboard/`) omit `api.ts`, `queries.ts`, `mutations.ts`.
+### Pure Business Data Modules
+Modules with no dedicated UI components (such as `branches/`, `suppliers/`, `manual-sales/`, `manual-returns/`, `promotions/`, `payment-methods/`) omit the `components/` directory. Their APIs and React Query hooks are imported and consumed by views in the consolidated `dashboard` orchestrator view layer (`modules/dashboard/components/views/*`). This separates UI layout logic from domain logic and keeps our visual admin panels centralized.
 
 ### api.ts
 
@@ -403,9 +449,8 @@ export const useDeleteProduct = () => {
 
 export { useProducts, useProductBySlug, useFeaturedProducts } from './queries'
 export { useCreateProduct, useUpdateProduct, useDeleteProduct } from './mutations'
-export { ProductCard }   from './components/ProductCard'
-export { ProductGrid }   from './components/ProductGrid'
-export { ProductDetail } from './components/ProductDetail'
+export { default as ShopView } from './components/ShopView'
+export { default as ProductDetailView } from './components/ProductDetailView'
 ```
 
 ---
@@ -420,7 +465,7 @@ shared/     →  nothing inside src/
 
 ```ts
 // ✅ In a page
-import { ProductGrid }   from '@/modules/products'
+import { ShopView }      from '@/modules/products'
 import { ErrorBoundary } from '@/shared/components'
 import type { Product }  from '@/shared/types'
 
@@ -444,51 +489,27 @@ import { productAPI } from '@/modules/products/api' // always use index.ts
 ## What to Delete & Why
 
 ### `features/` → merge into `modules/`, then delete
-
-`features/` duplicates what `modules/` owns. Merge each file, then remove the directory.
-
-```
-features/products/   → modules/products/
-features/customers/  → modules/customers/
-features/orders/     → modules/orders/
-features/cart/       → modules/cart/
-features/categories/ → modules/categories/
-features/inventory/  → modules/inventory/
-features/analytics/  → modules/analytics/
-features/homepage/   → modules/homepage/
-```
+`features/` duplicated what `modules/` owned. All former features have been merged into `modules/`, and the legacy directory has been completely deleted. **Do not reintroduce this directory.**
 
 ### `entities/` → update all imports, then delete
-
-`entities/` only re-exports from `shared/types/`. It exists for backward compatibility and doubles the type surface area.
-
-```ts
-// ❌ Before
-import { Product } from '@/entities/product'
-import type { Order } from '@/entities/types'
-
-// ✅ After
-import type { Product, Order } from '@/shared/types'
-```
+`entities/` only re-exported from `shared/types/`. It doubled the typing surface area for no utility. All imports have been redirected directly to `shared/types` and `entities/` has been deleted.
 
 ### `components/` (root) → redistribute, then delete
-
-- Generic UI → `shared/components/`
-- Domain-specific UI → `modules/<domain>/components/`
+Root components were distributed between generic UI in `shared/components/` and domain-specific UI in `modules/<domain>/components/`. The root directory is gone.
 
 ---
 
 ## Migration Steps
 
-- [ ] Merge everything from `features/<domain>/` into `modules/<domain>/`
-- [ ] Delete `features/` directory
-- [ ] Replace all `@/entities/*` imports with `@/shared/types`
-- [ ] Delete `entities/` directory
-- [ ] Move root `components/` files into `shared/components/` or `modules/<domain>/components/`
-- [ ] Delete root `components/` directory
-- [ ] Update `tsconfig.json` path aliases if any pointed to deleted directories
-- [ ] Run `npm run typecheck` — fix broken imports
-- [ ] Run `npm run lint` — fix path violations
+- [x] Merge everything from `features/<domain>/` into `modules/<domain>/`
+- [x] Delete `features/` directory
+- [x] Replace all `@/entities/*` imports with `@/shared/types`
+- [x] Delete `entities/` directory
+- [x] Move root `components/` files into `shared/components/` or `modules/<domain>/components/`
+- [x] Delete root `components/` directory
+- [x] Update `tsconfig.json` path aliases if any pointed to deleted directories
+- [x] Run `npm run typecheck` — fix broken imports
+- [x] Run `npm run lint` — fix path violations
 
 ---
 
@@ -520,7 +541,8 @@ Build the module first, then wire it into `app/`. Never start from the page and 
 | React Query hooks | `modules/<domain>/queries.ts` |
 | Create / Update / Delete | `modules/<domain>/mutations.ts` |
 | Domain UI components | `modules/<domain>/components/` |
-| Generic UI (Skeleton, Spinner) | `shared/components/` |
+| Generic UI (CategoryCard, ProductCard) | `shared/components/` |
+| Application Contexts (Cart, Wishlist) | `shared/contexts/` |
 | TypeScript types & enums | `shared/types/<domain>.ts` |
 | Formatting / utility functions | `shared/utils/` |
 | Env config, API base URL | `shared/constants/config.ts` |
@@ -529,4 +551,4 @@ Build the module first, then wire it into `app/`. Never start from the page and 
 
 ---
 
-*Last updated: April 10, 2026*
+*Last updated: May 20, 2026*

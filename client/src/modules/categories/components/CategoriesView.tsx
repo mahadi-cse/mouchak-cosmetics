@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useListCategories } from '@/modules/categories';
 import { EmptyState, ErrorMessage, SkeletonGrid } from '@/shared/components';
 import { Header, Footer } from '@/modules/homepage';
-import { CategoryCard } from '@/modules/homepage/components/CategoryCard';
+import { CategoryCard } from '@/shared/components';
 
 const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   skincare: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=900&q=80',
