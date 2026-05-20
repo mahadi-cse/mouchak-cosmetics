@@ -1,1 +1,0 @@
-﻿export function useUpdateProductMutation() { return {} }
