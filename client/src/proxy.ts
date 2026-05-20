@@ -5,11 +5,10 @@ import { isCustomerRole, isStaffRole } from '@/shared/constants';
 /**
  * Protected route groups:
  *
- * Staff dashboard  → /dashboard/*
+ * Dashboard  → /dashboard/*
  *   Requires: authenticated + (staff or customer role)
  *
- * Customer routes  → /cart/*, /checkout/*, /my-orders/*, /profile/*,
- *                    /wishlist/*, /customer-dashboard/*
+ * Customer routes  → /cart/*, /checkout/*
  *   Requires: authenticated (any valid role)
  */
 export default auth((req) => {
@@ -19,11 +18,7 @@ export default auth((req) => {
 
   const isCustomerProtectedRoute =
     pathname.startsWith('/cart') ||
-    pathname.startsWith('/checkout') ||
-    pathname.startsWith('/my-orders') ||
-    pathname.startsWith('/profile') ||
-    pathname.startsWith('/wishlist') ||
-    pathname.startsWith('/customer-dashboard');
+    pathname.startsWith('/checkout');
 
   // Allow public routes through without any check
   if (!isStaffDashboardRoute && !isCustomerProtectedRoute) {
@@ -51,11 +46,7 @@ export default auth((req) => {
 export const config = {
   matcher: [
     '/dashboard/:path*',
-    '/customer-dashboard/:path*',
     '/cart/:path*',
     '/checkout/:path*',
-    '/my-orders/:path*',
-    '/profile/:path*',
-    '/wishlist/:path*',
   ],
 };

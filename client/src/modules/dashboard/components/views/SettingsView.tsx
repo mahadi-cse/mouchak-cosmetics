@@ -11,15 +11,14 @@ import {
   useUpdateCategory,
   useDeleteCategory,
   useUpdateCategoryStatus,
-} from '@/modules/categories/queries';
+} from '@/modules/categories';
 import {
   useListProducts,
   useCreateProduct,
   useUpdateProduct,
-  useDeleteProduct,
-  useUpdateProductStatus,
-} from '@/modules/products/queries';
-import { useListBranches } from '@/modules/branches/queries';
+  useDeleteProduct
+} from '@/modules/products';
+import { useListBranches } from '@/modules/branches';
 import { toast } from 'react-hot-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
@@ -298,7 +297,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
-  const updateProductStatus = useUpdateProductStatus();
+
 
   const createPaymentMethod = useCreatePaymentMethod();
   const updatePaymentMethod = useUpdatePaymentMethod();
@@ -709,20 +708,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       if (editProduct) {
         await updateProduct.mutateAsync({
           id: editProduct,
-          data: {
-            name: productForm.name,
-            sku: productForm.sku,
-            price: Number(productForm.price),
-            costPrice: productForm.costPrice ? Number(productForm.costPrice) : undefined,
-            categoryId: Number(productForm.categoryId),
-            branchId: Number(productForm.branchId),
-            description: productForm.description,
-            images,
-            unitType: productForm.unitType,
-            unitLabel: productForm.unitLabel,
-            sizes: sizesPayload,
-          } as any,
-        });
+          name: productForm.name,
+          sku: productForm.sku,
+          price: Number(productForm.price),
+          costPrice: productForm.costPrice ? Number(productForm.costPrice) : undefined,
+          categoryId: Number(productForm.categoryId),
+          branchId: Number(productForm.branchId),
+          description: productForm.description,
+          images,
+          unitType: productForm.unitType,
+          unitLabel: productForm.unitLabel,
+          sizes: sizesPayload,
+        } as any);
         toast.success('Product updated successfully');
       } else {
         await createProduct.mutateAsync({
@@ -764,7 +761,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
   const handleUpdateProductStatus = async (id: number, isActive: boolean) => {
     try {
-      await updateProductStatus.mutateAsync({ id, data: { isActive } });
+      await updateProduct.mutateAsync({ id, isActive } as any);
       toast.success(`Product ${isActive ? 'activated' : 'deactivated'}`);
     } catch {
       toast.error('Failed to update product status');
@@ -1516,8 +1513,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                       try {
                         await updateProduct.mutateAsync({
                           id: p.id,
-                          data: { isFeatured: e.target.checked },
-                        });
+                          isFeatured: e.target.checked,
+                        } as any);
                         triggerSavedIndicator();
                         toast.success(e.target.checked ? 'Added to featured' : 'Removed from featured');
                       } catch {

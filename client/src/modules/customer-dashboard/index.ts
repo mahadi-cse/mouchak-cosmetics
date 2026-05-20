@@ -5,3 +5,4 @@ export * from './types';
 
 // Views
 export { default as CustomerDashboardView } from './components/CustomerDashboardView';
+export { WishlistDrawer } from './components/WishlistDrawer';
