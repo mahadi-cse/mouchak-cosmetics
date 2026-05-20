@@ -14,7 +14,11 @@ datasource db {
 // ENUMS
 // ─────────────────────────────────────────────────────────────
 
-
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
 
 enum OrderStatus {
   PENDING
@@ -100,12 +104,6 @@ enum ReturnStatus {
   CLOSED
 }
 
-enum RefundStatus {
-  PENDING
-  SUCCESS
-  FAILED
-}
-
 // ─────────────────────────────────────────────────────────────
 // USER TYPES
 // Role codes are business-driven and mapped to permissions in code.
@@ -148,7 +146,7 @@ model User {
   refreshTokens   RefreshToken[]
   
   // RBAC relationships
-  userRoles       UserRole[]
+  userRoles       UserRole_Model[]
   userBranches    UserBranch[]
   assignedRoles   RoleAssignment[]
   userModules     UserModule[]
@@ -207,8 +205,6 @@ model Customer {
   orders          Order[]
   wishlist        Wishlist[]
 
-  @@index([segment])
-  @@index([createdAt])
   @@map("customers")
 }
 
@@ -281,9 +277,6 @@ model Product {
   transfers       StockTransfer[]
   skuHistory      SKUHistory[]
 
-  @@index([categoryId])
-  @@index([isActive, createdAt])
-  @@index([isFeatured, isActive])
   @@map("products")
 }
 
@@ -320,7 +313,6 @@ model ManualSale {
   totalAmount Decimal          @db.Decimal(12,2)
   totalQty    Int
   branchId    Int?
-  branch      Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
   branchName  String?
   note        String?
   soldBy      String?
@@ -365,7 +357,6 @@ model ManualReturn {
   totalAmount   Decimal            @db.Decimal(12,2)
   totalQty      Int
   branchId      Int?
-  branch        Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
   branchName    String?
   reason        String?
   returnedBy    String?
@@ -434,7 +425,6 @@ model SupplierTransaction {
   supplierId      Int
   supplier        Supplier                     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   branchId        Int?
-  branch          Branch?                      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   branchName      String?
   direction       SupplierTransactionDirection
   totalAmount     Decimal                      @db.Decimal(12,2)
@@ -519,8 +509,6 @@ model InventoryTransaction {
   sizeName    String?    // Snapshot of size for this transaction
   createdAt   DateTime                  @default(now())
 
-  @@index([inventoryId])
-  @@index([inventoryId, createdAt])
   @@map("inventory_transactions")
 }
 
@@ -567,9 +555,6 @@ model Order {
 
   @@index([customerId, createdAt])
   @@index([customerId, status])
-  @@index([status])
-  @@index([createdAt])
-  @@index([channel])
   @@map("orders")
 }
 
@@ -610,8 +595,6 @@ model OrderItem {
   
   return      Return?
 
-  @@index([orderId])
-  @@index([productId])
   @@map("order_items")
 }
 
@@ -691,7 +674,7 @@ model Refund {
   originalAmount  Decimal        @db.Decimal(12,2)
   refundAmount    Decimal        @db.Decimal(12,2)
   
-  status          RefundStatus   @default(PENDING)
+  status          String         @default("PENDING")
   gatewayRefId    String?        @unique
   
   processedAt     DateTime?
@@ -774,9 +757,7 @@ model StockTransfer {
   inventoryId     Int
   inventory       Inventory           @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   fromWarehouseId Int?
-  fromBranch      Branch?             @relation("TransfersFrom", fields: [fromWarehouseId], references: [id], onDelete: SetNull)
   toWarehouseId   Int?
-  toBranch        Branch?             @relation("TransfersTo", fields: [toWarehouseId], references: [id], onDelete: SetNull)
   quantity        Int
   status          StockTransferStatus @default(PENDING)
   initiatedBy     Int
@@ -786,10 +767,6 @@ model StockTransfer {
   referenceNumber String?             @unique
   notes           String?
 
-  @@index([productId])
-  @@index([status])
-  @@index([fromWarehouseId])
-  @@index([toWarehouseId])
   @@map("stock_transfers")
 }
 
@@ -818,15 +795,10 @@ model Branch {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  userRoles             UserRole[]
-  userBranches          UserBranch[]
-  inventory             Inventory[]
-  categories            Category[]
-  manualSales           ManualSale[]
-  manualReturns         ManualReturn[]
-  supplierTransactions  SupplierTransaction[]
-  transfersFrom         StockTransfer[]       @relation("TransfersFrom")
-  transfersTo           StockTransfer[]       @relation("TransfersTo")
+  userRoles     UserRole_Model[]
+  userBranches  UserBranch[]
+  inventory     Inventory[]
+  categories    Category[]
 
   @@map("branches")
 }
@@ -848,9 +820,8 @@ model Role {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  userRoles       UserRole[]
-  permissions     RolePermission[]
-  roleAssignments RoleAssignment[]
+  userRoles     UserRole_Model[]
+  permissions   RolePermission[]
 
   @@map("roles")
 }
@@ -905,7 +876,7 @@ model RolePermission {
 // Users can have multiple roles, optionally scoped to a branch.
 // ─────────────────────────────────────────────────────────────
 
-model UserRole {
+model UserRole_Model {
   id            Int       @id @default(autoincrement())
   
   userId        Int
@@ -989,7 +960,6 @@ model SKUHistory {
   changedBy       Int?
   changedAt       DateTime  @default(now())
 
-  @@index([productId])
   @@map("sku_history")
 }
 
@@ -1005,15 +975,12 @@ model RoleAssignment {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   roleId          Int
-  role            Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
   actionType      String    // ASSIGNED, REMOVED, UPDATED
   
   assignedAt      DateTime  @default(now())
   changedBy       Int?
   reason          String?
 
-  @@index([userId])
-  @@index([roleId])
   @@map("role_assignments")
 }
 
