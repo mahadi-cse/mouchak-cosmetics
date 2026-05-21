@@ -2,6 +2,13 @@ import { prisma } from '../../config/database';
 import { generateSlug } from '../../shared/utils/slug';
 import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.schema';
+import { cacheGet, cacheSet, cacheInvalidatePattern, TTL } from '../../shared/utils/cache';
+
+const KEYS = {
+  list: (branchId?: number, includeInactive?: boolean) =>
+    `categories:list:b${branchId ?? 'all'}:ia${includeInactive ? '1' : '0'}`,
+  slug: (slug: string) => `categories:slug:${slug}`,
+};
 
 export class CategoryService {
   async createCategory(data: CreateCategoryInput) {
@@ -11,8 +18,7 @@ export class CategoryService {
 
     if (existing) {
       if (!existing.isActive) {
-        // If it exists but is inactive, reactivate it and update its data
-        return await prisma.category.update({
+        const updated = await prisma.category.update({
           where: { id: existing.id },
           data: {
             name: data.name,
@@ -23,11 +29,13 @@ export class CategoryService {
             branchId: data.branchId,
           },
         });
+        await cacheInvalidatePattern('categories:*');
+        return updated;
       }
       throw new ConflictError('Category with this name already exists');
     }
 
-    return await prisma.category.create({
+    const category = await prisma.category.create({
       data: {
         name: data.name,
         slug,
@@ -37,51 +45,53 @@ export class CategoryService {
         branchId: data.branchId,
       },
     });
+
+    await cacheInvalidatePattern('categories:*');
+    return category;
   }
 
   async getCategoryBySlug(slug: string) {
+    const key = KEYS.slug(slug);
+    const cached = await cacheGet<any>(key);
+    if (cached) return cached;
+
     const category = await prisma.category.findUnique({
       where: { slug },
       include: { products: { where: { isActive: true } } },
     });
 
-    if (!category) {
-      throw new NotFoundError('Category not found');
-    }
+    if (!category) throw new NotFoundError('Category not found');
 
+    await cacheSet(key, category, TTL.VERY_LONG);
     return category;
   }
 
   async listCategories(filters?: { branchId?: number; includeInactive?: boolean }) {
+    const key = KEYS.list(filters?.branchId, filters?.includeInactive);
+    const cached = await cacheGet<any[]>(key);
+    if (cached) return cached;
+
     const where: any = {};
+    if (!filters?.includeInactive) where.isActive = true;
+    if (filters?.branchId) where.branchId = filters.branchId;
 
-    if (!filters?.includeInactive) {
-      where.isActive = true;
-    }
-
-    if (filters?.branchId) {
-      where.branchId = filters.branchId;
-    }
-
-    return await prisma.category.findMany({
+    const categories = await prisma.category.findMany({
       where,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       include: {
-        _count: {
-          select: { products: true },
-        },
+        _count: { select: { products: true } },
       },
     });
+
+    await cacheSet(key, categories, TTL.VERY_LONG);
+    return categories;
   }
 
   async updateCategory(id: string, data: UpdateCategoryInput) {
     const category = await prisma.category.findUnique({ where: { id: Number(id) } });
+    if (!category) throw new NotFoundError('Category not found');
 
-    if (!category) {
-      throw new NotFoundError('Category not found');
-    }
-
-    return await prisma.category.update({
+    const updated = await prisma.category.update({
       where: { id: Number(id) },
       data: {
         name: data.name,
@@ -92,32 +102,31 @@ export class CategoryService {
         branchId: data.branchId,
       },
     });
+
+    await cacheInvalidatePattern('categories:*');
+    return updated;
   }
 
   async deleteCategory(id: string) {
     const category = await prisma.category.findUnique({ where: { id: Number(id) } });
+    if (!category) throw new NotFoundError('Category not found');
 
-    if (!category) {
-      throw new NotFoundError('Category not found');
-    }
-
-    // Hard delete for categories as requested for products
-    return await prisma.category.delete({
-      where: { id: Number(id) },
-    });
+    const deleted = await prisma.category.delete({ where: { id: Number(id) } });
+    await cacheInvalidatePattern('categories:*');
+    return deleted;
   }
 
   async updateCategoryStatus(id: number, data: { isActive?: boolean }) {
     const category = await prisma.category.findUnique({ where: { id } });
+    if (!category) throw new NotFoundError('Category not found');
 
-    if (!category) {
-      throw new NotFoundError('Category not found');
-    }
-
-    return await prisma.category.update({
+    const updated = await prisma.category.update({
       where: { id },
       data: { isActive: data.isActive },
     });
+
+    await cacheInvalidatePattern('categories:*');
+    return updated;
   }
 }
 

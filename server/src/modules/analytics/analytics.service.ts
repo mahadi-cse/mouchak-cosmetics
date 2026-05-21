@@ -1,6 +1,10 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { AnalyticsFilterInput } from './analytics.schema';
+import { cacheGet, cacheSet, TTL } from '../../shared/utils/cache';
+
+const analyticsKey = (method: string, params: object) =>
+  `analytics:${method}:${JSON.stringify(params)}`;
 
 type OverviewPeriod = 'today' | 'week' | 'month';
 
@@ -63,6 +67,10 @@ const getPeriodRanges = (period: OverviewPeriod) => {
 
 export class AnalyticsService {
   async getRevenueAnalytics(filters: AnalyticsFilterInput) {
+    const key = analyticsKey('revenue', filters);
+    const cached = await cacheGet<any>(key);
+    if (cached) return cached;
+
     const where: any = { status: { in: ['DELIVERED', 'SHIPPED'] } };
 
     if (filters.startDate || filters.endDate) {
@@ -73,39 +81,30 @@ export class AnalyticsService {
 
     const aggregate = await prisma.order.aggregate({
       where,
-      _sum: {
-        total: true,
-      },
-      _count: {
-        id: true,
-      },
+      _sum: { total: true },
+      _count: { id: true },
     });
 
     const totalRevenue = Number(aggregate._sum.total || 0);
     const totalOrders = aggregate._count.id;
 
     const itemsAggregate = await prisma.orderItem.aggregate({
-      where: {
-        order: where,
-      },
-      _sum: {
-        quantity: true,
-      },
+      where: { order: where },
+      _sum: { quantity: true },
     });
     const totalItems = Number(itemsAggregate._sum.quantity || 0);
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    return {
-      period: filters,
-      totalRevenue,
-      totalOrders,
-      totalItems,
-      avgOrderValue,
-      currency: 'BDT',
-    };
+    const result = { period: filters, totalRevenue, totalOrders, totalItems, avgOrderValue, currency: 'BDT' };
+    await cacheSet(key, result, TTL.LONG);
+    return result;
   }
 
   async getSalesByCategory(filters: AnalyticsFilterInput) {
+    const key = analyticsKey('salesByCategory', filters);
+    const cached = await cacheGet<any[]>(key);
+    if (cached) return cached;
+
     const where: any = { order: { status: { in: ['DELIVERED', 'SHIPPED'] } } };
 
     if (filters.startDate || filters.endDate) {
@@ -122,44 +121,36 @@ export class AnalyticsService {
         product: {
           select: {
             categoryId: true,
-            category: {
-              select: {
-                name: true,
-              },
-            },
+            category: { select: { name: true } },
           },
         },
       },
     });
 
     const categoryMap = new Map<number, any>();
-
     for (const item of items) {
       const categoryId = item.product.categoryId;
       const categoryName = item.product.category.name;
-
       if (!categoryMap.has(categoryId)) {
-        categoryMap.set(categoryId, {
-          categoryId,
-          categoryName,
-          totalSales: 0,
-          totalItems: 0,
-          totalRevenue: 0,
-        });
+        categoryMap.set(categoryId, { categoryId, categoryName, totalSales: 0, totalItems: 0, totalRevenue: 0 });
       }
-
       const cat = categoryMap.get(categoryId);
       cat.totalSales += 1;
       cat.totalItems += item.quantity;
       cat.totalRevenue += Number(item.totalPrice);
     }
 
-    return Array.from(categoryMap.values());
+    const result = Array.from(categoryMap.values());
+    await cacheSet(key, result, TTL.LONG);
+    return result;
   }
 
   async getTopProducts(filters: AnalyticsFilterInput & { limit?: number }) {
-    const { limit = 10, startDate, endDate } = filters;
+    const key = analyticsKey('topProducts', filters);
+    const cached = await cacheGet<any[]>(key);
+    if (cached) return cached;
 
+    const { limit = 10, startDate, endDate } = filters;
     const where: any = { order: { status: { in: ['DELIVERED', 'SHIPPED'] } } };
 
     if (startDate || endDate) {
@@ -171,28 +162,28 @@ export class AnalyticsService {
     const groupedItems = await prisma.orderItem.groupBy({
       by: ['productId', 'productName', 'productSku'],
       where,
-      _sum: {
-        quantity: true,
-        totalPrice: true,
-      },
-      orderBy: {
-        _sum: {
-          totalPrice: 'desc',
-        },
-      },
+      _sum: { quantity: true, totalPrice: true },
+      orderBy: { _sum: { totalPrice: 'desc' } },
       take: limit,
     });
 
-    return groupedItems.map(item => ({
+    const result = groupedItems.map(item => ({
       productId: item.productId,
       productName: item.productName,
       sku: item.productSku,
       unitsSold: item._sum.quantity || 0,
       revenue: Number(item._sum.totalPrice || 0),
     }));
+
+    await cacheSet(key, result, TTL.LONG);
+    return result;
   }
 
   async getOverviewMetrics(filters: { period?: OverviewPeriod; warehouseId?: number; startDate?: string; endDate?: string }) {
+    const key = analyticsKey('overview', filters);
+    const cached = await cacheGet<any>(key);
+    if (cached) return cached;
+
     let currentStart: Date;
     let currentEnd: Date;
     let previousStart: Date;
@@ -435,7 +426,7 @@ export class AnalyticsService {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 6);
 
-    return {
+    const result = {
       period: effectivePeriod,
       range: {
         startDate: currentStart.toISOString(),
@@ -473,6 +464,9 @@ export class AnalyticsService {
       salesByCategory,
       topProducts,
     };
+
+    await cacheSet(key, result, TTL.LONG);
+    return result;
   }
 
   async getCustomerAnalytics(filters: AnalyticsFilterInput) {
