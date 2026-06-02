@@ -1,8 +1,17 @@
 import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
+import { cacheGet, cacheSet, cacheDel, TTL } from "../../shared/utils/cache";
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// Cache key constants
+const HP_KEYS = {
+  stats: 'homepage:stats',
+  settings: 'homepage:settings',
+  slider: 'homepage:slider',
+  state: 'homepage:state',
+};
 
 /**
  * GET /api/homepage/stats
@@ -10,26 +19,29 @@ const prisma = new PrismaClient();
  */
 router.get("/stats", async (req, res) => {
   try {
+    const cached = await cacheGet<any>(HP_KEYS.stats);
+    if (cached) return res.json(cached);
+
     const stats = await prisma.homepageStats.findFirst();
     const paymentMethods = await prisma.paymentMethodOption.findMany({
       orderBy: { createdAt: "asc" }
     });
 
-    if (!stats) {
-      // Return default stats if none exist
-      return res.json({
-        totalHappyCustomers: 10000,
-        minFreeDeliveryAmount: 999,
-        isFreeDeliveryActive: true,
-        deliveryTimeframe: "48hr",
-        currentOfferText: "Spring Sale - Save up to 40%",
-        currentOfferPercentage: 40,
-        isOfferActive: true,
-        paymentMethods, // Dynamic options
-      });
-    }
+    const result = stats
+      ? { ...stats, paymentMethods }
+      : {
+          totalHappyCustomers: 10000,
+          minFreeDeliveryAmount: 999,
+          isFreeDeliveryActive: true,
+          deliveryTimeframe: "48hr",
+          currentOfferText: "Spring Sale - Save up to 40%",
+          currentOfferPercentage: 40,
+          isOfferActive: true,
+          paymentMethods,
+        };
 
-    res.json({ ...stats, paymentMethods });
+    await cacheSet(HP_KEYS.stats, result, TTL.MEDIUM);
+    return res.json(result);
   } catch (error) {
     console.error("Error fetching homepage stats:", error);
     res.status(500).json({ error: "Failed to fetch homepage stats" });
@@ -42,17 +54,18 @@ router.get("/stats", async (req, res) => {
  */
 router.get("/state", async (req, res) => {
   try {
+    const cached = await cacheGet<any>(HP_KEYS.state);
+    if (cached) return res.json(cached);
+
     const stats = await prisma.homepageStats.findFirst();
     const settings = await prisma.siteSettings.findFirst();
     const paymentMethods = await prisma.paymentMethodOption.findMany({
       orderBy: { createdAt: "asc" }
     });
 
-    res.json({
-      ...stats,
-      settings,
-      paymentMethods,
-    });
+    const result = { ...stats, settings, paymentMethods };
+    await cacheSet(HP_KEYS.state, result, TTL.MEDIUM);
+    return res.json(result);
   } catch (error) {
     console.error("Error fetching global state:", error);
     res.status(500).json({ error: "Failed to fetch global state" });
@@ -65,12 +78,12 @@ router.get("/state", async (req, res) => {
  */
 router.put("/stats", async (req, res) => {
   try {
-    const { 
-      totalHappyCustomers, 
-      minFreeDeliveryAmount, 
+    const {
+      totalHappyCustomers,
+      minFreeDeliveryAmount,
       isFreeDeliveryActive,
-      deliveryTimeframe, 
-      currentOfferText, 
+      deliveryTimeframe,
+      currentOfferText,
       currentOfferPercentage,
       isOfferActive
     } = req.body;
@@ -98,6 +111,8 @@ router.put("/stats", async (req, res) => {
       },
     });
 
+    // Bust both stats and state caches
+    await cacheDel(HP_KEYS.stats, HP_KEYS.state);
     res.json({ message: "Stats updated successfully", data: stats });
   } catch (error) {
     console.error("Error updating homepage stats:", error);
@@ -114,9 +129,8 @@ router.post("/payment-methods", async (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: "Name is required" });
 
-    const method = await prisma.paymentMethodOption.create({
-      data: { name }
-    });
+    const method = await prisma.paymentMethodOption.create({ data: { name } });
+    await cacheDel(HP_KEYS.stats, HP_KEYS.state);
     res.status(201).json(method);
   } catch (error) {
     console.error("Error creating payment method:", error);
@@ -140,6 +154,7 @@ router.patch("/payment-methods/:id", async (req, res) => {
         ...(isActive !== undefined && { isActive })
       }
     });
+    await cacheDel(HP_KEYS.stats, HP_KEYS.state);
     res.json(method);
   } catch (error) {
     console.error("Error updating payment method:", error);
@@ -154,9 +169,8 @@ router.patch("/payment-methods/:id", async (req, res) => {
 router.delete("/payment-methods/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.paymentMethodOption.delete({
-      where: { id: parseInt(id) }
-    });
+    await prisma.paymentMethodOption.delete({ where: { id: parseInt(id) } });
+    await cacheDel(HP_KEYS.stats, HP_KEYS.state);
     res.json({ message: "Payment method deleted successfully" });
   } catch (error) {
     console.error("Error deleting payment method:", error);
@@ -170,24 +184,25 @@ router.delete("/payment-methods/:id", async (req, res) => {
  */
 router.get("/settings", async (req, res) => {
   try {
+    const cached = await cacheGet<any>(HP_KEYS.settings);
+    if (cached) return res.json(cached);
+
     const settings = await prisma.siteSettings.findFirst();
 
-    if (!settings) {
-      // Return default settings if none exist
-      return res.json({
-        storeName: "Mouchak Cosmetics",
-        tagline: "Clean · Cruelty-Free · Bangladesh",
-        primaryColor: "#f01172",
-        heroHeadline: "Spring Beauty Collection",
-        heroYear: "2026",
-        heroDescription: "Discover luxurious skincare and makeup that celebrates your natural glow. Clean, cruelty-free formulas delivered across Bangladesh in 48 hours.",
-        contactAddress: "Dhaka, Bangladesh",
-        contactPhone: "+880 1XXX-XXXXXX",
-        contactEmail: "hello@mouchakcosmetics.com",
-      });
-    }
+    const result = settings ?? {
+      storeName: "Mouchak Cosmetics",
+      tagline: "Clean · Cruelty-Free · Bangladesh",
+      primaryColor: "#f01172",
+      heroHeadline: "Spring Beauty Collection",
+      heroYear: "2026",
+      heroDescription: "Discover luxurious skincare and makeup that celebrates your natural glow. Clean, cruelty-free formulas delivered across Bangladesh in 48 hours.",
+      contactAddress: "Dhaka, Bangladesh",
+      contactPhone: "+880 1XXX-XXXXXX",
+      contactEmail: "hello@mouchakcosmetics.com",
+    };
 
-    res.json(settings);
+    await cacheSet(HP_KEYS.settings, result, TTL.MEDIUM);
+    return res.json(result);
   } catch (error) {
     console.error("Error fetching site settings:", error);
     res.status(500).json({ error: "Failed to fetch site settings" });
@@ -200,7 +215,7 @@ router.get("/settings", async (req, res) => {
  */
 router.put("/settings", async (req, res) => {
   try {
-    const { 
+    const {
       storeName, tagline, primaryColor, heroHeadline, heroYear, heroDescription,
       contactAddress, contactPhone, contactEmail
     } = req.body;
@@ -232,6 +247,7 @@ router.put("/settings", async (req, res) => {
       },
     });
 
+    await cacheDel(HP_KEYS.settings, HP_KEYS.state);
     res.json({ message: "Settings updated successfully", data: settings });
   } catch (error) {
     console.error("Error updating site settings:", error);
@@ -246,12 +262,16 @@ router.put("/settings", async (req, res) => {
  */
 router.get("/slider", async (req, res) => {
   try {
+    const cached = await cacheGet<any[]>(HP_KEYS.slider);
+    if (cached) return res.json(cached);
+
     const sliders = await prisma.heroSlider.findMany({
       where: { isActive: true },
       orderBy: { displayOrder: "asc" },
     });
 
     if (sliders.length > 0) {
+      await cacheSet(HP_KEYS.slider, sliders, TTL.MEDIUM);
       return res.json(sliders);
     }
 
@@ -264,7 +284,7 @@ router.get("/slider", async (req, res) => {
     });
 
     const productSliders = featured.map((p: any, i: number) => ({
-      id: -(p.id),  // negative id to distinguish from real slider entries
+      id: -(p.id),
       title: p.name,
       description: p.shortDescription || p.description || null,
       imageUrl: p.images?.[0] || "",
@@ -277,7 +297,8 @@ router.get("/slider", async (req, res) => {
       updatedAt: p.updatedAt,
     }));
 
-    res.json(productSliders);
+    await cacheSet(HP_KEYS.slider, productSliders, TTL.SHORT);
+    return res.json(productSliders);
   } catch (error) {
     console.error("Error fetching hero slider:", error);
     res.status(500).json({ error: "Failed to fetch hero slider" });
@@ -293,7 +314,6 @@ router.get("/slider/all", async (req, res) => {
     const sliders = await prisma.heroSlider.findMany({
       orderBy: { displayOrder: "asc" },
     });
-
     res.json(sliders);
   } catch (error) {
     console.error("Error fetching all hero slider images:", error);
@@ -308,10 +328,7 @@ router.get("/slider/all", async (req, res) => {
 router.post("/slider", async (req, res) => {
   try {
     const { title, description, imageUrl, imageAlt, buttonText, buttonLink, displayOrder } = req.body;
-
-    if (!imageUrl) {
-      return res.status(400).json({ error: "imageUrl is required" });
-    }
+    if (!imageUrl) return res.status(400).json({ error: "imageUrl is required" });
 
     const slider = await prisma.heroSlider.create({
       data: {
@@ -326,6 +343,7 @@ router.post("/slider", async (req, res) => {
       },
     });
 
+    await cacheDel(HP_KEYS.slider);
     res.status(201).json({ message: "Slider image created successfully", data: slider });
   } catch (error) {
     console.error("Error creating hero slider image:", error);
@@ -356,6 +374,7 @@ router.put("/slider/:id", async (req, res) => {
       },
     });
 
+    await cacheDel(HP_KEYS.slider);
     res.json({ message: "Slider image updated successfully", data: slider });
   } catch (error) {
     console.error("Error updating hero slider image:", error);
@@ -370,11 +389,8 @@ router.put("/slider/:id", async (req, res) => {
 router.delete("/slider/:id", async (req, res) => {
   try {
     const { id } = req.params;
-
-    await prisma.heroSlider.delete({
-      where: { id: parseInt(id) },
-    });
-
+    await prisma.heroSlider.delete({ where: { id: parseInt(id) } });
+    await cacheDel(HP_KEYS.slider);
     res.json({ message: "Slider image deleted successfully" });
   } catch (error) {
     console.error("Error deleting hero slider image:", error);
