@@ -1,4 +1,5 @@
 import { prisma } from '../../config/database';
+import { Prisma } from '@prisma/client';
 import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
 import { parsePagination } from '../../shared/utils/pagination';
 import {
@@ -21,10 +22,10 @@ export class OrderService {
     REFUNDED: 'Order refunded',
   };
 
-  private async appendTrackingEvent(orderId: number, status: string, description?: string) {
+  private async appendTrackingEvent(orderId: number, status: string, description?: string, tx: Prisma.TransactionClient = prisma) {
     const title = this.trackingTitleMap[status] || `Status updated to ${status}`;
 
-    await prisma.orderTrackingEvent.create({
+    await tx.orderTrackingEvent.create({
       data: {
         orderId,
         status: status as any,
@@ -85,108 +86,126 @@ export class OrderService {
   }
 
   async createOrder(data: CreateOrderInput) {
-    // Validate products exist and have stock
-    const products = await prisma.product.findMany({
-      where: { id: { in: data.items.map(item => item.productId) } },
-      include: { inventories: { orderBy: { warehouseId: 'asc' }, take: 1 } },
-    });
+    return await prisma.$transaction(async (tx) => {
+      // Validate products exist and have stock
+      const products = await tx.product.findMany({
+        where: { id: { in: data.items.map(item => item.productId) } },
+        include: { inventories: { orderBy: { warehouseId: 'asc' }, take: 1 } },
+      });
 
-    if (products.length !== data.items.length) {
-      throw new NotFoundError('One or more products not found');
-    }
-
-    // Check stock availability
-    for (const item of data.items) {
-      const product = products.find(p => p.id === item.productId);
-      const inventory = product?.inventories?.[0];
-      if (!inventory || (inventory.quantity - inventory.reservedQty) < item.quantity) {
-        throw new ConflictError(`Insufficient stock for product ${product?.name}`);
+      if (products.length !== data.items.length) {
+        throw new NotFoundError('One or more products not found');
       }
-    }
 
-    // Calculate totals
-    let subtotal = 0;
-    const orderItems = data.items.map(item => {
-      const product = products.find(p => p.id === item.productId)!;
-      const itemTotal = Number(product.price) * item.quantity;
-      subtotal += itemTotal;
-      return {
-        product,
-        ...item,
-        unitPrice: product.price,
-        totalPrice: itemTotal,
-      };
-    });
+      // Check stock availability
+      for (const item of data.items) {
+        const product = products.find(p => p.id === item.productId);
+        const inventory = product?.inventories?.[0];
+        if (!inventory || (inventory.quantity - inventory.reservedQty) < item.quantity) {
+          throw new ConflictError(`Insufficient stock for product ${product?.name}`);
+        }
+      }
 
-    const total =
-      subtotal +
-      (data.discountAmount || 0) +
-      (data.shippingCharge || 0) +
-      (data.taxAmount || 0);
-
-    // Generate order number
-    const orderNumber = `ORD-${Date.now()}`;
-
-    // Create order
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        customerId: data.customerId,
-        channel: data.channel,
-        shippingName: data.shippingName,
-        shippingPhone: data.shippingPhone,
-        shippingAddress: data.shippingAddress,
-        shippingCity: data.shippingCity,
-        shippingPostal: data.shippingPostal,
-        shippingCountry: data.shippingCountry,
-        subtotal: subtotal,
-        discountAmount: data.discountAmount || 0,
-        shippingCharge: data.shippingCharge || 0,
-        taxAmount: data.taxAmount || 0,
-        total: total,
-        notes: data.notes,
-        items: {
-          create: orderItems.map(item => ({
-            productId: item.productId,
-            productName: item.product.name,
-            productSku: item.product.sku,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.totalPrice,
-          })),
-        },
-      },
-      include: { items: true, customer: true },
-    });
-
-    // Reserve inventory
-    for (const item of data.items) {
-      const inventory = await prisma.inventory.findFirst({
-        where: { productId: item.productId },
-        orderBy: { warehouseId: 'asc' },
+      // Calculate totals
+      let subtotal = 0;
+      const orderItems = data.items.map(item => {
+        const product = products.find(p => p.id === item.productId)!;
+        const itemTotal = Number(product.price) * item.quantity;
+        subtotal += itemTotal;
+        return {
+          product,
+          ...item,
+          unitPrice: product.price,
+          totalPrice: itemTotal,
+        };
       });
-      if (!inventory) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
-      await prisma.inventory.update({
-        where: { id: inventory.id },
+
+      const total =
+        subtotal +
+        (data.discountAmount || 0) +
+        (data.shippingCharge || 0) +
+        (data.taxAmount || 0);
+
+      // Generate order number
+      const orderNumber = `ORD-${Date.now()}`;
+
+      // Create order
+      const order = await tx.order.create({
         data: {
-          reservedQty: { increment: item.quantity },
+          orderNumber,
+          customerId: data.customerId,
+          channel: data.channel,
+          shippingName: data.shippingName,
+          shippingPhone: data.shippingPhone,
+          shippingAddress: data.shippingAddress,
+          shippingCity: data.shippingCity,
+          shippingPostal: data.shippingPostal,
+          shippingCountry: data.shippingCountry,
+          subtotal: subtotal,
+          discountAmount: data.discountAmount || 0,
+          shippingCharge: data.shippingCharge || 0,
+          taxAmount: data.taxAmount || 0,
+          total: total,
+          notes: data.notes,
+          items: {
+            create: orderItems.map(item => ({
+              productId: item.productId,
+              productName: item.product.name,
+              productSku: item.product.sku,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+            })),
+          },
+        },
+        include: { items: true, customer: true },
+      });
+
+      // Reserve inventory with locking
+      for (const item of data.items) {
+        // Find which warehouse to use (currently picking the first one with stock)
+        const inventoryRecord = await tx.inventory.findFirst({
+          where: { productId: item.productId },
+          orderBy: { warehouseId: 'asc' },
+        });
+
+        if (!inventoryRecord) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
+
+        // Lock the specific inventory record
+        const lockedRows = await tx.$queryRaw<any[]>`
+          SELECT * FROM inventory WHERE id = ${inventoryRecord.id} FOR UPDATE
+        `;
+        const inventory = lockedRows[0];
+        
+        if (!inventory) throw new NotFoundError(`Inventory record vanished for product ${item.productId}`);
+
+        const product = products.find(p => p.id === item.productId);
+        if ((inventory.quantity - inventory.reservedQty) < item.quantity) {
+          throw new ConflictError(`Insufficient stock for product ${product?.name} in warehouse ${inventory.warehouseId}`);
+        }
+
+        await tx.inventory.update({
+          where: { id: inventory.id },
+          data: {
+            reservedQty: { increment: item.quantity },
+          },
+        });
+      }
+
+      // Create payment record
+      await tx.payment.create({
+        data: {
+          orderId: order.id,
+          method: data.paymentMethod || 'CASH',
+          status: data.paymentMethod === 'SSLCOMMERZ' ? 'INITIATED' : 'PENDING',
+          amount: total,
         },
       });
-    }
 
-    // Create payment record
-    await prisma.payment.create({
-      data: {
-        orderId: order.id,
-        method: data.paymentMethod || 'CASH',
-        status: data.paymentMethod === 'SSLCOMMERZ' ? 'INITIATED' : 'PENDING',
-        amount: total,
-      },
+      await this.appendTrackingEvent(order.id, 'PENDING', 'Cash on delivery order has been placed', tx);
+
+      return order;
     });
-
-    await this.appendTrackingEvent(order.id, 'PENDING', 'Cash on delivery order has been placed');
-
-    return order;
   }
 
   async createCodOrder(data: CreateCodOrderInput, userId: number) {
@@ -305,59 +324,80 @@ export class OrderService {
     });
   }
 
-  async updateOrderStatus(orderId: number, data: UpdateOrderStatusInput) {
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
-    if (!order) throw new NotFoundError('Order not found');
+  async updateOrderStatus(orderId: number, data: UpdateOrderStatusInput, txOverride?: Prisma.TransactionClient) {
+    const execute = async (tx: Prisma.TransactionClient) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new NotFoundError('Order not found');
 
-    const updateData: any = { status: data.status };
+      const updateData: any = { status: data.status };
 
-    if (data.status === 'SHIPPED') {
-      updateData.shippedAt = new Date();
-    } else if (data.status === 'DELIVERED') {
-      updateData.deliveredAt = new Date();
-      // Release reserved inventory
-      const items = await prisma.orderItem.findMany({ where: { orderId } });
-      for (const item of items) {
-        const inventory = await prisma.inventory.findFirst({
-          where: { productId: item.productId },
-          orderBy: { warehouseId: 'asc' },
-        });
-        if (!inventory) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
-        await prisma.inventory.update({
-          where: { id: inventory.id },
-          data: {
-            reservedQty: { decrement: item.quantity },
-            quantity: { decrement: item.quantity },
-          },
-        });
+      if (data.status === 'SHIPPED') {
+        updateData.shippedAt = new Date();
+      } else if (data.status === 'DELIVERED') {
+        updateData.deliveredAt = new Date();
+        // Release reserved inventory
+        const items = await tx.orderItem.findMany({ where: { orderId } });
+        for (const item of items) {
+          const inventoryRecord = await tx.inventory.findFirst({
+            where: { productId: item.productId },
+            orderBy: { warehouseId: 'asc' },
+          });
+          if (!inventoryRecord) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
+          
+          // Lock record
+          const lockedRows = await tx.$queryRaw<any[]>`
+            SELECT * FROM inventory WHERE id = ${inventoryRecord.id} FOR UPDATE
+          `;
+          const inventory = lockedRows[0];
+          if (!inventory) throw new NotFoundError(`Inventory record vanished for product ${item.productId}`);
+
+          await tx.inventory.update({
+            where: { id: inventory.id },
+            data: {
+              reservedQty: { decrement: item.quantity },
+              quantity: { decrement: item.quantity },
+            },
+          });
+        }
+      } else if (data.status === 'CANCELLED') {
+        // Release reserved inventory
+        const items = await tx.orderItem.findMany({ where: { orderId } });
+        for (const item of items) {
+          const inventoryRecord = await tx.inventory.findFirst({
+            where: { productId: item.productId },
+            orderBy: { warehouseId: 'asc' },
+          });
+          if (!inventoryRecord) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
+
+          // Lock record
+          const lockedRows = await tx.$queryRaw<any[]>`
+            SELECT * FROM inventory WHERE id = ${inventoryRecord.id} FOR UPDATE
+          `;
+          const inventory = lockedRows[0];
+          if (!inventory) throw new NotFoundError(`Inventory record vanished for product ${item.productId}`);
+
+          await tx.inventory.update({
+            where: { id: inventory.id },
+            data: {
+              reservedQty: { decrement: item.quantity },
+            },
+          });
+        }
       }
-    } else if (data.status === 'CANCELLED') {
-      // Release reserved inventory
-      const items = await prisma.orderItem.findMany({ where: { orderId } });
-      for (const item of items) {
-        const inventory = await prisma.inventory.findFirst({
-          where: { productId: item.productId },
-          orderBy: { warehouseId: 'asc' },
-        });
-        if (!inventory) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
-        await prisma.inventory.update({
-          where: { id: inventory.id },
-          data: {
-            reservedQty: { decrement: item.quantity },
-          },
-        });
-      }
-    }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: updateData,
-      include: { items: true, payment: true },
-    });
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: updateData,
+        include: { items: true, payment: true },
+      });
 
-    await this.appendTrackingEvent(orderId, data.status);
+      await this.appendTrackingEvent(orderId, data.status, undefined, tx);
 
-    return updatedOrder;
+      return updatedOrder;
+    };
+
+    if (txOverride) return execute(txOverride);
+    return await prisma.$transaction(execute);
   }
 
   async getOrderTracking(orderId: number) {
@@ -471,33 +511,43 @@ export class OrderService {
   }
 
   async cancelOrder(orderId: number) {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: true },
+    return await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      if (!order) throw new NotFoundError('Order not found');
+
+      if (['DELIVERED', 'REFUNDED'].includes(order.status)) {
+        throw new ConflictError('Cannot cancel ' + order.status + ' order');
+      }
+
+      // Release reserved inventory
+      for (const item of order.items) {
+        const inventoryRecord = await tx.inventory.findFirst({
+          where: { productId: item.productId },
+          orderBy: { warehouseId: 'asc' },
+        });
+        if (!inventoryRecord) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
+        
+        // Lock record
+        const lockedRows = await tx.$queryRaw<any[]>`
+          SELECT * FROM inventory WHERE id = ${inventoryRecord.id} FOR UPDATE
+        `;
+        const inventory = lockedRows[0];
+        if (!inventory) throw new NotFoundError(`Inventory record vanished for product ${item.productId}`);
+
+        await tx.inventory.update({
+          where: { id: inventory.id },
+          data: {
+            reservedQty: { decrement: item.quantity },
+          },
+        });
+      }
+
+      return await this.updateOrderStatus(orderId, { status: 'CANCELLED' }, tx);
     });
-
-    if (!order) throw new NotFoundError('Order not found');
-
-    if (['DELIVERED', 'REFUNDED'].includes(order.status)) {
-      throw new ConflictError('Cannot cancel ' + order.status + ' order');
-    }
-
-    // Release reserved inventory
-    for (const item of order.items) {
-      const inventory = await prisma.inventory.findFirst({
-        where: { productId: item.productId },
-        orderBy: { warehouseId: 'asc' },
-      });
-      if (!inventory) throw new NotFoundError(`Inventory not found for product ${item.productId}`);
-      await prisma.inventory.update({
-        where: { id: inventory.id },
-        data: {
-          reservedQty: { decrement: item.quantity },
-        },
-      });
-    }
-
-    return await this.updateOrderStatus(orderId, { status: 'CANCELLED' });
   }
 
   async generateInvoice(orderId: number) {

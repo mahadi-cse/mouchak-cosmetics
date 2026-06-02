@@ -10,6 +10,9 @@ export type SiteSettings = {
   heroHeadline: string;
   heroYear: string;
   heroDescription: string;
+  contactAddress: string;
+  contactPhone: string;
+  contactEmail: string;
   lastUpdated: string;
 };
 
@@ -39,18 +42,37 @@ export const homepageAPI = {
     return response.data.data;
   },
 
+  // State method
+  getState: async (): Promise<any> => {
+    const response = await apiClient.get<any>("/homepage/state");
+    return response.data;
+  },
+
   // Stats methods
   getStats: async (): Promise<HomepageStats> => {
     const response = await apiClient.get<HomepageStats>("/homepage/stats");
     return response.data;
   },
 
-  updateStats: async (data: Partial<HomepageStats>): Promise<HomepageStats> => {
-    const response = await apiClient.put<{ message?: string; data?: HomepageStats } | HomepageStats>("/homepage/stats", data);
-    if (typeof response.data === 'object' && response.data !== null && 'data' in response.data && response.data.data) {
-      return response.data.data;
-    }
-    return response.data as HomepageStats;
+  updateStats: async (data: Record<string, unknown>): Promise<{ message: string; data: HomepageStats }> => {
+    const response = await apiClient.put<{ message: string; data: HomepageStats }>("/homepage/stats", data);
+    return response.data;
+  },
+
+  // Payment Method Options
+  createPaymentMethod: async (name: string): Promise<any> => {
+    const response = await apiClient.post<any>("/homepage/payment-methods", { name });
+    return response.data;
+  },
+
+  updatePaymentMethod: async (id: number, data: any): Promise<any> => {
+    const response = await apiClient.patch<any>(`/homepage/payment-methods/${id}`, data);
+    return response.data;
+  },
+
+  deletePaymentMethod: async (id: number): Promise<any> => {
+    const response = await apiClient.delete<any>(`/homepage/payment-methods/${id}`);
+    return response.data;
   },
 
   // Slider methods

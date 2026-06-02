@@ -6,15 +6,14 @@ import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, Btn } from '../Primitives';
 import {
   useListCategories,
-} from '@/modules/categories/queries';
+} from '@/modules/categories';
 import {
   useListProducts,
   useCreateProduct,
   useUpdateProduct,
-  useDeleteProduct,
-  useUpdateProductStatus,
-} from '@/modules/products/queries';
-import { useListBranches } from '@/modules/branches/queries';
+  useDeleteProduct
+} from '@/modules/products';
+import { useListBranches } from '@/modules/branches';
 import { toast } from 'react-hot-toast';
 import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
@@ -44,7 +43,7 @@ export default function ProductsView() {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
-  const updateProductStatus = useUpdateProductStatus();
+
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editProduct, setEditProduct] = useState<number | null>(null);
@@ -89,7 +88,7 @@ export default function ProductsView() {
       const images = imageUrl ? [imageUrl] : [defaultImage];
       const sizesPayload = productForm.sizes.filter(s => s.name.trim()).map((s, i) => ({ name: s.name.trim(), sortOrder: i, imageUrl: s.imageUrl || null, priceOverride: s.priceOverride ? Number(s.priceOverride) : null }));
       const payload = { name: productForm.name, sku: productForm.sku, price: Number(productForm.price), costPrice: productForm.costPrice ? Number(productForm.costPrice) : undefined, categoryId: Number(productForm.categoryId), branchId: Number(productForm.branchId), description: productForm.description, images, unitType: productForm.unitType, unitLabel: productForm.unitLabel, sizes: sizesPayload } as any;
-      if (editProduct) { await updateProduct.mutateAsync({ id: editProduct, data: payload }); toast.success(t.products.productUpdated); }
+      if (editProduct) { await updateProduct.mutateAsync({ id: editProduct, ...payload }); toast.success(t.products.productUpdated); }
       else { await createProduct.mutateAsync(payload); toast.success(t.products.productCreated); }
       resetForm();
     } catch (error: any) { toast.error(error?.message || t.products.failedSave); }
@@ -102,7 +101,7 @@ export default function ProductsView() {
   };
 
   const handleUpdateProductStatus = async (id: number, isActive: boolean) => {
-    try { await updateProductStatus.mutateAsync({ id, data: { isActive } }); toast.success(isActive ? t.products.productActivated : t.products.productDeactivated); } catch { toast.error(t.products.failedStatusUpdate); }
+    try { await updateProduct.mutateAsync({ id, isActive } as any); toast.success(isActive ? t.products.productActivated : t.products.productDeactivated); } catch { toast.error(t.products.failedStatusUpdate); }
   };
 
   const productsList = apiProducts;

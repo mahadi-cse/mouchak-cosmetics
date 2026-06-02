@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { useHomepageFeaturedProducts, useHomepageCategories } from '@/modules/homepage';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { useCart } from '@/shared/contexts/CartContext';
-import { CategoryCard } from './CategoryCard';
+import { CategoryCard } from '@/shared/components';
 import { useHomepageLocale } from '../locales/HomepageLocaleContext';
 import type { Category, Product } from '@/shared/types';
 
