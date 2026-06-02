@@ -366,12 +366,49 @@ export class InventoryService {
     });
 
     if (filters.reportType === 'summary') {
+      const aggregate = await prisma.inventory.aggregate({
+        where,
+        _sum: {
+          quantity: true,
+          reservedQty: true,
+        },
+        _count: {
+          id: true,
+        },
+      });
+
+      const valuationRows = await prisma.inventory.findMany({
+        where,
+        select: {
+          quantity: true,
+          product: {
+            select: {
+              costPrice: true,
+            },
+          },
+        },
+      });
+
+      const totalValue = valuationRows.reduce(
+        (sum, inv) => sum + (inv.product.costPrice ? Number(inv.product.costPrice) * inv.quantity : 0),
+        0
+      );
+
+      const thresholdRows = await prisma.inventory.findMany({
+        where,
+        select: {
+          quantity: true,
+          lowStockThreshold: true,
+        },
+      });
+      const lowStockCount = thresholdRows.filter(inv => inv.quantity < inv.lowStockThreshold).length;
+
       return {
-        totalItems: inventory.length,
-        totalQuantity: inventory.reduce((sum, inv) => sum + inv.quantity, 0),
-        totalReserved: inventory.reduce((sum, inv) => sum + inv.reservedQty, 0),
-        totalValue: inventory.reduce((sum, inv) => sum + (inv.product.costPrice ? Number(inv.product.costPrice) * inv.quantity : 0), 0),
-        lowStockCount: inventory.filter(inv => inv.quantity < inv.lowStockThreshold).length,
+        totalItems: aggregate._count.id,
+        totalQuantity: aggregate._sum.quantity || 0,
+        totalReserved: aggregate._sum.reservedQty || 0,
+        totalValue,
+        lowStockCount,
       };
     }
 
