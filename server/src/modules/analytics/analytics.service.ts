@@ -1,6 +1,10 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { AnalyticsFilterInput } from './analytics.schema';
+import { cacheGet, cacheSet, TTL } from '../../shared/utils/cache';
+
+const analyticsKey = (method: string, params: object) =>
+  `analytics:${method}:${JSON.stringify(params)}`;
 
 type OverviewPeriod = 'today' | 'week' | 'month';
 
@@ -63,6 +67,10 @@ const getPeriodRanges = (period: OverviewPeriod) => {
 
 export class AnalyticsService {
   async getRevenueAnalytics(filters: AnalyticsFilterInput) {
+    const key = analyticsKey('revenue', filters);
+    const cached = await cacheGet<any>(key);
+    if (cached) return cached;
+
     const where: any = { status: { in: ['DELIVERED', 'SHIPPED'] } };
 
     if (filters.startDate || filters.endDate) {
@@ -71,27 +79,32 @@ export class AnalyticsService {
       if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
     }
 
-    const orders = await prisma.order.findMany({
+    const aggregate = await prisma.order.aggregate({
       where,
-      include: { items: true },
+      _sum: { total: true },
+      _count: { id: true },
     });
 
-    const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
-    const totalOrders = orders.length;
-    const totalItems = orders.reduce((sum, order) => sum + order.items.length, 0);
+    const totalRevenue = Number(aggregate._sum.total || 0);
+    const totalOrders = aggregate._count.id;
+
+    const itemsAggregate = await prisma.orderItem.aggregate({
+      where: { order: where },
+      _sum: { quantity: true },
+    });
+    const totalItems = Number(itemsAggregate._sum.quantity || 0);
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    return {
-      period: filters,
-      totalRevenue,
-      totalOrders,
-      totalItems,
-      avgOrderValue,
-      currency: 'BDT',
-    };
+    const result = { period: filters, totalRevenue, totalOrders, totalItems, avgOrderValue, currency: 'BDT' };
+    await cacheSet(key, result, TTL.LONG);
+    return result;
   }
 
   async getSalesByCategory(filters: AnalyticsFilterInput) {
+    const key = analyticsKey('salesByCategory', filters);
+    const cached = await cacheGet<any[]>(key);
+    if (cached) return cached;
+
     const where: any = { order: { status: { in: ['DELIVERED', 'SHIPPED'] } } };
 
     if (filters.startDate || filters.endDate) {
@@ -102,37 +115,42 @@ export class AnalyticsService {
 
     const items = await prisma.orderItem.findMany({
       where,
-      include: { product: { include: { category: true, analytics: true } } },
+      select: {
+        quantity: true,
+        totalPrice: true,
+        product: {
+          select: {
+            categoryId: true,
+            category: { select: { name: true } },
+          },
+        },
+      },
     });
 
     const categoryMap = new Map<number, any>();
-
     for (const item of items) {
       const categoryId = item.product.categoryId;
       const categoryName = item.product.category.name;
-
       if (!categoryMap.has(categoryId)) {
-        categoryMap.set(categoryId, {
-          categoryId,
-          categoryName,
-          totalSales: 0,
-          totalItems: 0,
-          totalRevenue: 0,
-        });
+        categoryMap.set(categoryId, { categoryId, categoryName, totalSales: 0, totalItems: 0, totalRevenue: 0 });
       }
-
       const cat = categoryMap.get(categoryId);
       cat.totalSales += 1;
       cat.totalItems += item.quantity;
       cat.totalRevenue += Number(item.totalPrice);
     }
 
-    return Array.from(categoryMap.values());
+    const result = Array.from(categoryMap.values());
+    await cacheSet(key, result, TTL.LONG);
+    return result;
   }
 
   async getTopProducts(filters: AnalyticsFilterInput & { limit?: number }) {
-    const { limit = 10, startDate, endDate } = filters;
+    const key = analyticsKey('topProducts', filters);
+    const cached = await cacheGet<any[]>(key);
+    if (cached) return cached;
 
+    const { limit = 10, startDate, endDate } = filters;
     const where: any = { order: { status: { in: ['DELIVERED', 'SHIPPED'] } } };
 
     if (startDate || endDate) {
@@ -141,37 +159,31 @@ export class AnalyticsService {
       if (endDate) where.order.createdAt.lte = new Date(endDate);
     }
 
-    const items = await prisma.orderItem.findMany({
+    const groupedItems = await prisma.orderItem.groupBy({
+      by: ['productId', 'productName', 'productSku'],
       where,
-      include: { product: { include: { analytics: true } } },
+      _sum: { quantity: true, totalPrice: true },
+      orderBy: { _sum: { totalPrice: 'desc' } },
+      take: limit,
     });
 
-    const productMap = new Map<number, any>();
+    const result = groupedItems.map(item => ({
+      productId: item.productId,
+      productName: item.productName,
+      sku: item.productSku,
+      unitsSold: item._sum.quantity || 0,
+      revenue: Number(item._sum.totalPrice || 0),
+    }));
 
-    for (const item of items) {
-      if (!productMap.has(item.productId)) {
-        productMap.set(item.productId, {
-          productId: item.productId,
-          productName: item.productName,
-          sku: item.productSku,
-          unitsSold: 0,
-          revenue: 0,
-        });
-      }
-
-      const prod = productMap.get(item.productId);
-      prod.unitsSold += item.quantity;
-      prod.revenue += Number(item.totalPrice);
-    }
-
-    const sorted = Array.from(productMap.values())
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, limit);
-
-    return sorted;
+    await cacheSet(key, result, TTL.LONG);
+    return result;
   }
 
   async getOverviewMetrics(filters: { period?: OverviewPeriod; warehouseId?: number; startDate?: string; endDate?: string }) {
+    const key = analyticsKey('overview', filters);
+    const cached = await cacheGet<any>(key);
+    if (cached) return cached;
+
     let currentStart: Date;
     let currentEnd: Date;
     let previousStart: Date;
@@ -414,7 +426,7 @@ export class AnalyticsService {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 6);
 
-    return {
+    const result = {
       period: effectivePeriod,
       range: {
         startDate: currentStart.toISOString(),
@@ -452,6 +464,9 @@ export class AnalyticsService {
       salesByCategory,
       topProducts,
     };
+
+    await cacheSet(key, result, TTL.LONG);
+    return result;
   }
 
   async getCustomerAnalytics(filters: AnalyticsFilterInput) {
@@ -463,22 +478,47 @@ export class AnalyticsService {
       if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
     }
 
-    const customers = await prisma.customer.findMany({
-      where,
-      include: { orders: true },
+    const totalCustomers = await prisma.customer.count({ where });
+
+    const activeCustomers = await prisma.customer.count({
+      where: {
+        ...where,
+        orders: {
+          some: {},
+        },
+      },
     });
 
-    const totalCustomers = customers.length;
-    const activeCustomers = customers.filter(c => c.orders.length > 0).length;
-    const avgOrdersPerCustomer = activeCustomers > 0 ? customers.reduce((sum, c) => sum + c.orders.length, 0) / activeCustomers : 0;
-    const totalSpent = customers.reduce((sum, c) => sum + Number(c.totalSpent), 0);
+    const totalOrders = await prisma.order.count({
+      where: {
+        customer: where,
+      },
+    });
+
+    const avgOrdersPerCustomer = activeCustomers > 0 ? totalOrders / activeCustomers : 0;
+
+    const spentAggregate = await prisma.customer.aggregate({
+      where,
+      _sum: {
+        totalSpent: true,
+      },
+    });
+    const totalSpent = Number(spentAggregate._sum.totalSpent || 0);
     const avgSpentPerCustomer = totalCustomers > 0 ? totalSpent / totalCustomers : 0;
 
+    const segmentGroups = await prisma.customer.groupBy({
+      by: ['segment'],
+      where,
+      _count: {
+        id: true,
+      },
+    });
+
     const segments = {
-      vip: customers.filter(c => c.segment === 'VIP').length,
-      regular: customers.filter(c => c.segment === 'REGULAR').length,
-      new: customers.filter(c => c.segment === 'NEW').length,
-      inactive: customers.filter(c => c.segment === 'INACTIVE').length,
+      vip: segmentGroups.find(g => g.segment === 'VIP')?._count.id || 0,
+      regular: segmentGroups.find(g => g.segment === 'REGULAR')?._count.id || 0,
+      new: segmentGroups.find(g => g.segment === 'NEW')?._count.id || 0,
+      inactive: segmentGroups.find(g => g.segment === 'INACTIVE')?._count.id || 0,
     };
 
     return {

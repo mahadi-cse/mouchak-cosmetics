@@ -2,6 +2,21 @@ import { RequestHandler } from 'express';
 import customerService from './customer.service';
 import { ok, paginate } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
+import { ForbiddenError } from '../../shared/utils/AppError';
+import { USER_TYPE_CODES } from '../../shared/types/auth.types';
+import { prisma } from '../../config/database';
+
+const checkCustomerOwnership = async (req: any, customerId: number) => {
+  if (req.user.role === USER_TYPE_CODES.CUSTOMER) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { userId: true },
+    });
+    if (!customer || customer.userId !== req.user.id) {
+      throw new ForbiddenError('You are not authorized to access this customer record');
+    }
+  }
+};
 
 export const listCustomers: RequestHandler = asyncHandler(async (req, res) => {
   const { page, limit, search, segment } = req.query;
@@ -18,18 +33,21 @@ export const listCustomers: RequestHandler = asyncHandler(async (req, res) => {
 
 export const getCustomerDetails: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  await checkCustomerOwnership(req, Number(id));
   const customer = await customerService.getCustomerDetails(Number(id));
   res.json(ok(customer));
 });
 
 export const updateCustomer: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  await checkCustomerOwnership(req, Number(id));
   const customer = await customerService.updateCustomer(Number(id), req.body);
   res.json(ok(customer, 'Customer updated successfully'));
 });
 
 export const getCustomerOrders: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  await checkCustomerOwnership(req, Number(id));
   const { page, limit, status } = req.query;
 
   const result = await customerService.getCustomerOrders(Number(id), {

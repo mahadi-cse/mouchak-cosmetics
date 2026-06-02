@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../middleware/authenticate';
 import * as customerDashboardController from './customerDashboard.controller';
+import { USER_TYPE_CODES } from '../../shared/types/auth.types';
 
 const router = Router();
 
-router.use(authenticate, authorize('CUSTOMER'));
+router.use(authenticate, authorize(USER_TYPE_CODES.CUSTOMER));
 
 router.get('/summary', customerDashboardController.getMySummary);
 router.get('/profile', customerDashboardController.getMyProfile);

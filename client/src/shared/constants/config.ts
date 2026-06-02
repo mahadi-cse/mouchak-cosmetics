@@ -33,11 +33,11 @@ export const ROUTES = {
   
   // Customer Routes
   DASHBOARD: '/dashboard',
-  PROFILE: '/profile',
-  MY_ORDERS: '/my-orders',
-  ORDER_DETAIL: '/my-orders/:id',
+  PROFILE: '/dashboard?tab=profile',
+  MY_ORDERS: '/dashboard?tab=order',
+  ORDER_DETAIL: '/dashboard?tab=order&id=:id',
   CHECKOUT: '/checkout',
-  WISHLIST: '/wishlist',
+  WISHLIST: '/dashboard?tab=wishlist',
   CART: '/cart',
   
   // Shop Routes

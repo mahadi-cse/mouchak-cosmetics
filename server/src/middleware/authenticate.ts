@@ -5,47 +5,8 @@ import { fail } from '../shared/utils/apiResponse';
 import { prisma } from '../config/database';
 import logger from '../shared/utils/logger';
 
-type RoleAlias =
-  | 'SYSTEM_ADMIN'
-  | 'MANAGER'
-  | 'SALES_STAFF'
-  | 'CASHIER'
-  | 'RIDER'
-  | 'CUSTOMER'
-  | 'ADMIN'
-  | 'STAFF';
-
-type AllowedRole = RoleCode | RoleAlias;
-
-const ROLE_ALIAS_MAP: Record<RoleAlias, RoleCode | RoleCode[]> = {
-  SYSTEM_ADMIN: USER_TYPE_CODES.SYSTEM_ADMIN,
-  MANAGER: USER_TYPE_CODES.MANAGER,
-  SALES_STAFF: USER_TYPE_CODES.SALES_STAFF,
-  CASHIER: USER_TYPE_CODES.CASHIER,
-  RIDER: USER_TYPE_CODES.RIDER,
-  CUSTOMER: USER_TYPE_CODES.CUSTOMER,
-  ADMIN: USER_TYPE_CODES.SYSTEM_ADMIN,
-  STAFF: [
-    USER_TYPE_CODES.MANAGER,
-    USER_TYPE_CODES.SALES_STAFF,
-    USER_TYPE_CODES.CASHIER,
-    USER_TYPE_CODES.RIDER,
-  ],
-};
-
-const isRoleAlias = (role: AllowedRole): role is RoleAlias => role in ROLE_ALIAS_MAP;
-
-const toRoleCodeSet = (roles: AllowedRole[]): Set<RoleCode> => {
-  const normalized = roles.flatMap((role) => {
-    if (isRoleAlias(role)) {
-      const mapped = ROLE_ALIAS_MAP[role];
-      return Array.isArray(mapped) ? mapped : [mapped];
-    }
-
-    return [role];
-  });
-
-  return new Set(normalized);
+const toRoleCodeSet = (roles: RoleCode[]): Set<RoleCode> => {
+  return new Set(roles);
 };
 
 export const authMiddleware: RequestHandler = async (req, res, next) => {
@@ -84,7 +45,7 @@ export const authMiddleware: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const allowRoles = (...roles: AllowedRole[]): RequestHandler => {
+export const allowRoles = (...roles: RoleCode[]): RequestHandler => {
   const allowedRoleCodes = toRoleCodeSet(roles);
 
   return (req, res, next) => {

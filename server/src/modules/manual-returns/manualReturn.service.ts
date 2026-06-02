@@ -79,48 +79,42 @@ export class ManualReturnService {
       for (const [productIdStr, returnedQty] of Object.entries(productQtyMap)) {
         const productId = Number(productIdStr);
 
-        const inventory = await tx.inventory.findUnique({
+        // Ensure inventory record exists
+        await tx.inventory.upsert({
           where: { productId_warehouseId: { productId, warehouseId: data.branchId } },
+          update: {},
+          create: { productId, warehouseId: data.branchId, quantity: 0, reservedQty: 0 },
         });
 
-        if (inventory) {
-          const beforeQty = inventory.quantity;
-          const afterQty = beforeQty + returnedQty;
+        // Lock inventory record
+        const lockedRows = await tx.$queryRaw<any[]>`
+          SELECT * FROM inventory 
+          WHERE "productId" = ${productId} AND "warehouseId" = ${data.branchId}
+          FOR UPDATE
+        `;
+        const inventory = lockedRows[0];
 
-          await tx.inventory.update({
-            where: { id: inventory.id },
-            data: { quantity: { increment: returnedQty } },
-          });
+        if (!inventory) throw new ConflictError('Inventory record vanished');
 
-          await tx.inventoryTransaction.create({
-            data: {
-              inventoryId: inventory.id,
-              type: 'RETURN',
-              quantity: returnedQty,
-              balanceBefore: beforeQty,
-              balanceAfter: afterQty,
-              reference: returnNumber,
-              notes: `Manual return recorded (${returnNumber})`,
-            },
-          });
-        } else {
-          // Create inventory record if it doesn't exist
-          const newInv = await tx.inventory.create({
-            data: { productId, warehouseId: data.branchId, quantity: returnedQty, reservedQty: 0 },
-          });
+        const beforeQty = inventory.quantity;
+        const afterQty = beforeQty + returnedQty;
 
-          await tx.inventoryTransaction.create({
-            data: {
-              inventoryId: newInv.id,
-              type: 'RETURN',
-              quantity: returnedQty,
-              balanceBefore: 0,
-              balanceAfter: returnedQty,
-              reference: returnNumber,
-              notes: `Manual return recorded (${returnNumber})`,
-            },
-          });
-        }
+        await tx.inventory.update({
+          where: { id: inventory.id },
+          data: { quantity: { increment: returnedQty } },
+        });
+
+        await tx.inventoryTransaction.create({
+          data: {
+            inventoryId: inventory.id,
+            type: 'RETURN',
+            quantity: returnedQty,
+            balanceBefore: beforeQty,
+            balanceAfter: afterQty,
+            reference: returnNumber,
+            notes: `Manual return recorded (${returnNumber})`,
+          },
+        });
       }
 
       return {

@@ -94,7 +94,20 @@ export class ManualSaleService {
       for (const [productIdStr, requestedQty] of Object.entries(productQtyMap)) {
         const productId = Number(productIdStr);
         const product = productMap.get(productId)!;
-        const inventory = product.inventories[0]!;
+        
+        // Lock inventory record
+        const lockedRows = await tx.$queryRaw<any[]>`
+          SELECT * FROM inventory 
+          WHERE "productId" = ${productId} AND "warehouseId" = ${data.branchId}
+          FOR UPDATE
+        `;
+        const inventory = lockedRows[0];
+        
+        if (!inventory) throw new ConflictError(`Inventory record vanished for product ${product.name}`);
+        if (inventory.quantity < requestedQty) {
+          throw new ConflictError(`Insufficient stock for product ${product.name} (Available: ${inventory.quantity})`);
+        }
+
         const beforeQty = inventory.quantity;
         const afterQty = beforeQty - requestedQty;
 

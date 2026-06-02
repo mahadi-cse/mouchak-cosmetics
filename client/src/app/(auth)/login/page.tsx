@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import LoginPageClient from './LoginPageClient';
+import { LoginView } from '@/modules/auth';
 
 interface LoginPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -12,7 +12,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <Suspense fallback={<div className="p-6 text-sm text-zinc-500">Loading login page...</div>}>
-      <LoginPageClient callbackUrl={callbackUrl || '/dashboard'} />
+      <LoginView callbackUrl={callbackUrl || '/dashboard'} />
     </Suspense>
   );
 }

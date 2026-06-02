@@ -23,12 +23,12 @@ router.get(
   authController.adminOnlyHealth
 );
 
-router.get('/user-types', authMiddleware, authController.getUserTypes);
-router.get('/users', authMiddleware, authController.getUsers);
-router.post('/users', authMiddleware, authController.createUser);
-router.patch('/users/:id', authMiddleware, authController.updateUser);
-router.put('/users/:id/modules', authMiddleware, authController.updateUserModules);
-router.put('/users/:id/branches', authMiddleware, authController.updateUserBranches);
-router.post('/users/:id/force-logout', authMiddleware, authController.forceLogout);
+router.get('/user-types', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.getUserTypes);
+router.get('/users', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.getUsers);
+router.post('/users', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.createUser);
+router.patch('/users/:id', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.updateUser);
+router.put('/users/:id/modules', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.updateUserModules);
+router.put('/users/:id/branches', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.updateUserBranches);
+router.post('/users/:id/force-logout', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.forceLogout);
 
 export default router;
