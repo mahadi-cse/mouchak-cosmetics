@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useSiteSettings } from '@/modules/homepage';
-import { adjustColor } from '@/shared/utils/theme';
+import { getThemeColors } from '@/shared/utils/theme';
 
 export default function ColorThemeProvider() {
   const { data: settings } = useSiteSettings();
@@ -11,13 +11,13 @@ export default function ColorThemeProvider() {
     if (settings?.primaryColor) {
       const root = document.documentElement;
       const primary = settings.primaryColor;
+      const colors = getThemeColors(primary);
       
-      // Calculate a darker shade for primaryDark (-30 roughly maps to a darker shade)
-      const primaryDark = adjustColor(primary, -30);
-      
-      root.style.setProperty('--primary', primary);
-      root.style.setProperty('--primary-dark', primaryDark);
-      root.style.setProperty('--ring', primary);
+      root.style.setProperty('--primary', colors.primary);
+      root.style.setProperty('--primary-dark', colors.primaryDark);
+      root.style.setProperty('--primary-light', colors.primaryLight);
+      root.style.setProperty('--primary-pale', colors.primaryPale);
+      root.style.setProperty('--ring', colors.primary);
     }
   }, [settings?.primaryColor]);
 
