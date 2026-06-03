@@ -46,9 +46,6 @@ router.post(
         {
           folder,
           resource_type: 'image',
-          transformation: [
-            { quality: 'auto:good', fetch_format: 'auto' },
-          ],
         },
         (error, result) => {
           if (error) reject(error);
