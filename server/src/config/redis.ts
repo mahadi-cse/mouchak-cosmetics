@@ -1,29 +1,51 @@
-import { createClient, RedisClientType } from 'redis';
+import { Redis } from '@upstash/redis';
 
-const globalForRedis = global as unknown as { redis: RedisClientType | undefined };
+/**
+ * Upstash Redis REST client.
+ *
+ * Uses HTTP/HTTPS instead of TCP — no persistent connection, no TLS handshake
+ * overhead per invocation. This is the correct approach for serverless
+ * environments like Vercel where TCP connection pooling is not available.
+ *
+ * Requires two environment variables:
+ *   UPSTASH_REDIS_REST_URL  — e.g. https://knowing-caribou-142345.upstash.io
+ *   UPSTASH_REDIS_REST_TOKEN — the bearer token shown in Upstash console
+ *
+ * Falls back to a no-op mock client when the env vars are not set
+ * (local development without Redis).
+ */
 
-function createRedisClient(): RedisClientType {
-  const url = process.env.REDIS_URL || 'redis://localhost:6379';
+// Minimal mock for local development when Upstash env vars are absent
+const createMockClient = () => ({
+  get: async (_key: string) => null,
+  set: async (_key: string, _value: unknown, _opts?: unknown) => 'OK' as const,
+  del: async (..._keys: string[]) => 0,
+  scan: async (_cursor: number, _opts?: unknown) => ({ cursor: 0, keys: [] }),
+  keys: async (_pattern: string) => [] as string[],
+});
 
-  const client = createClient({ url }) as RedisClientType;
+type MockClient = ReturnType<typeof createMockClient>;
 
-  client.on('connect', () => console.log('[Redis] Connected'));
-  client.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
-  client.on('end', () => console.warn('[Redis] Connection closed'));
+let _redis: Redis | MockClient | null = null;
 
-  // Connect once — node-redis v4 requires explicit connect()
-  client.connect().catch((err: Error) =>
-    console.error('[Redis] Initial connection failed:', err.message)
-  );
+function getRedisClient(): Redis | MockClient {
+  if (_redis) return _redis;
 
-  return client;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    console.warn(
+      '[Redis] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN is not set. ' +
+        'Using no-op mock client — caching is disabled.'
+    );
+    _redis = createMockClient();
+    return _redis;
+  }
+
+  _redis = new Redis({ url, token });
+  return _redis;
 }
 
-export const redis: RedisClientType =
-  globalForRedis.redis ?? createRedisClient();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForRedis.redis = redis;
-}
-
+export const redis = getRedisClient();
 export default redis;
