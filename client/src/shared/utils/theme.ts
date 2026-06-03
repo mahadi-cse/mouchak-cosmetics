@@ -21,9 +21,22 @@ export function adjustColor(color: string, amount: number) {
   return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
 }
 
+export function blendWithWhite(color: string, weight: number) {
+  const rgb = hexToRgb(color);
+  if (!rgb) return color;
+  
+  const r = Math.round(rgb.r + (255 - rgb.r) * weight);
+  const g = Math.round(rgb.g + (255 - rgb.g) * weight);
+  const b = Math.round(rgb.b + (255 - rgb.b) * weight);
+  
+  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
+}
+
 export function getThemeColors(primary: string) {
   return {
     primary,
     primaryDark: adjustColor(primary, -30),
+    primaryLight: blendWithWhite(primary, 0.85),
+    primaryPale: blendWithWhite(primary, 0.93),
   };
 }

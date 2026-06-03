@@ -44,6 +44,8 @@ export default async function RootLayout({
           :root {
             --primary: ${colors.primary};
             --primary-dark: ${colors.primaryDark};
+            --primary-light: ${colors.primaryLight};
+            --primary-pale: ${colors.primaryPale};
             --ring: ${colors.primary};
           }
         `}} />
