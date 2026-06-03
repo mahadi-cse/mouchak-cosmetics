@@ -40,11 +40,10 @@ export function createApp(): Express {
     cors({
       origin: (origin, callback) => {
         // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
-          callback(new Error(`CORS: origin '${origin}' not allowed`));
+          callback(null, false); // Standard CORS rejection (fails in browser, no server 500 error)
         }
       },
       credentials: true,
