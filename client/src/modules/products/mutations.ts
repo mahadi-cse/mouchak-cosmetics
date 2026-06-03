@@ -1,4 +1,5 @@
 import { useMutation, UseMutationResult, UseMutationOptions } from '@tanstack/react-query';
+import apiClient from '@/shared/lib/apiClient';
 
 export interface CreateProductPayload {
   name: string;
@@ -22,13 +23,8 @@ export const useCreateProduct = (
 ): UseMutationResult<any, Error, CreateProductPayload> => {
   return useMutation({
     mutationFn: async (data) => {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create product');
-      return response.json();
+      const response = await apiClient.post('/products', data);
+      return response.data;
     },
     ...options,
   });
@@ -43,13 +39,8 @@ export const useUpdateProduct = (
   return useMutation({
     mutationFn: async (data) => {
       const { id, ...updateData } = data;
-      const response = await fetch(`/api/products/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      });
-      if (!response.ok) throw new Error('Failed to update product');
-      return response.json();
+      const response = await apiClient.put(`/products/${id}`, updateData);
+      return response.data;
     },
     ...options,
   });
@@ -63,10 +54,7 @@ export const useDeleteProduct = (
 ): UseMutationResult<void, Error, number> => {
   return useMutation({
     mutationFn: async (productId) => {
-      const response = await fetch(`/api/products/${productId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete product');
+      await apiClient.delete(`/products/${productId}`);
     },
     ...options,
   });

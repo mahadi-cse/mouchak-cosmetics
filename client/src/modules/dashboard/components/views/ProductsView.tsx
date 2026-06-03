@@ -19,6 +19,7 @@ import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
+import { LoadingOverlay } from '@/shared/components';
 
 const inputClass = 'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
 const selectClass = `${inputClass} cursor-pointer`;
@@ -43,6 +44,8 @@ export default function ProductsView() {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSavingProduct = createProduct.isPending || updateProduct.isPending || isSubmitting;
 
 
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -81,6 +84,7 @@ export default function ProductsView() {
 
   const handleAddProduct = async () => {
     if (!productForm.name || !productForm.sku || !productForm.price || !productForm.categoryId || !productForm.branchId) return toast.error(t.products.fillRequired);
+    setIsSubmitting(true);
     try {
       let imageUrl = productForm.image;
       if (productImageRef.current?.hasPending()) { const uploaded = await productImageRef.current.upload(); if (uploaded) imageUrl = uploaded; }
@@ -91,7 +95,7 @@ export default function ProductsView() {
       if (editProduct) { await updateProduct.mutateAsync({ id: editProduct, ...payload }); toast.success(t.products.productUpdated); }
       else { await createProduct.mutateAsync(payload); toast.success(t.products.productCreated); }
       resetForm();
-    } catch (error: any) { toast.error(error?.message || t.products.failedSave); }
+    } catch (error: any) { toast.error(error?.message || t.products.failedSave); } finally { setIsSubmitting(false); }
   };
 
   const handleDeleteProduct = async (id: number) => {
@@ -108,6 +112,7 @@ export default function ProductsView() {
 
   return (
     <div className="flex flex-col gap-4">
+      {isSavingProduct && <LoadingOverlay />}
       <Card className={isMobile ? 'p-[18px]' : 'p-7'}>
         <div className="mb-[14px] flex flex-wrap items-center justify-between gap-2">
           <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
@@ -145,7 +150,7 @@ export default function ProductsView() {
             <div className="mt-3"><div className="mb-2 flex items-center justify-between"><label className={labelClass} style={{ marginBottom: 0 }}>{t.products.sizesOptional}</label><Btn variant="ghost" size="sm" onClick={() => setProductForm({ ...productForm, sizes: [...productForm.sizes, { name: '', imageUrl: '', priceOverride: '' }] })}>{t.products.addSize}</Btn></div>
               {productForm.sizes.length > 0 && <div className="flex flex-col gap-2">{productForm.sizes.map((size, idx) => (<div key={idx} className={`grid items-end gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}><div><label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.sizeName}</label><input className={inputClass} value={size.name} onChange={(e) => { const n = [...productForm.sizes]; n[idx] = { ...n[idx], name: e.target.value }; setProductForm({ ...productForm, sizes: n }); }} placeholder="e.g. S, M, L" /></div><div><label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.priceOverride}</label><input type="number" className={inputClass} value={size.priceOverride} onChange={(e) => { const n = [...productForm.sizes]; n[idx] = { ...n[idx], priceOverride: e.target.value }; setProductForm({ ...productForm, sizes: n }); }} placeholder={t.products.leaveEmpty} /></div><div><Btn variant="ghost" size="sm" onClick={() => setProductForm({ ...productForm, sizes: productForm.sizes.filter((_, i) => i !== idx) })}>{t.products.remove}</Btn></div></div>))}</div>}
             </div>
-            <div className="mt-3 flex gap-2"><Btn variant="ghost" size="sm" onClick={resetForm}>{t.products.cancel}</Btn><Btn variant="primary" size="sm" onClick={handleAddProduct}>{editProduct !== null ? t.products.saveChanges : t.products.createProduct}</Btn></div>
+            <div className="mt-3 flex gap-2"><Btn variant="ghost" size="sm" onClick={resetForm} disabled={isSavingProduct}>{t.products.cancel}</Btn><Btn variant="primary" size="sm" onClick={handleAddProduct} loading={isSavingProduct}>{editProduct !== null ? t.products.saveChanges : t.products.createProduct}</Btn></div>
           </div>
         )}
 

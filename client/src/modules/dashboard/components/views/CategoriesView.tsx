@@ -11,6 +11,7 @@ import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
+import { LoadingOverlay } from '@/shared/components';
 
 const inputClass = 'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
 const selectClass = `${inputClass} cursor-pointer`;
@@ -32,6 +33,8 @@ export default function CategoriesView() {
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
   const updateCategoryStatus = useUpdateCategoryStatus();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSavingCategory = createCategory.isPending || updateCategory.isPending || isSubmitting;
 
   const [editCat, setEditCat] = useState<number | null>(null);
   const [showAddCat, setShowAddCat] = useState(false);
@@ -39,6 +42,7 @@ export default function CategoriesView() {
 
   const handleAddCategory = async () => {
     if (!catForm.name || !catForm.branchId) return toast.error(t.categories.nameAndBranchRequired);
+    setIsSubmitting(true);
     try {
       let imageUrl = catForm.imageUrl;
       if (categoryImageRef.current?.hasPending()) { const uploaded = await categoryImageRef.current.upload(); if (uploaded) imageUrl = uploaded; }
@@ -46,7 +50,7 @@ export default function CategoriesView() {
       if (editCat) { await updateCategory.mutateAsync({ id: editCat, data: payload }); toast.success(t.categories.categoryUpdated); }
       else { await createCategory.mutateAsync(payload); toast.success(t.categories.categoryCreated); }
       setShowAddCat(false); setEditCat(null); setCatForm({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: '' });
-    } catch { toast.error(t.categories.failedSaveCategory); }
+    } catch { toast.error(t.categories.failedSaveCategory); } finally { setIsSubmitting(false); }
   };
 
   const handleDeleteCategory = async (id: number) => {
@@ -63,6 +67,7 @@ export default function CategoriesView() {
 
   return (
     <div className="flex flex-col gap-4">
+      {isSavingCategory && <LoadingOverlay />}
       <Card className={isMobile ? 'p-[18px]' : 'p-7'}>
         <div className="mb-[14px] flex flex-wrap items-center justify-between gap-2">
           <div className="text-[13px]" style={{ color: Theme.mutedFg }}>{isLoadingCats ? t.categories.loadingCategories : `${categories.length} ${t.categories.totalCategories}`}</div>
@@ -86,7 +91,7 @@ export default function CategoriesView() {
               <div className={isMobile ? '' : 'col-span-2'}><label className={labelClass}>{t.categories.categoryImage}</label><ImageUploader ref={categoryImageRef} value={catForm.imageUrl} onChange={(url) => setCatForm(f => ({ ...f, imageUrl: url }))} folder="mouchak/categories" aspect={16 / 9} placeholder={t.categories.uploadImage} /></div>
             </div>
             <div className="mb-3"><label className="flex cursor-pointer items-center gap-2 text-[13px]"><input type="checkbox" checked={catForm.active} onChange={(e) => setCatForm(f => ({ ...f, active: e.target.checked }))} style={{ accentColor: Theme.primary }} />{t.categories.activeOnStorefront}</label></div>
-            <div className="flex gap-2"><Btn variant="ghost" size="sm" onClick={() => { setShowAddCat(false); setEditCat(null); }}>{t.products.cancel}</Btn><Btn variant="primary" size="sm" onClick={handleAddCategory}>{editCat !== null ? t.products.saveChanges : t.categories.createCategory}</Btn></div>
+            <div className="flex gap-2"><Btn variant="ghost" size="sm" onClick={() => { setShowAddCat(false); setEditCat(null); }} disabled={isSavingCategory}>{t.products.cancel}</Btn><Btn variant="primary" size="sm" onClick={handleAddCategory} loading={isSavingCategory}>{editCat !== null ? t.products.saveChanges : t.categories.createCategory}</Btn></div>
           </div>
         )}
 
