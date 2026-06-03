@@ -19,7 +19,6 @@ import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
-import { LoadingOverlay } from '@/shared/components';
 
 const inputClass = 'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
 const selectClass = `${inputClass} cursor-pointer`;
@@ -85,17 +84,26 @@ export default function ProductsView() {
   const handleAddProduct = async () => {
     if (!productForm.name || !productForm.sku || !productForm.price || !productForm.categoryId || !productForm.branchId) return toast.error(t.products.fillRequired);
     setIsSubmitting(true);
-    try {
+    
+    const savePromise = (async () => {
       let imageUrl = productForm.image;
       if (productImageRef.current?.hasPending()) { const uploaded = await productImageRef.current.upload(); if (uploaded) imageUrl = uploaded; }
       const defaultImage = 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=800&auto=format&fit=crop';
       const images = imageUrl ? [imageUrl] : [defaultImage];
       const sizesPayload = productForm.sizes.filter(s => s.name.trim()).map((s, i) => ({ name: s.name.trim(), sortOrder: i, imageUrl: s.imageUrl || null, priceOverride: s.priceOverride ? Number(s.priceOverride) : null }));
       const payload = { name: productForm.name, sku: productForm.sku, price: Number(productForm.price), costPrice: productForm.costPrice ? Number(productForm.costPrice) : undefined, categoryId: Number(productForm.categoryId), branchId: Number(productForm.branchId), description: productForm.description, images, unitType: productForm.unitType, unitLabel: productForm.unitLabel, sizes: sizesPayload } as any;
-      if (editProduct) { await updateProduct.mutateAsync({ id: editProduct, ...payload }); toast.success(t.products.productUpdated); }
-      else { await createProduct.mutateAsync(payload); toast.success(t.products.productCreated); }
+      if (editProduct) { await updateProduct.mutateAsync({ id: editProduct, ...payload }); }
+      else { await createProduct.mutateAsync(payload); }
       resetForm();
-    } catch (error: any) { toast.error(error?.message || t.products.failedSave); } finally { setIsSubmitting(false); }
+    })();
+
+    toast.promise(savePromise, {
+      loading: editProduct ? 'Updating product...' : 'Creating product...',
+      success: editProduct ? t.products.productUpdated : t.products.productCreated,
+      error: (err: any) => err?.message || t.products.failedSave,
+    }).finally(() => {
+      setIsSubmitting(false);
+    });
   };
 
   const handleDeleteProduct = async (id: number) => {
@@ -112,7 +120,6 @@ export default function ProductsView() {
 
   return (
     <div className="flex flex-col gap-4">
-      {isSavingProduct && <LoadingOverlay />}
       <Card className={isMobile ? 'p-[18px]' : 'p-7'}>
         <div className="mb-[14px] flex flex-wrap items-center justify-between gap-2">
           <div className="text-[13px]" style={{ color: Theme.mutedFg }}>

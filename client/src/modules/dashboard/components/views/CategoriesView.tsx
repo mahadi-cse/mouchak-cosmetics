@@ -11,7 +11,6 @@ import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
-import { LoadingOverlay } from '@/shared/components';
 
 const inputClass = 'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
 const selectClass = `${inputClass} cursor-pointer`;
@@ -43,14 +42,23 @@ export default function CategoriesView() {
   const handleAddCategory = async () => {
     if (!catForm.name || !catForm.branchId) return toast.error(t.categories.nameAndBranchRequired);
     setIsSubmitting(true);
-    try {
+    
+    const savePromise = (async () => {
       let imageUrl = catForm.imageUrl;
       if (categoryImageRef.current?.hasPending()) { const uploaded = await categoryImageRef.current.upload(); if (uploaded) imageUrl = uploaded; }
       const payload = { name: catForm.name, description: catForm.desc, isActive: catForm.active, imageUrl, branchId: Number(catForm.branchId) } as any;
-      if (editCat) { await updateCategory.mutateAsync({ id: editCat, data: payload }); toast.success(t.categories.categoryUpdated); }
-      else { await createCategory.mutateAsync(payload); toast.success(t.categories.categoryCreated); }
+      if (editCat) { await updateCategory.mutateAsync({ id: editCat, data: payload }); }
+      else { await createCategory.mutateAsync(payload); }
       setShowAddCat(false); setEditCat(null); setCatForm({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: '' });
-    } catch { toast.error(t.categories.failedSaveCategory); } finally { setIsSubmitting(false); }
+    })();
+
+    toast.promise(savePromise, {
+      loading: editCat ? 'Updating category...' : 'Creating category...',
+      success: editCat ? t.categories.categoryUpdated : t.categories.categoryCreated,
+      error: t.categories.failedSaveCategory,
+    }).finally(() => {
+      setIsSubmitting(false);
+    });
   };
 
   const handleDeleteCategory = async (id: number) => {
@@ -67,7 +75,6 @@ export default function CategoriesView() {
 
   return (
     <div className="flex flex-col gap-4">
-      {isSavingCategory && <LoadingOverlay />}
       <Card className={isMobile ? 'p-[18px]' : 'p-7'}>
         <div className="mb-[14px] flex flex-wrap items-center justify-between gap-2">
           <div className="text-[13px]" style={{ color: Theme.mutedFg }}>{isLoadingCats ? t.categories.loadingCategories : `${categories.length} ${t.categories.totalCategories}`}</div>
