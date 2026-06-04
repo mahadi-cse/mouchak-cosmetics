@@ -415,6 +415,7 @@ export class AuthService {
         firstName: true,
         lastName: true,
         phone: true,
+        avatarUrl: true,
         userType: true,
         customer: {
           select: {
@@ -466,7 +467,7 @@ export class AuthService {
     return profile;
   }
 
-  async updateProfile(userId: number, data: { firstName?: string; lastName?: string; phone?: string; address?: string }) {
+  async updateProfile(userId: number, data: { firstName?: string; lastName?: string; phone?: string; address?: string; avatarUrl?: string }) {
     // Check if this user is a customer
     const customer = await prisma.customer.findUnique({ where: { userId } });
 
@@ -495,6 +496,13 @@ export class AuthService {
         },
       });
 
+      if (data.avatarUrl !== undefined) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { avatarUrl: data.avatarUrl },
+        });
+      }
+
       return {
         id: updatedCustomer.user.id,
         email: updatedCustomer.user.email,
@@ -502,6 +510,7 @@ export class AuthService {
         lastName: updatedCustomer.lastName,
         phone: updatedCustomer.phone,
         address: updatedCustomer.defaultAddress,
+        avatarUrl: data.avatarUrl,
       };
     }
 
@@ -513,6 +522,7 @@ export class AuthService {
         ...(data.lastName !== undefined && { lastName: data.lastName }),
         ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.address !== undefined && { address: data.address }),
+        ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
       },
       select: {
         id: true,
@@ -521,9 +531,10 @@ export class AuthService {
         lastName: true,
         phone: true,
         address: true,
+        avatarUrl: true,
       }
     });
-    
+
     return updatedUser;
   }
 }

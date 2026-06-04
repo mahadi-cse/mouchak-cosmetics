@@ -26,7 +26,7 @@ const upload = multer({
 router.post(
   '/image',
   authenticate,
-  authorize(USER_TYPE_CODES.SYSTEM_ADMIN, USER_TYPE_CODES.MANAGER, USER_TYPE_CODES.SALES_STAFF, USER_TYPE_CODES.CASHIER),
+  authorize(USER_TYPE_CODES.SYSTEM_ADMIN, USER_TYPE_CODES.MANAGER, USER_TYPE_CODES.SALES_STAFF, USER_TYPE_CODES.CASHIER, USER_TYPE_CODES.CUSTOMER),
   upload.single('image'),
   asyncHandler(async (req, res) => {
     if (!req.file) {

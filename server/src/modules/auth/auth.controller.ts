@@ -158,8 +158,8 @@ export const updateProfile: RequestHandler = asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Unauthorized', 'UNAUTHORIZED');
   }
 
-  const { firstName, lastName, phone, address } = req.body;
-  const updated = await authService.updateProfile(req.user.id, { firstName, lastName, phone, address });
+  const { firstName, lastName, phone, address, avatarUrl } = req.body;
+  const updated = await authService.updateProfile(req.user.id, { firstName, lastName, phone, address, avatarUrl });
   
   res.json(ok(updated, 'Profile updated successfully'));
 });

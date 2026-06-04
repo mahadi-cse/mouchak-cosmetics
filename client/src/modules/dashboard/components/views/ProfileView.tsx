@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Theme } from "@/modules/dashboard/utils/theme";
 import { apiClient } from "@/shared/lib/apiClient";
+import { useQueryClient } from '@tanstack/react-query';
+import { PROFILE_QUERY_KEY } from '@/modules/auth/queries/useProfileQuery';
 
 export default function ProfileView() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -50,8 +54,47 @@ export default function ProfileView() {
             
             {/* Profile Header Card */}
             <div className="bg-white border border-gray-100 rounded-xl p-6 flex flex-row items-center gap-5 shadow-sm">
-              <div className="w-16 h-16 rounded-full bg-pink-500 flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-sm">
-                {initials}
+              <div className="relative group cursor-pointer">
+                <div className="w-16 h-16 rounded-full bg-pink-500 flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-sm overflow-hidden">
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    initials
+                  )}
+                </div>
+                {/* Edit Badge */}
+                <div className="absolute bottom-0 right-0 bg-white border-2 border-white rounded-full p-1 shadow-md text-pink-500 z-10 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                </div>
+                <label className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 cursor-pointer text-[10px] font-bold z-20">
+                  {uploading ? '...' : 'UPLOAD'}
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploading(true);
+                      try {
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        const res = await apiClient.post('/uploads/image?folder=mouchak/users', formData, {
+                          headers: { 'Content-Type': 'multipart/form-data' },
+                        });
+                        const newAvatarUrl = res.data.data.url;
+                        await apiClient.patch('/auth/profile', { avatarUrl: newAvatarUrl });
+                        setProfile((prev: any) => ({ ...prev, avatarUrl: newAvatarUrl }));
+                        queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
+                      } catch (err) {
+                        alert('Failed to upload avatar');
+                      } finally {
+                        setUploading(false);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                </label>
               </div>
               <div className="flex-1 flex flex-col justify-center">
                 <div className="flex items-center gap-3 mb-1">

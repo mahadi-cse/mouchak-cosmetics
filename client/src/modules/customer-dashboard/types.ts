@@ -37,6 +37,7 @@ export interface CustomerDashboardProfile {
   id: number;
   userId: number;
   email: string;
+  avatarUrl?: string | null;
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -162,6 +163,7 @@ export interface WishlistItem {
 export interface UpdateProfilePayload {
   firstName?: string;
   lastName?: string;
+  avatarUrl?: string;
   phone?: string;
   address?: string;
   dateOfBirth?: string;

@@ -87,6 +87,7 @@ class CustomerDashboardService {
       id: customer.id,
       userId: customer.userId,
       email: customer.user.email,
+      avatarUrl: customer.user.avatarUrl,
       firstName: customer.firstName,
       lastName: customer.lastName,
       phone: customer.phone,
@@ -126,6 +127,13 @@ class CustomerDashboardService {
     if (data.city !== undefined) customerUpdateData.city = data.city || null;
     if (data.postalCode !== undefined) customerUpdateData.postalCode = data.postalCode || null;
     if (data.country !== undefined) customerUpdateData.country = data.country || 'Bangladesh';
+
+    if ((data as any).avatarUrl !== undefined) {
+      await prisma.user.update({
+        where: { id: customer.userId },
+        data: { avatarUrl: (data as any).avatarUrl },
+      });
+    }
 
     if (Object.keys(customerUpdateData).length > 0) {
       await prisma.customer.update({
