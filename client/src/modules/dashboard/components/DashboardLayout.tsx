@@ -838,8 +838,8 @@ export default function DashboardLayout({
               try {
                 await createSaleMutation.mutateAsync({
                   items: [{ productId: product.id, quantity: qty, unitPrice: total / qty }],
-                  branchId: product.branchId ?? (product as any).inventories?.[0]?.warehouseId,
-                  branchName: product.branch ?? '',
+                  branchId: (product as any).branchId ?? (product as any).inventories?.[0]?.warehouseId,
+                  branchName: (product as any).branch ?? '',
                   note: note || undefined,
                   soldBy: 'Staff',
                 });

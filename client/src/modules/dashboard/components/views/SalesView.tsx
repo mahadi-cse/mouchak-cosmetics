@@ -394,26 +394,26 @@ export default function SalesView({
                           </div>
                           <div className="inline-flex items-center rounded-lg border bg-white overflow-hidden" style={{ borderColor: Theme.border }}>
                             <button
-                              className="w-10 h-10 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="w-8 h-8 text-sm font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                               style={{ color: Theme.fg }}
                               onClick={() => updateLineItem(idx, { qty: item.qty - 1 })}
                               disabled={item.qty <= 1}
                             >
                               −
                             </button>
-                            <span className="w-px h-5 bg-gray-200" />
+                            <span className="w-px h-4 bg-gray-200" />
                             <input
                               type="number"
                               min={1}
                               max={maxQty}
                               value={item.qty}
                               onChange={(e) => updateLineItem(idx, { qty: Number(e.target.value) || 1 })}
-                              className="w-14 text-center text-sm font-bold outline-none bg-transparent"
+                              className="w-10 text-center text-xs font-bold outline-none bg-transparent"
                               style={{ color: Theme.fg }}
                             />
-                            <span className="w-px h-5 bg-gray-200" />
+                            <span className="w-px h-4 bg-gray-200" />
                             <button
-                              className="w-10 h-10 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="w-8 h-8 text-sm font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                               style={{ color: Theme.fg }}
                               onClick={() => updateLineItem(idx, { qty: item.qty + 1 })}
                               disabled={item.qty >= maxQty}
@@ -432,7 +432,7 @@ export default function SalesView({
                             min={0}
                             value={item.unitPrice}
                             onChange={(e) => updateLineItem(idx, { unitPrice: Number(e.target.value) || 0 })}
-                            className="w-full px-2.5 py-2 border rounded text-sm text-right outline-none bg-white"
+                            className="w-full px-2.5 py-1.5 border rounded text-sm text-right outline-none bg-white"
                             style={{ borderColor: Theme.border }}
                           />
                         </div>
