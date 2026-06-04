@@ -120,8 +120,8 @@ export default function ProfileTab() {
         <div className="flex items-center gap-4">
           <div className="relative group">
             <div
-              className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm ring-2"
-              style={{ background: DESIGN.softPink, color: DESIGN.primary, ringColor: DESIGN.primary }}
+              className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm border-2"
+              style={{ background: DESIGN.softPink, color: DESIGN.primary, borderColor: DESIGN.primary }}
             >
               {draft.avatarUrl ? (
                 <img src={draft.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
