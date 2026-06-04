@@ -239,6 +239,50 @@ export default function SalesView({
     setLineItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const handleGrandTotalChange = (newGrandTotal: number) => {
+    if (lineItems.length === 0) return;
+    const currentCalculatedTotal = lineItems.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
+    if (currentCalculatedTotal === 0) {
+      const totalQty = lineItems.reduce((sum, item) => sum + item.qty, 0);
+      if (totalQty === 0) return;
+      const pricePerUnit = newGrandTotal / totalQty;
+      setLineItems((prev) =>
+        prev.map((item) => {
+          const nextPrice = Math.round(pricePerUnit * 100) / 100;
+          return { ...item, unitPrice: nextPrice, total: item.qty * nextPrice };
+        })
+      );
+      return;
+    }
+
+    const ratio = newGrandTotal / currentCalculatedTotal;
+    setLineItems((prev) => {
+      const updated = prev.map((item) => {
+        const nextPrice = Math.round(item.unitPrice * ratio * 100) / 100;
+        return {
+          ...item,
+          unitPrice: nextPrice,
+          total: item.qty * nextPrice,
+        };
+      });
+
+      const currentSum = updated.reduce((sum, item) => sum + item.total, 0);
+      const diff = newGrandTotal - currentSum;
+      if (diff !== 0 && updated.length > 0) {
+        const lastIdx = updated.length - 1;
+        const lastItem = updated[lastIdx];
+        const nextTotal = Math.max(0, lastItem.total + diff);
+        const nextPrice = lastItem.qty > 0 ? Math.round((nextTotal / lastItem.qty) * 100) / 100 : lastItem.unitPrice;
+        updated[lastIdx] = {
+          ...lastItem,
+          unitPrice: nextPrice,
+          total: lastItem.qty * nextPrice,
+        };
+      }
+      return updated;
+    });
+  };
+
   return (
     <div className={`flex flex-col ${isMobile ? 'gap-3' : 'gap-3.5'}`}>
       {/* Add Sale Form Card */}
@@ -547,14 +591,23 @@ export default function SalesView({
           </div>
 
           {/* Footer Row */}
-          <div className={`pt-1 ${isMobile ? 'space-y-1.5' : 'flex items-center justify-between'}`}>
+          <div className={`pt-1 flex ${isMobile ? 'flex-col gap-1.5' : 'items-center justify-between'}`}>
             <div className="text-xs" style={{ color: Theme.mutedFg }}>
               <span className="font-semibold">{t.sales.totalItems}: {totalItems}</span>
               <span className="mx-2">•</span>
               <span className="font-semibold">{t.sales.totalQty}: {totalQty}</span>
             </div>
-            <div className="text-sm font-black" style={{ color: Theme.primary }}>
-              {t.sales.grandTotal}: {formatCurrency(grandTotal)}
+            <div className={`flex items-center text-sm font-black ${isMobile ? 'justify-between w-full' : 'gap-1.5'}`} style={{ color: Theme.primary }}>
+              <span>{t.sales.grandTotal}: ৳</span>
+              <input
+                type="number"
+                min={0}
+                value={lineItems.length > 0 ? parseFloat(grandTotal.toFixed(2)) : 0}
+                disabled={lineItems.length === 0}
+                onChange={(e) => handleGrandTotalChange(Number(e.target.value) || 0)}
+                className="w-24 px-2 py-1 border rounded-lg text-sm font-black text-right outline-none bg-white focus:ring-2 focus:ring-pink-100 transition-all"
+                style={{ borderColor: Theme.border, color: Theme.primary }}
+              />
             </div>
           </div>
 
