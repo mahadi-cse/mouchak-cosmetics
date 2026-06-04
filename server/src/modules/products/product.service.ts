@@ -3,12 +3,15 @@ import { generateSlug } from '../../shared/utils/slug';
 import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
 import { CreateProductInput, UpdateProductInput } from './product.schema';
 import { parsePagination } from '../../shared/utils/pagination';
-import { cacheGet, cacheSet, cacheInvalidatePattern, TTL } from '../../shared/utils/cache';
+import { cacheGet, cacheSet, cacheInvalidatePattern, cacheDel, TTL } from '../../shared/utils/cache';
 
 const KEYS = {
   list: (filters: object) => `products:list:${JSON.stringify(filters)}`,
   slug: (slug: string) => `products:slug:${slug}`,
 };
+
+/** Cache keys for homepage content that depends on featured products */
+const HP_SLIDER_KEY = 'homepage:slider';
 
 export class ProductService {
   private async getDefaultBranchId() {
@@ -205,11 +208,16 @@ export class ProductService {
       include: { category: true, inventories: true, sizes: { orderBy: { sortOrder: 'asc' } } },
     });
 
-    // Invalidate the updated product's slug cache + all list pages
-    await Promise.all([
+    // Invalidate product caches + homepage slider if isFeatured changed
+    const invalidations: Promise<void>[] = [
       cacheInvalidatePattern('products:list:*'),
       cacheInvalidatePattern(`products:slug:${updated.slug}`),
-    ]);
+    ];
+    if (data.isFeatured !== undefined || data.images !== undefined) {
+      // isFeatured or images changed — the homepage slider fallback must refresh
+      invalidations.push(cacheDel(HP_SLIDER_KEY));
+    }
+    await Promise.all(invalidations);
 
     return updated;
   }
@@ -286,7 +294,11 @@ export class ProductService {
       include: { category: true, inventories: true, sizes: { orderBy: { sortOrder: 'asc' } } },
     });
 
-    await cacheInvalidatePattern('products:*');
+    // Bust all product caches AND the homepage slider (isFeatured may have changed)
+    await Promise.all([
+      cacheInvalidatePattern('products:*'),
+      cacheDel(HP_SLIDER_KEY),
+    ]);
     return updated;
   }
 }

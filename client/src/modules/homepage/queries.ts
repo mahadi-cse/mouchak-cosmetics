@@ -62,8 +62,11 @@ export const useSliders = (
   return useQuery({
     queryKey: HOMEPAGE_QUERY_KEYS.sliders(),
     queryFn: () => homepageAPI.getSliders(),
-    staleTime: 60 * 1000, // 1 minute — slider now includes featured products
-    gcTime: 5 * 60 * 1000,
+    // 15 seconds — slider changes (featured toggle) should reflect quickly.
+    // staleTime is intentionally short here: the slider is the most visible
+    // element on the page and users expect near-instant feedback.
+    staleTime: 15 * 1000,
+    gcTime: 60 * 1000,
     ...options,
   });
 };
@@ -87,8 +90,10 @@ export const useHomepageFeaturedProducts = (
   return useQuery<Product[], Error>({
     queryKey: HOMEPAGE_QUERY_KEYS.featuredProducts(limit),
     queryFn: () => homepageAPI.getFeaturedProducts(limit),
-    staleTime: 60 * 1000, // 1 minute — featured products change from dashboard
-    gcTime: 5 * 60 * 1000,
+    // 15 seconds — same reasoning as slider: featured-product changes
+    // should appear promptly after a dashboard toggle.
+    staleTime: 15 * 1000,
+    gcTime: 60 * 1000,
     ...options,
   });
 };

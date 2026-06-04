@@ -297,6 +297,8 @@ router.get("/slider", async (req, res) => {
       updatedAt: p.updatedAt,
     }));
 
+    // Featured-product fallback: use SHORT TTL (5 min) so image/featured
+    // changes propagate much faster than the manual-slider path (10 min).
     await cacheSet(HP_KEYS.slider, productSliders, TTL.SHORT);
     return res.json(productSliders);
   } catch (error) {

@@ -16,7 +16,11 @@ export default async function HomePage() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000,
+        // Setting staleTime to Infinity on the SSR client prevents the
+        // hydrated data from being considered stale the instant it lands on
+        // the client, which would trigger an immediate background refetch
+        // that causes the flash-of-old-data glitch.
+        staleTime: Infinity,
       },
     },
   });

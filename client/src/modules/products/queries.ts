@@ -84,6 +84,8 @@ export const useDeleteProduct = () => {
     mutationFn: (id: number) => productAPI.deleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['homepage', 'sliders'] });
+      queryClient.invalidateQueries({ queryKey: ['homepage', 'featuredProducts'] });
     },
   });
 };
@@ -95,6 +97,8 @@ export const useUpdateProductStatus = () => {
       productAPI.updateProductStatus(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['homepage', 'sliders'] });
+      queryClient.invalidateQueries({ queryKey: ['homepage', 'featuredProducts'] });
     },
   });
 };
