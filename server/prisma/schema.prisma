@@ -206,6 +206,7 @@ model Customer {
 
   orders          Order[]
   wishlist        Wishlist[]
+  reviews         ProductReview[]
 
   @@index([segment])
   @@index([createdAt])
@@ -280,11 +281,39 @@ model Product {
   wishlist        Wishlist[]
   transfers       StockTransfer[]
   skuHistory      SKUHistory[]
+  reviews         ProductReview[]
 
   @@index([categoryId])
   @@index([isActive, createdAt])
   @@index([isFeatured, isActive])
   @@map("products")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRODUCT REVIEWS
+// Only customers who have a DELIVERED order containing the
+// product are allowed to leave a review (verified purchase).
+// One review per customer per product.
+// ─────────────────────────────────────────────────────────────
+
+model ProductReview {
+  id          Int       @id @default(autoincrement())
+  productId   Int       @map("product_id")
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerId  Int       @map("customer_id")
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rating      Int       // 1–5
+  title       String?   @db.VarChar(200)
+  body        String?   @db.Text
+  isVerified  Boolean   @default(true) // true = purchased & delivered
+  isApproved  Boolean   @default(true) // can be toggled by admin
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([customerId, productId])
+  @@index([productId, isApproved, createdAt])
+  @@index([customerId])
+  @@map("product_reviews")
 }
 
 // ─────────────────────────────────────────────────────────────

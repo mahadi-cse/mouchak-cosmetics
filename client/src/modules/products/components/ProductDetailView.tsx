@@ -7,16 +7,25 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle2, ChevronRight, Clock, ShieldCheck, ShoppingBag, Truck, X, Heart, Share2, Star, Zap, TrendingUp, ShoppingCart } from 'lucide-react';
+import { Heart, Star, ShoppingCart } from 'lucide-react';
 import { Header } from '@/modules/homepage';
 import { Footer } from '@/modules/homepage';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
+import { useProductReviews, useReviewEligibility, useCreateReview, useUpdateReview, useDeleteReview } from '@/modules/reviews';
 
 function formatMoney(value?: number | string | null) {
   return `৳${Number(value || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
 }
 
 type TabType = 'description' | 'specifications' | 'reviews' | 'faqs';
+
+const PINK = 'var(--primary)';
+const PINK_DARK = 'var(--primary-dark)';
+const PINK_LIGHT = 'var(--primary-light)';
+const PINK_PALE = 'var(--primary-pale)';
+const DARK = '#1f2937';
+const GRAY = '#4b5563';
+const GRAY_LIGHT = '#9ca3af';
 
 export default function ProductDetailView() {
   const params = useParams();
@@ -166,7 +175,17 @@ export default function ProductDetailView() {
     router.push(`/checkout?slug=${product!.slug}&qty=${safeQuantity}${sizeParam}`);
   };
 
-  if (isLoading) return <div className="container mx-auto px-4 py-8"><SkeletonCard /></div>;
+  if (isLoading) {
+    return (
+      <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <SkeletonCard />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (isError) {
     const message =
@@ -175,28 +194,31 @@ export default function ProductDetailView() {
         : 'Failed to load product';
 
     return (
-      <div className="container mx-auto px-4 py-8">
-        <ErrorMessage message={message} onRetry={() => refetch()} />
+      <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <ErrorMessage message={message} onRetry={() => refetch()} />
+        </div>
+        <Footer />
       </div>
     );
   }
 
   if (!product) {
     return (
-      <EmptyState
-        title="Product Not Found"
-        description="The product you're looking for doesn't exist or has been removed"
-        action={{ label: 'Back to Shop', onClick: () => window.history.back() }}
-      />
+      <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
+        <Header />
+        <EmptyState
+          title="Product Not Found"
+          description="The product you're looking for doesn't exist or has been removed"
+          action={{ label: 'Back to Shop', onClick: () => window.history.back() }}
+        />
+        <Footer />
+      </div>
     );
   }
 
-  const PINK = 'var(--primary)';
-  const PINK_LIGHT = 'var(--primary-light)';
-  const PINK_PALE = 'var(--primary-pale)';
-  const DARK = '#1f2937';
-  const GRAY = '#4b5563';
-  const GRAY_LIGHT = '#9ca3af';
+
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
@@ -402,25 +424,14 @@ export default function ProductDetailView() {
               </div>
               <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
                 <p style={{ fontSize: 14, color: GRAY, lineHeight: 1.7 }}>{descriptionContent}</p>
-                <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Features & Benefits</p>
-                  {[
-                    { icon: '✦', title: 'Premium Quality', desc: 'Made with the finest ingredients.' },
-                    { icon: '✦', title: 'Dermatologist Tested', desc: 'Safe for all skin types.' },
-                  ].map((f, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 12, background: PINK_PALE, padding: 12, borderRadius: 12 }}>
-                      <span style={{ color: PINK, fontWeight: 700, fontSize: 16, marginTop: 2 }}>{f.icon}</span>
-                      <div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: DARK, display: 'block', marginBottom: 2 }}>{f.title}</span>
-                        <span style={{ fontSize: 13, color: GRAY, lineHeight: 1.5 }}>{f.desc}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
+
+            {/* Customer Reviews Section */}
+            <ReviewSection productId={product.id} status={status} />
           </div>
         </div>
+
 
         {/* Related Products from same category */}
         {relatedProducts.length > 0 && (
@@ -463,6 +474,195 @@ export default function ProductDetailView() {
       </div>
 
       <Footer />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// STAR PICKER
+// ─────────────────────────────────────────────────────────────
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => onChange(s)}
+          onMouseEnter={() => setHover(s)}
+          onMouseLeave={() => setHover(0)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
+        >
+          <Star
+            size={22}
+            fill={(hover || value) >= s ? '#f59e0b' : 'none'}
+            color={(hover || value) >= s ? '#f59e0b' : GRAY_LIGHT}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// REVIEW SECTION
+// ─────────────────────────────────────────────────────────────
+
+function ReviewSection({ productId, status }: { productId: number; status: string }) {
+  const { data: summary, isLoading: loadingReviews } = useProductReviews(productId);
+  const { data: eligibility } = useReviewEligibility(productId);
+  const createReview = useCreateReview(productId);
+  const updateReview = useUpdateReview(productId);
+  const deleteReview = useDeleteReview(productId);
+
+  const [showForm, setShowForm] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const isEditing = !!eligibility?.hasReviewed;
+
+  useEffect(() => {
+    if (eligibility?.existingReview && showForm) {
+      setRating(eligibility.existingReview.rating);
+      setTitle(eligibility.existingReview.title ?? '');
+      setBody(eligibility.existingReview.body ?? '');
+    }
+  }, [eligibility, showForm]);
+
+  const handleOpenForm = () => {
+    if (status === 'unauthenticated') { toast.error('Please login to write a review'); return; }
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
+    if (rating === 0) { toast.error('Please select a star rating'); return; }
+    try {
+      if (isEditing) {
+        await updateReview.mutateAsync({ rating, title, body });
+        toast.success('Review updated!');
+      } else {
+        await createReview.mutateAsync({ rating, title, body });
+        toast.success('Review submitted!');
+      }
+      setShowForm(false);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || e.message || 'Failed to submit review');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete your review?')) return;
+    try { await deleteReview.mutateAsync(); toast.success('Review deleted'); }
+    catch { toast.error('Failed to delete review'); }
+  };
+
+  const reviews = summary?.reviews ?? [];
+  const avg = summary?.avgRating ?? 0;
+  const total = summary?.total ?? 0;
+
+  return (
+    <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff', marginTop: 24 }}>
+      {/* Header */}
+      <div style={{ padding: '16px 20px', background: PINK_PALE, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Customer Reviews</span>
+          {total > 0 && (
+            <span style={{ fontSize: 13, color: GRAY, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Star size={13} fill="#f59e0b" color="#f59e0b" /> {avg} ({total})
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {eligibility?.hasReviewed && (
+            <button onClick={handleDelete} disabled={deleteReview.isPending}
+              style={{ background: '#fff1f2', color: '#e11d48', padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, border: '1px solid #ffe4e6', cursor: 'pointer' }}>
+              Delete My Review
+            </button>
+          )}
+          {(eligibility?.canReview || eligibility?.hasReviewed) && (
+            <button onClick={() => { if (!showForm) { if (isEditing && eligibility?.existingReview) { setRating(eligibility.existingReview.rating); setTitle(eligibility.existingReview.title ?? ''); setBody(eligibility.existingReview.body ?? ''); } } setShowForm((v) => !v); }}
+              style={{ background: PINK, color: '#fff', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+              {showForm ? 'Cancel' : isEditing ? 'Edit My Review' : 'Write a Review'}
+            </button>
+          )}
+          {status === 'authenticated' && eligibility && !eligibility.canReview && (
+            <span style={{ fontSize: 12, color: GRAY_LIGHT }}>Purchase to leave a review</span>
+          )}
+          {status === 'unauthenticated' && (
+            <button onClick={handleOpenForm} style={{ background: PINK, color: '#fff', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+              Write a Review
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Review Form */}
+      {showForm && (
+        <div style={{ padding: '20px', borderBottom: `1px solid ${PINK_LIGHT}`, background: PINK_PALE }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 12 }}>{isEditing ? 'Update Your Review' : 'Your Review'}</p>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: GRAY, display: 'block', marginBottom: 6 }}>Rating *</label>
+            <StarPicker value={rating} onChange={setRating} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: GRAY, display: 'block', marginBottom: 6 }}>Title (optional)</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Summarise your experience..." maxLength={200}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${PINK_LIGHT}`, fontSize: 14, color: DARK, outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: GRAY, display: 'block', marginBottom: 6 }}>Review (optional)</label>
+            <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Tell others what you think..." rows={4}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${PINK_LIGHT}`, fontSize: 14, color: DARK, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+          </div>
+          <button onClick={handleSubmit} disabled={createReview.isPending || updateReview.isPending}
+            style={{ background: PINK, color: '#fff', padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', opacity: (createReview.isPending || updateReview.isPending) ? 0.7 : 1 }}>
+            {(createReview.isPending || updateReview.isPending) ? 'Submitting...' : isEditing ? 'Update Review' : 'Submit Review'}
+          </button>
+        </div>
+      )}
+
+      {/* Review List */}
+      <div style={{ padding: '24px 20px', background: '#fff' }}>
+        {loadingReviews ? (
+          <p style={{ fontSize: 14, color: GRAY_LIGHT, textAlign: 'center' }}>Loading reviews...</p>
+        ) : reviews.length === 0 ? (
+          <p style={{ fontSize: 14, color: GRAY_LIGHT, textAlign: 'center' }}>No reviews yet. Be the first to share your experience!</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {reviews.map((review, i) => {
+              const name = [review.customer.firstName, review.customer.lastName].filter(Boolean).join(' ') || 'Customer';
+              const date = new Date(review.createdAt).toLocaleDateString('en-BD', { year: 'numeric', month: 'long' });
+              return (
+                <div key={review.id} style={{ borderBottom: i === reviews.length - 1 ? 'none' : `1px solid ${PINK_LIGHT}`, paddingBottom: i === reviews.length - 1 ? 0 : 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: `linear-gradient(135deg, ${PINK}, ${PINK_DARK})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16 }}>
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{name}</span>
+                          {review.isVerified && <span style={{ fontSize: 10, color: '#059669', background: '#ecfdf5', padding: '2px 7px', borderRadius: 6, fontWeight: 700, textTransform: 'uppercase' }}>✓ Verified</span>}
+                        </div>
+                        <span style={{ fontSize: 12, color: GRAY_LIGHT }}>{date}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} size={14} fill={s <= review.rating ? '#f59e0b' : 'none'} color={s <= review.rating ? '#f59e0b' : GRAY_LIGHT} />
+                      ))}
+                    </div>
+                  </div>
+                  {review.title && <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 4 }}>{review.title}</p>}
+                  {review.body && <p style={{ fontSize: 14, color: GRAY, lineHeight: 1.7, margin: 0 }}>{review.body}</p>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
