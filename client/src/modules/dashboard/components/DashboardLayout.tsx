@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { User, LogOut } from 'lucide-react';
@@ -25,6 +26,9 @@ import ProfileView from './views/ProfileView';
 import ManualSaleModal from './ManualSaleModal';
 import { Product, SellLog, Order } from '@/modules/dashboard/data/mockData';
 import { useDashboardLocale } from '../locales/DashboardLocaleContext';
+import { useCreateManualSaleMutation } from '@/modules/manual-sales';
+import { ANALYTICS_QUERY_KEYS } from '@/modules/analytics';
+import { INVENTORY_QUERY_KEYS } from '@/modules/inventory';
 
 interface DashboardLayoutProps {
   products: Product[];
@@ -298,6 +302,8 @@ export default function DashboardLayout({
   const [toast, setToast] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const createSaleMutation = useCreateManualSaleMutation();
 
   const NAV_CACHE_KEY = 'mouchak.nav.modules.v1';
 
@@ -797,7 +803,9 @@ export default function DashboardLayout({
           <ManualSaleModal
             products={products}
             onClose={() => setModal(false)}
-            onConfirm={(product: Product, qty: number, note: string, total: number) => {
+            onConfirm={async (product: Product, qty: number, note: string, total: number) => {
+              // 1. Optimistically update local UI state so inventory badge, sell log, etc
+              //    feel instant without waiting for the API round trip.
               setProducts(
                 products.map((p: Product) => {
                   if (p.id !== product.id) return p;
@@ -824,6 +832,23 @@ export default function DashboardLayout({
                 ...sellLog,
               ]);
               setToast(`✓ ${t.sold} ${qty} × ${product.name}`);
+
+              // 2. Persist to the real API and bust caches so overview, inventory,
+              //    and sales list all update without requiring a page refresh.
+              try {
+                await createSaleMutation.mutateAsync({
+                  items: [{ productId: product.id, quantity: qty, unitPrice: total / qty }],
+                  branchId: product.branchId ?? (product as any).inventories?.[0]?.warehouseId,
+                  branchName: product.branch ?? '',
+                  note: note || undefined,
+                  soldBy: 'Staff',
+                });
+                // Explicit invalidation so the overview widget re-fetches right away
+                queryClient.invalidateQueries({ queryKey: ANALYTICS_QUERY_KEYS.overview() });
+                queryClient.invalidateQueries({ queryKey: INVENTORY_QUERY_KEYS.all });
+              } catch (err) {
+                console.error('[ManualSale] API call failed — local state updated but server not synced:', err);
+              }
             }}
           />
         )}

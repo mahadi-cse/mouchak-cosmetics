@@ -3,6 +3,7 @@ import { prisma } from '../../config/database';
 import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
 import { parsePagination } from '../../shared/utils/pagination';
 import { CreateManualSaleInput } from './manualSale.schema';
+import { cacheInvalidatePattern } from '../../shared/utils/cache';
 
 const toNumber = (value: Prisma.Decimal | number | string) => Number(value);
 
@@ -149,6 +150,11 @@ export class ManualSaleService {
           lineTotal: toNumber(item.lineTotal),
         })),
       };
+    }).then(async (result) => {
+      // Bust overview & inventory analytics caches so the dashboard
+      // overview reflects this sale immediately after it is recorded.
+      await cacheInvalidatePattern('analytics:overview:*');
+      return result;
     });
   }
 

@@ -465,7 +465,9 @@ export class AnalyticsService {
       topProducts,
     };
 
-    await cacheSet(key, result, TTL.LONG);
+    // SHORT TTL (5 min): overview data changes every time a sale is recorded.
+    // The cache is also explicitly busted on each new sale via manualSale.service.ts.
+    await cacheSet(key, result, TTL.SHORT);
     return result;
   }
 
