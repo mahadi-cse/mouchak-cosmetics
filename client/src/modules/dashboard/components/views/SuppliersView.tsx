@@ -136,19 +136,31 @@ export default function SuppliersView() {
               <div className="text-[12px]" style={{ color: Theme.mutedFg }}>{t.suppliers.logPayments}</div>
             </div>
             <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-4'}`}>
-              <select value={txnSupplierId} onChange={(e) => setTxnSupplierId(e.target.value)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }}>
-                <option value="">{t.suppliers.selectSupplier}</option>
-                {suppliers.filter((s: Supplier) => s.isActive).map((s: Supplier) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-              <select value={txnBranchId} onChange={(e) => setTxnBranchId(e.target.value)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }}>
-                <option value="">{t.suppliers.branchOptional}</option>
-                {activeBranches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-              <select value={txnDirection} onChange={(e) => setTxnDirection(e.target.value as any)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }}>
-                <option value="DUE_TO_SUPPLIER">{t.suppliers.dueToSupplier}</option>
-                <option value="DUE_TO_US">{t.suppliers.supplierOwesUs}</option>
-              </select>
-              <input type="date" value={txnDate} onChange={(e) => setTxnDate(e.target.value)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-gray-700">{t.suppliers.selectSupplier} <span className="text-red-500">*</span></label>
+                <select required value={txnSupplierId} onChange={(e) => setTxnSupplierId(e.target.value)} className={`rounded-lg border px-3 py-2 text-xs outline-none transition-colors ${!txnSupplierId ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: txnSupplierId ? Theme.border : undefined, color: Theme.fg }}>
+                  <option value="">{t.suppliers.selectSupplier}</option>
+                  {suppliers.filter((s: Supplier) => s.isActive).map((s: Supplier) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-gray-700">{t.suppliers.branchOptional}</label>
+                <select value={txnBranchId} onChange={(e) => setTxnBranchId(e.target.value)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }}>
+                  <option value="">{t.suppliers.branchOptional}</option>
+                  {activeBranches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-gray-700">{t.suppliers.type}</label>
+                <select value={txnDirection} onChange={(e) => setTxnDirection(e.target.value as any)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }}>
+                  <option value="DUE_TO_SUPPLIER">{t.suppliers.dueToSupplier}</option>
+                  <option value="DUE_TO_US">{t.suppliers.supplierOwesUs}</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-gray-700">{t.suppliers.date}</label>
+                <input type="date" value={txnDate} onChange={(e) => setTxnDate(e.target.value)} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+              </div>
             </div>
             <input value={txnNote} onChange={(e) => setTxnNote(e.target.value)} placeholder={t.suppliers.noteOptional} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
             <div className="relative" ref={productSearchRef}>
@@ -215,12 +227,27 @@ export default function SuppliersView() {
           {showForm && (
             <div className="mb-3 rounded-xl border-[1.5px] p-3" style={{ borderColor: Theme.primary, background: '#fdf2f8' }}>
               <div className="text-sm font-bold mb-2" style={{ color: Theme.primary }}>{editId ? t.suppliers.editSupplier : t.suppliers.newSupplier}</div>
-              <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t.suppliers.nameReq} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={t.suppliers.email} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder={t.suppliers.phone} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t.branches.address} className="rounded-lg border px-3 py-2 text-xs outline-none col-span-2" style={{ borderColor: Theme.border }} />
-                <input type="number" value={form.rotationDays} onChange={(e) => setForm({ ...form, rotationDays: e.target.value })} placeholder={t.suppliers.rotationDays} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+              <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-semibold text-gray-700">{t.suppliers.nameReq || 'Name'} <span className="text-red-500">*</span></label>
+                  <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t.suppliers.nameReq} className={`rounded-lg border px-3 py-2 text-xs outline-none transition-colors ${!form.name.trim() ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: form.name.trim() ? Theme.border : undefined }} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-semibold text-gray-700">{t.suppliers.email || 'Email'}</label>
+                  <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={t.suppliers.email} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-semibold text-gray-700">{t.suppliers.phone || 'Phone'}</label>
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder={t.suppliers.phone} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+                <div className="flex flex-col gap-1 col-span-1 sm:col-span-2">
+                  <label className="text-[10px] font-semibold text-gray-700">{t.branches.address || 'Address'}</label>
+                  <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t.branches.address} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-semibold text-gray-700">{t.suppliers.rotationDays || 'Rotation Days'}</label>
+                  <input type="number" value={form.rotationDays} onChange={(e) => setForm({ ...form, rotationDays: e.target.value })} placeholder={t.suppliers.rotationDays} className="rounded-lg border px-3 py-2 text-xs outline-none" style={{ borderColor: Theme.border }} />
+                </div>
               </div>
               <div className="flex gap-2 mt-2">
                 <Btn variant="ghost" size="sm" onClick={() => setShowForm(false)}>{t.products.cancel}</Btn>

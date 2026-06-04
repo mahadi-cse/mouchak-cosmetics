@@ -148,10 +148,11 @@ export default function ProfileView() {
                   <li key={key} className="flex items-start gap-4 px-6 py-4">
                     <span className="text-lg">{icon}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-400 mb-1">{label}</p>
+                      <p className="text-xs font-medium text-gray-400 mb-1">{label} {key === 'name' && <span className="text-red-500">*</span>}</p>
                       {editMode && key !== 'email' ? (
                         <input
-                          className="text-sm text-gray-900 font-medium w-full border-b border-gray-300 focus:border-pink-500 outline-none pb-1 bg-transparent transition-colors"
+                          required={key === 'name'}
+                          className={`text-sm text-gray-900 font-medium w-full border-b focus:border-pink-500 outline-none pb-1 bg-transparent transition-colors ${key === 'name' && !form.name.trim() ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                           value={form[key]}
                           onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                         />

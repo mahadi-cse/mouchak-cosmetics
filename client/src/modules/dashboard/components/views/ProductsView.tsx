@@ -141,14 +141,44 @@ export default function ProductsView() {
               <button type="button" onClick={resetForm} className="cursor-pointer border-none bg-transparent text-lg leading-none" style={{ color: Theme.mutedFg }}>✕</button>
             </div>
             <div className={`grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-              <div><label className={labelClass}>{t.products.productName}</label><input placeholder="e.g. Rose Glow Serum" className={inputClass} value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} /></div>
-              <div><label className={labelClass}>{t.products.sku}</label><input placeholder="e.g. SKU-019" className={inputClass} value={productForm.sku} onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} /></div>
-              <div><label className={labelClass}>{t.products.branch}</label><select className={selectClass} value={productForm.branchId} onChange={(e) => { setProductCategoryBranchId(e.target.value); setProductForm({ ...productForm, branchId: e.target.value, categoryId: '' }); }}><option value="">{t.products.selectBranch}</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
-              <div><label className={labelClass}>{t.products.category}</label><select className={selectClass} value={productForm.categoryId} disabled={!productForm.branchId || isLoadingProductCategories} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}><option value="">{!productForm.branchId ? t.products.selectBranchFirst : isLoadingProductCategories ? t.products.loading : t.products.selectCategory}</option>{productCategories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-              <div><label className={labelClass}>{t.products.sellingPrice}</label><input type="number" placeholder="0" className={inputClass} value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} /></div>
-              <div><label className={labelClass}>{t.products.costPrice}</label><input type="number" placeholder="0" className={inputClass} value={productForm.costPrice} onChange={(e) => setProductForm({ ...productForm, costPrice: e.target.value })} /></div>
-              <div className={isMobile ? '' : 'col-span-2'}><label className={labelClass}>{t.products.description}</label><textarea placeholder="..." className={`${inputClass} h-16 resize-y`} value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></div>
-              <div><label className={labelClass}>{t.products.productImage}</label><ImageUploader ref={productImageRef} value={productForm.image} onChange={(url) => setProductForm({ ...productForm, image: url })} folder="mouchak/products" aspect={1} /></div>
+              <div>
+                <label className={labelClass}>{t.products.productName} <span className="text-red-500">*</span></label>
+                <input required placeholder="e.g. Rose Glow Serum" className={`${inputClass} transition-colors ${!productForm.name.trim() ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.name.trim() ? Theme.border : undefined }} value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass}>{t.products.sku} <span className="text-red-500">*</span></label>
+                <input required placeholder="e.g. SKU-019" className={`${inputClass} transition-colors ${!productForm.sku.trim() ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.sku.trim() ? Theme.border : undefined }} value={productForm.sku} onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass}>{t.products.branch} <span className="text-red-500">*</span></label>
+                <select required className={`${selectClass} transition-colors ${!productForm.branchId ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.branchId ? Theme.border : undefined }} value={productForm.branchId} onChange={(e) => { setProductCategoryBranchId(e.target.value); setProductForm({ ...productForm, branchId: e.target.value, categoryId: '' }); }}>
+                  <option value="">{t.products.selectBranch}</option>
+                  {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>{t.products.category} <span className="text-red-500">*</span></label>
+                <select required className={`${selectClass} transition-colors ${!productForm.categoryId ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.categoryId ? Theme.border : undefined }} value={productForm.categoryId} disabled={!productForm.branchId || isLoadingProductCategories} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}>
+                  <option value="">{!productForm.branchId ? t.products.selectBranchFirst : isLoadingProductCategories ? t.products.loading : t.products.selectCategory}</option>
+                  {productCategories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>{t.products.sellingPrice} <span className="text-red-500">*</span></label>
+                <input required type="number" placeholder="0" className={`${inputClass} transition-colors ${!productForm.price.toString().trim() ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.price.toString().trim() ? Theme.border : undefined }} value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass}>{t.products.costPrice}</label>
+                <input type="number" placeholder="0" className={inputClass} style={{ borderColor: Theme.border }} value={productForm.costPrice} onChange={(e) => setProductForm({ ...productForm, costPrice: e.target.value })} />
+              </div>
+              <div className={isMobile ? '' : 'col-span-2'}>
+                <label className={labelClass}>{t.products.description}</label>
+                <textarea placeholder="..." className={`${inputClass} h-16 resize-y`} style={{ borderColor: Theme.border }} value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass}>{t.products.productImage}</label>
+                <ImageUploader ref={productImageRef} value={productForm.image} onChange={(url) => setProductForm({ ...productForm, image: url })} folder="mouchak/products" aspect={1} />
+              </div>
             </div>
             <div className={`mt-3 grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
               <div><label className={labelClass}>{t.products.unitType}</label><select className={selectClass} value={productForm.unitType} onChange={(e) => { const ut = e.target.value as 'PIECE' | 'WEIGHT'; setProductForm({ ...productForm, unitType: ut, unitLabel: ut === 'PIECE' ? 'pc' : 'kg' }); }}><option value="PIECE">{t.products.piece}</option><option value="WEIGHT">{t.products.weight}</option></select></div>

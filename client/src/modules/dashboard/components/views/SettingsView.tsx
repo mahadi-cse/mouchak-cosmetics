@@ -1585,9 +1585,11 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
               <div className="flex flex-col gap-4 p-6">
                 <div>
-                  <label className={labelClass}>{t.settings.promotionName}</label>
+                  <label className={labelClass}>{t.settings.promotionName} <span className="text-red-500">*</span></label>
                   <input
-                    className={inputClass}
+                    required
+                    className={`${inputClass} transition-colors ${!promotionForm.label.trim() ? 'border-red-400 bg-red-50' : ''}`}
+                    style={{ borderColor: promotionForm.label.trim() ? Theme.border : undefined }}
                     value={promotionForm.label}
                     onChange={(e) => setPromotionForm((prev) => ({ ...prev, label: e.target.value }))}
                     placeholder="e.g. Eid Flash Sale"
@@ -1606,9 +1608,11 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>{t.settings.bannerText}</label>
+                  <label className={labelClass}>{t.settings.bannerText} <span className="text-red-500">*</span></label>
                   <textarea
-                    className={`${inputClass} h-20 resize-y`}
+                    required
+                    className={`${inputClass} h-20 resize-y transition-colors ${!promotionForm.banner.trim() ? 'border-red-400 bg-red-50' : ''}`}
+                    style={{ borderColor: promotionForm.banner.trim() ? Theme.border : undefined }}
                     value={promotionForm.banner}
                     onChange={(e) => setPromotionForm((prev) => ({ ...prev, banner: e.target.value }))}
                     placeholder="e.g. Eid Special - 20% off sitewide!"

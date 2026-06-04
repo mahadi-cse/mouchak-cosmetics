@@ -9,50 +9,28 @@ import {
 } from '@/modules/customer-dashboard';
 import { useQueryClient } from '@tanstack/react-query';
 import { PROFILE_QUERY_KEY } from '@/modules/auth/queries/useProfileQuery';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 // ---------------------------------------------------------------------------
-// Types
+// Types & Schema
 // ---------------------------------------------------------------------------
 
-type ProfileDraft = {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  address: string;
-  dateOfBirth: string;
-  gender: string;
-  defaultAddress: string;
-  city: string;
-  postalCode: string;
-  country: string;
-  avatarUrl: string;
-};
-
-const EMPTY_DRAFT: ProfileDraft = {
-  firstName: '', lastName: '', phone: '', address: '',
-  dateOfBirth: '', gender: '', defaultAddress: '',
-  city: '', postalCode: '', country: 'Bangladesh',
-  avatarUrl: '',
-};
-
-const toProfileDraft = (profile: CustomerDashboardProfile): ProfileDraft => ({
-  firstName:      profile.firstName      || '',
-  lastName:       profile.lastName       || '',
-  phone:          profile.phone          || '',
-  address:        profile.address        || '',
-  dateOfBirth:    toDateInputValue(profile.dateOfBirth),
-  gender:         profile.gender         || '',
-  defaultAddress: profile.defaultAddress || '',
-  city:           profile.city           || '',
-  postalCode:     profile.postalCode     || '',
-  country:        profile.country        || 'Bangladesh',
-  avatarUrl:      profile.avatarUrl      || '',
+const profileSchema = z.object({
+  firstName: z.string().min(1, "First Name is required"),
+  lastName: z.string().min(1, "Last Name is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  address: z.string().optional().default(''),
+  dateOfBirth: z.string().optional().default(''),
+  gender: z.string().optional().default(''),
+  defaultAddress: z.string().optional().default(''),
+  city: z.string().optional().default(''),
+  postalCode: z.string().optional().default(''),
+  country: z.string().optional().default('Bangladesh'),
+  avatarUrl: z.string().optional().default(''),
 });
-
-const hasChanges = (draft: ProfileDraft, profile?: CustomerDashboardProfile) => {
-  if (!profile) return false;
-  return JSON.stringify(draft) !== JSON.stringify(toProfileDraft(profile));
-};
+type ProfileFormData = z.infer<typeof profileSchema>;
 
 // ---------------------------------------------------------------------------
 // Input / Textarea primitives (keep styling consistent)
@@ -67,20 +45,44 @@ const inputStyle = { borderColor: DESIGN.border, color: DESIGN.fg };
 
 export default function ProfileTab() {
   const profileQuery        = useCustomerDashboardProfile();
-  const [draft, setDraft]   = useState<ProfileDraft>(EMPTY_DRAFT);
-  const [dirty, setDirty]   = useState(false);
   const [notice, setNotice] = useState('');
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (profileQuery.data && !dirty) {
-      setDraft(toProfileDraft(profileQuery.data));
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors, isDirty } } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      firstName: '', lastName: '', phone: '', address: '',
+      dateOfBirth: '', gender: '', defaultAddress: '',
+      city: '', postalCode: '', country: 'Bangladesh', avatarUrl: ''
     }
-  }, [profileQuery.data, dirty]);
+  });
+  
+  const watchAvatarUrl = watch('avatarUrl');
+
+  useEffect(() => {
+    if (profileQuery.data) {
+      reset({
+        firstName:      profileQuery.data.firstName      || '',
+        lastName:       profileQuery.data.lastName       || '',
+        phone:          profileQuery.data.phone          || '',
+        address:        profileQuery.data.address        || '',
+        dateOfBirth:    toDateInputValue(profileQuery.data.dateOfBirth),
+        gender:         profileQuery.data.gender         || '',
+        defaultAddress: profileQuery.data.defaultAddress || '',
+        city:           profileQuery.data.city           || '',
+        postalCode:     profileQuery.data.postalCode     || '',
+        country:        profileQuery.data.country        || 'Bangladesh',
+        avatarUrl:      profileQuery.data.avatarUrl      || '',
+      });
+    }
+  }, [profileQuery.data, reset]);
 
   const updateMutation = useUpdateCustomerDashboardProfile({
-    onSuccess: () => { setDirty(false); setNotice('Profile updated successfully.'); },
+    onSuccess: (data) => { 
+      reset(undefined, { keepValues: true }); // Reset isDirty, keep current values
+      setNotice('Profile updated successfully.'); 
+    },
     onError:   () => { setNotice('Failed to update profile. Please try again.'); },
   });
 
@@ -88,33 +90,29 @@ export default function ProfileTab() {
   if (profileQuery.isError || !profileQuery.data) return <ErrorState message="Unable to load profile information." />;
 
   const profile = profileQuery.data;
-  const canSave = hasChanges(draft, profile) && !updateMutation.isPending;
+  const canSave = isDirty && !updateMutation.isPending;
 
-  const change = (field: keyof ProfileDraft, value: string) => {
+  const onSubmit = (data: ProfileFormData) => {
     setNotice('');
-    setDirty(true);
-    setDraft((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const save = () => {
     const payload: UpdateProfilePayload = {
-      firstName:      draft.firstName.trim(),
-      lastName:       draft.lastName.trim(),
-      phone:          draft.phone.trim(),
-      address:        draft.address.trim(),
-      dateOfBirth:    draft.dateOfBirth,
-      gender:         draft.gender.trim(),
-      defaultAddress: draft.defaultAddress.trim(),
-      city:           draft.city.trim(),
-      postalCode:     draft.postalCode.trim(),
-      country:        draft.country.trim() || 'Bangladesh',
-      avatarUrl:      draft.avatarUrl,
+      firstName:      data.firstName.trim(),
+      lastName:       data.lastName.trim(),
+      phone:          data.phone.trim(),
+      address:        data.address.trim(),
+      dateOfBirth:    data.dateOfBirth,
+      gender:         data.gender.trim(),
+      defaultAddress: data.defaultAddress.trim(),
+      city:           data.city.trim(),
+      postalCode:     data.postalCode.trim(),
+      country:        data.country.trim() || 'Bangladesh',
+      avatarUrl:      data.avatarUrl,
     };
     updateMutation.mutate(payload);
   };
 
   return (
     <SectionContainer>
+      <form onSubmit={handleSubmit(onSubmit)}>
       {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
@@ -123,8 +121,8 @@ export default function ProfileTab() {
               className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm border-2"
               style={{ background: DESIGN.softPink, color: DESIGN.primary, borderColor: DESIGN.primary }}
             >
-              {draft.avatarUrl ? (
-                <img src={draft.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              {watchAvatarUrl ? (
+                <img src={watchAvatarUrl} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
                 profile.firstName?.charAt(0).toUpperCase() || profile.email?.charAt(0).toUpperCase() || 'U'
               )}
@@ -155,7 +153,7 @@ export default function ProfileTab() {
                   const res = await apiClient.post('/uploads/image?folder=mouchak/users', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                   });
-                  change('avatarUrl', res.data.data.url);
+                  setValue('avatarUrl', res.data.data.url, { shouldDirty: true });
                   setNotice('Avatar uploaded. Remember to save.');
                   queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
                 } catch (err) {
@@ -185,29 +183,31 @@ export default function ProfileTab() {
       {/* Form grid */}
       <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
         {([
-          { label: 'First Name', field: 'firstName', placeholder: 'First name' },
-          { label: 'Last Name',  field: 'lastName',  placeholder: 'Last name'  },
-          { label: 'Phone',      field: 'phone',     placeholder: 'Phone number'},
-          { label: 'Gender',     field: 'gender',    placeholder: 'Gender'     },
-        ] as { label: string; field: keyof ProfileDraft; placeholder: string }[]).map(({ label, field, placeholder }) => (
-          <label key={field} className="text-sm">
-            <span style={{ color: DESIGN.mutedFg }}>{label}</span>
-            <input
-              value={draft[field]}
-              onChange={(e) => change(field, e.target.value)}
-              className={inputCls}
-              style={inputStyle}
-              placeholder={placeholder}
-            />
-          </label>
-        ))}
+          { label: 'First Name', field: 'firstName', placeholder: 'First name', required: true },
+          { label: 'Last Name',  field: 'lastName',  placeholder: 'Last name', required: true },
+          { label: 'Phone',      field: 'phone',     placeholder: 'Phone number', required: true },
+          { label: 'Gender',     field: 'gender',    placeholder: 'Gender', required: false },
+        ] as { label: string; field: keyof ProfileFormData; placeholder: string; required?: boolean }[]).map(({ label, field, placeholder, required }) => {
+          const hasError = !!errors[field];
+          return (
+            <label key={field} className="text-sm">
+              <span style={{ color: DESIGN.mutedFg }}>{label} {required && <span className="text-red-500">*</span>}</span>
+              <input
+                {...register(field)}
+                className={`${inputCls} transition-colors ${hasError ? 'border-red-400 bg-red-50' : ''}`}
+                style={{ ...inputStyle, borderColor: hasError ? undefined : inputStyle.borderColor }}
+                placeholder={placeholder}
+              />
+              {hasError && <p className="mt-1 text-xs text-red-500">{errors[field]?.message as string}</p>}
+            </label>
+          )
+        })}
 
         <label className="text-sm">
           <span style={{ color: DESIGN.mutedFg }}>Date of Birth</span>
           <input
             type="date"
-            value={draft.dateOfBirth}
-            onChange={(e) => change('dateOfBirth', e.target.value)}
+            {...register('dateOfBirth')}
             className={inputCls}
             style={inputStyle}
           />
@@ -216,8 +216,7 @@ export default function ProfileTab() {
         <label className="text-sm">
           <span style={{ color: DESIGN.mutedFg }}>City</span>
           <input
-            value={draft.city}
-            onChange={(e) => change('city', e.target.value)}
+            {...register('city')}
             className={inputCls}
             style={inputStyle}
             placeholder="City"
@@ -227,8 +226,7 @@ export default function ProfileTab() {
         <label className="text-sm md:col-span-2">
           <span style={{ color: DESIGN.mutedFg }}>Address</span>
           <textarea
-            value={draft.address}
-            onChange={(e) => change('address', e.target.value)}
+            {...register('address')}
             rows={2}
             className={inputCls}
             style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit' }}
@@ -239,8 +237,7 @@ export default function ProfileTab() {
         <label className="text-sm md:col-span-2">
           <span style={{ color: DESIGN.mutedFg }}>Default Delivery Address</span>
           <textarea
-            value={draft.defaultAddress}
-            onChange={(e) => change('defaultAddress', e.target.value)}
+            {...register('defaultAddress')}
             rows={2}
             className={inputCls}
             style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit' }}
@@ -251,8 +248,7 @@ export default function ProfileTab() {
         <label className="text-sm">
           <span style={{ color: DESIGN.mutedFg }}>Postal Code</span>
           <input
-            value={draft.postalCode}
-            onChange={(e) => change('postalCode', e.target.value)}
+            {...register('postalCode')}
             className={inputCls}
             style={inputStyle}
             placeholder="Postal code"
@@ -262,8 +258,7 @@ export default function ProfileTab() {
         <label className="text-sm">
           <span style={{ color: DESIGN.mutedFg }}>Country</span>
           <input
-            value={draft.country}
-            onChange={(e) => change('country', e.target.value)}
+            {...register('country')}
             className={inputCls}
             style={inputStyle}
             placeholder="Country"
@@ -277,7 +272,7 @@ export default function ProfileTab() {
           Last updated on {toDateLabel(profile.updatedAt)}
         </div>
         <button
-          onClick={save}
+          type="submit"
           disabled={!canSave}
           className="rounded-xl px-5 py-2 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
           style={{

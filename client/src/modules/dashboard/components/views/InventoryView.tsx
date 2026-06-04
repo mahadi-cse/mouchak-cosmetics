@@ -590,10 +590,11 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    {t.inventory.searchProduct}
+                    {t.inventory.searchProduct} <span className="text-red-500">*</span>
                   </label>
                   <div className="relative" ref={productSearchRef}>
                     <input
+                      required
                       value={productQuery}
                       onChange={(e) => {
                         setProductQuery(e.target.value);
@@ -605,8 +606,8 @@ export default function InventoryView({
                       }}
                       disabled={!formBranchId}
                       placeholder={formBranchId ? t.inventory.searchProductOrSku : t.inventory.selectBranchFirst}
-                      className="w-full rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
-                      style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                      className={`w-full rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none transition-colors ${!formProductId && formBranchId ? 'border-red-400 bg-red-50' : ''}`}
+                      style={{ border: (formProductId || !formBranchId) ? `1px solid ${Theme.border}` : undefined, color: Theme.fg }}
                     />
 
                     {showProductDropdown && formBranchId && (
@@ -645,9 +646,10 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    {t.inventory.selectBranch}
+                    {t.inventory.selectBranch} <span className="text-red-500">*</span>
                   </label>
                   <select
+                    required
                     value={formBranchId}
                     onChange={(e) => {
                       const nextBranchId = e.target.value;
@@ -656,8 +658,8 @@ export default function InventoryView({
                       setProductQuery('');
                       setShowProductDropdown(false);
                     }}
-                    className="w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
-                    style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                    className={`w-full cursor-pointer rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none transition-colors ${!formBranchId ? 'border-red-400 bg-red-50' : ''}`}
+                    style={{ border: formBranchId ? `1px solid ${Theme.border}` : undefined, color: Theme.fg }}
                   >
                     <option value="">{t.inventory.selectBranch}</option>
                     {activeBranches.map((b) => (
@@ -700,15 +702,16 @@ export default function InventoryView({
                     className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
                     style={{ color: Theme.mutedFg }}
                   >
-                    {formMode === 'set' ? t.inventory.newStock : t.inventory.addQuantity}
+                    {formMode === 'set' ? t.inventory.newStock : t.inventory.addQuantity} <span className="text-red-500">*</span>
                   </label>
                   <input
+                    required
                     type="number"
                     value={formStockValue}
                     onChange={(e) => setFormStockValue(e.target.value)}
                     placeholder={formMode === 'set' ? 'e.g., 50' : 'e.g., 10'}
-                    className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none"
-                    style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+                    className={`w-full rounded-lg px-3 py-2.5 text-[13px] outline-none transition-colors ${!formStockValue.toString().trim() ? 'border-red-400 bg-red-50' : ''}`}
+                    style={{ border: formStockValue.toString().trim() ? `1px solid ${Theme.border}` : undefined, color: Theme.fg }}
                   />
                 </div>
 
