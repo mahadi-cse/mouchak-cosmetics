@@ -19,9 +19,9 @@ const categorySchema = z.object({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required"),
   branchId: z.string().min(1, "Branch is required"),
-  desc: z.string().optional().default(''),
-  imageUrl: z.string().optional().default(''),
-  active: z.boolean().optional().default(true),
+  desc: z.string(),
+  imageUrl: z.string(),
+  active: z.boolean(),
 });
 type CategoryFormData = z.infer<typeof categorySchema>;
 
@@ -111,7 +111,7 @@ export default function CategoriesView() {
               <div className={`mb-3 grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 <div>
                   <label className={labelClass}>{t.categories.name} <span className="text-red-500">*</span></label>
-                  <input {...register('name', { onChange: (e) => { setValue('slug', e.target.value.toLowerCase().replace(/\s+/g, '-'), { shouldValidate: true }); } })} placeholder="e.g. Skincare" className={`${inputClass} transition-colors ${errors.name ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: errors.name ? undefined : Theme.border }} />
+                  <input {...register('name', { onChange: (e: any) => { setValue('slug', e.target.value.toLowerCase().replace(/\s+/g, '-'), { shouldValidate: true }); } })} placeholder="e.g. Skincare" className={`${inputClass} transition-colors ${errors.name ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: errors.name ? undefined : Theme.border }} />
                   {errors.name && <span className="text-xs text-red-500">{errors.name.message}</span>}
                 </div>
                 <div>

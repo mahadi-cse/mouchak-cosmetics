@@ -23,6 +23,7 @@ interface ButtonProps extends ComponentProps {
   onClick?: () => void;
   disabled?: boolean;
   loading?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const Spinner = ({ size = 14 }: { size?: number }) => (
@@ -46,6 +47,7 @@ export const Btn: React.FC<ButtonProps> = ({
   onClick,
   disabled = false,
   loading = false,
+  type = 'button',
   className = '',
 }) => {
   const isDisabled = disabled || loading;
@@ -66,7 +68,7 @@ export const Btn: React.FC<ButtonProps> = ({
 
   return (
     <button
-      type="button"
+      type={type}
       onClick={onClick}
       disabled={isDisabled}
       className={`${baseClasses} ${variantClasses[variant]}`}

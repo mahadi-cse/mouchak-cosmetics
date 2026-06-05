@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, Btn } from '../Primitives';
@@ -19,10 +19,33 @@ import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
+import { z } from 'zod';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 const inputClass = 'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
 const selectClass = `${inputClass} cursor-pointer`;
 const labelClass = 'mb-1.5 block text-xs font-semibold text-foreground';
+
+const productSchema = z.object({
+  name: z.string().min(1, "Product Name is required"),
+  sku: z.string().min(1, "SKU is required"),
+  branchId: z.string().min(1, "Branch is required"),
+  categoryId: z.string().min(1, "Category is required"),
+  price: z.string().min(1, "Price is required"),
+  costPrice: z.string(),
+  description: z.string(),
+  image: z.string(),
+  unitType: z.enum(['PIECE', 'WEIGHT']),
+  unitLabel: z.string(),
+  sizes: z.array(z.object({
+    name: z.string().min(1, "Size Name is required"),
+    priceOverride: z.string(),
+    imageUrl: z.string(),
+  })),
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
 
 export default function ProductsView() {
   const { isMobile } = useResponsive();
@@ -46,52 +69,71 @@ export default function ProductsView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSavingProduct = createProduct.isPending || updateProduct.isPending || isSubmitting;
 
-
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editProduct, setEditProduct] = useState<number | null>(null);
-  const [productForm, setProductForm] = useState({
-    name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', stock: '', description: '', image: '',
-    unitType: 'PIECE' as 'PIECE' | 'WEIGHT', unitLabel: 'pc',
-    sizes: [] as Array<{ name: string; imageUrl: string; priceOverride: string }>,
+
+  const { register, handleSubmit, reset, setValue, watch, control, formState: { errors } } = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', description: '', image: '',
+      unitType: 'PIECE', unitLabel: 'pc', sizes: []
+    }
   });
 
-  React.useEffect(() => {
-    if (!productForm.branchId && productForm.categoryId) setProductForm(prev => ({ ...prev, categoryId: '' }));
-  }, [productForm.branchId, productForm.categoryId]);
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'sizes'
+  });
 
-  React.useEffect(() => {
-    if (!productForm.categoryId || productCategories.length === 0) return;
-    if (!productCategories.some((c: any) => String(c.id) === productForm.categoryId)) setProductForm(prev => ({ ...prev, categoryId: '' }));
-  }, [productCategories, productForm.categoryId]);
+  const watchBranchId = watch('branchId');
+  const watchCategoryId = watch('categoryId');
+  const watchImage = watch('image');
+  const watchUnitType = watch('unitType');
+
+  useEffect(() => {
+    if (!watchBranchId && watchCategoryId) {
+      setValue('categoryId', '');
+    }
+    setProductCategoryBranchId(watchBranchId || '');
+  }, [watchBranchId, watchCategoryId, setValue]);
+
+  useEffect(() => {
+    if (!watchCategoryId || productCategories.length === 0) return;
+    if (!productCategories.some((c: any) => String(c.id) === watchCategoryId)) {
+      setValue('categoryId', '');
+    }
+  }, [productCategories, watchCategoryId, setValue]);
 
   const resetForm = () => {
-    setProductForm({ name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', stock: '', description: '', image: '', unitType: 'PIECE', unitLabel: 'pc', sizes: [] });
+    reset({
+      name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', description: '', image: '',
+      unitType: 'PIECE', unitLabel: 'pc', sizes: []
+    });
     setShowAddProduct(false); setEditProduct(null); setProductCategoryBranchId('');
   };
 
   const openProductEditor = (product: any) => {
     const editBranchId = product.inventories?.[0]?.warehouseId?.toString() || '';
     setProductCategoryBranchId(editBranchId);
-    setProductForm({
+    reset({
       name: product.name, sku: product.sku, categoryId: product.categoryId?.toString() || '', branchId: editBranchId,
-      price: product.price?.toString() || '', costPrice: product.costPrice?.toString() || '', stock: '', description: product.description || '',
+      price: product.price?.toString() || '', costPrice: product.costPrice?.toString() || '', description: product.description || '',
       image: product.images?.[0] || '', unitType: product.unitType || 'PIECE', unitLabel: product.unitLabel || 'pc',
       sizes: (product.sizes || []).map((s: any) => ({ name: s.name, imageUrl: s.imageUrl || '', priceOverride: s.priceOverride?.toString() || '' })),
     });
     setEditProduct(product.id); setShowAddProduct(true);
   };
 
-  const handleAddProduct = async () => {
-    if (!productForm.name || !productForm.sku || !productForm.price || !productForm.categoryId || !productForm.branchId) return toast.error(t.products.fillRequired);
+  const onSubmit = async (data: ProductFormData) => {
     setIsSubmitting(true);
     
     const savePromise = (async () => {
-      let imageUrl = productForm.image;
+      let imageUrl = data.image;
       if (productImageRef.current?.hasPending()) { const uploaded = await productImageRef.current.upload(); if (uploaded) imageUrl = uploaded; }
       const defaultImage = 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=800&auto=format&fit=crop';
       const images = imageUrl ? [imageUrl] : [defaultImage];
-      const sizesPayload = productForm.sizes.filter(s => s.name.trim()).map((s, i) => ({ name: s.name.trim(), sortOrder: i, imageUrl: s.imageUrl || null, priceOverride: s.priceOverride ? Number(s.priceOverride) : null }));
-      const payload = { name: productForm.name, sku: productForm.sku, price: Number(productForm.price), costPrice: productForm.costPrice ? Number(productForm.costPrice) : undefined, categoryId: Number(productForm.categoryId), branchId: Number(productForm.branchId), description: productForm.description, images, unitType: productForm.unitType, unitLabel: productForm.unitLabel, sizes: sizesPayload } as any;
+      const sizesPayload = data.sizes.filter(s => s.name.trim()).map((s, i) => ({ name: s.name.trim(), sortOrder: i, imageUrl: s.imageUrl || null, priceOverride: s.priceOverride ? Number(s.priceOverride) : null }));
+      const payload = { name: data.name, sku: data.sku, price: Number(data.price), costPrice: data.costPrice ? Number(data.costPrice) : undefined, categoryId: Number(data.categoryId), branchId: Number(data.branchId), description: data.description, images, unitType: data.unitType, unitLabel: data.unitLabel, sizes: sizesPayload } as any;
       if (editProduct) { await updateProduct.mutateAsync({ id: editProduct, ...payload }); }
       else { await createProduct.mutateAsync(payload); }
       resetForm();
@@ -130,12 +172,12 @@ export default function ProductsView() {
               <option value="">{t.products.allBranches}</option>
               {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
-            <Btn variant="primary" size="sm" onClick={() => { setProductCategoryBranchId(filterBranchId); setProductForm({ ...productForm, branchId: filterBranchId, categoryId: '', name: '', sku: '', price: '', costPrice: '', stock: '', description: '', image: '', unitType: 'PIECE', unitLabel: 'pc', sizes: [] }); setShowAddProduct(true); }}>{t.products.addProduct}</Btn>
+            <Btn variant="primary" size="sm" onClick={() => { setProductCategoryBranchId(filterBranchId); reset({ branchId: filterBranchId, categoryId: '', name: '', sku: '', price: '', costPrice: '', description: '', image: '', unitType: 'PIECE', unitLabel: 'pc', sizes: [] }); setShowAddProduct(true); }}>{t.products.addProduct}</Btn>
           </div>
         </div>
 
         {(showAddProduct || editProduct !== null) && (
-          <div className="mb-4 rounded-xl border-[1.5px] p-4" style={{ borderColor: Theme.primary, background: Theme.secondary }}>
+          <form onSubmit={handleSubmit(onSubmit)} className="mb-4 rounded-xl border-[1.5px] p-4" style={{ borderColor: Theme.primary, background: Theme.secondary }}>
             <div className="mb-3 flex items-center justify-between">
               <div className="text-sm font-bold" style={{ color: Theme.primary }}>{editProduct !== null ? t.products.editProduct : t.products.newProduct}</div>
               <button type="button" onClick={resetForm} className="cursor-pointer border-none bg-transparent text-lg leading-none" style={{ color: Theme.mutedFg }}>✕</button>
@@ -143,52 +185,91 @@ export default function ProductsView() {
             <div className={`grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
               <div>
                 <label className={labelClass}>{t.products.productName} <span className="text-red-500">*</span></label>
-                <input required placeholder="e.g. Rose Glow Serum" className={`${inputClass} transition-colors ${!productForm.name.trim() ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.name.trim() ? Theme.border : undefined }} value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} />
+                <input {...register('name')} placeholder="e.g. Rose Glow Serum" className={`${inputClass} transition-colors ${errors.name ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: !errors.name ? Theme.border : undefined }} />
+                {errors.name && <span className="text-xs text-red-500 mt-1 block">{errors.name.message}</span>}
               </div>
               <div>
                 <label className={labelClass}>{t.products.sku} <span className="text-red-500">*</span></label>
-                <input required placeholder="e.g. SKU-019" className={`${inputClass} transition-colors ${!productForm.sku.trim() ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.sku.trim() ? Theme.border : undefined }} value={productForm.sku} onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} />
+                <input {...register('sku')} placeholder="e.g. SKU-019" className={`${inputClass} transition-colors ${errors.sku ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: !errors.sku ? Theme.border : undefined }} />
+                {errors.sku && <span className="text-xs text-red-500 mt-1 block">{errors.sku.message}</span>}
               </div>
               <div>
                 <label className={labelClass}>{t.products.branch} <span className="text-red-500">*</span></label>
-                <select required className={`${selectClass} transition-colors ${!productForm.branchId ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.branchId ? Theme.border : undefined }} value={productForm.branchId} onChange={(e) => { setProductCategoryBranchId(e.target.value); setProductForm({ ...productForm, branchId: e.target.value, categoryId: '' }); }}>
+                <select {...register('branchId')} className={`${selectClass} transition-colors ${errors.branchId ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: !errors.branchId ? Theme.border : undefined }}>
                   <option value="">{t.products.selectBranch}</option>
                   {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
+                {errors.branchId && <span className="text-xs text-red-500 mt-1 block">{errors.branchId.message}</span>}
               </div>
               <div>
                 <label className={labelClass}>{t.products.category} <span className="text-red-500">*</span></label>
-                <select required className={`${selectClass} transition-colors ${!productForm.categoryId ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.categoryId ? Theme.border : undefined }} value={productForm.categoryId} disabled={!productForm.branchId || isLoadingProductCategories} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}>
-                  <option value="">{!productForm.branchId ? t.products.selectBranchFirst : isLoadingProductCategories ? t.products.loading : t.products.selectCategory}</option>
+                <select {...register('categoryId')} className={`${selectClass} transition-colors ${errors.categoryId ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: !errors.categoryId ? Theme.border : undefined }} disabled={!watchBranchId || isLoadingProductCategories}>
+                  <option value="">{!watchBranchId ? t.products.selectBranchFirst : isLoadingProductCategories ? t.products.loading : t.products.selectCategory}</option>
                   {productCategories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+                {errors.categoryId && <span className="text-xs text-red-500 mt-1 block">{errors.categoryId.message}</span>}
               </div>
               <div>
                 <label className={labelClass}>{t.products.sellingPrice} <span className="text-red-500">*</span></label>
-                <input required type="number" placeholder="0" className={`${inputClass} transition-colors ${!productForm.price.toString().trim() ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: productForm.price.toString().trim() ? Theme.border : undefined }} value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} />
+                <input {...register('price')} type="number" placeholder="0" className={`${inputClass} transition-colors ${errors.price ? 'border-red-400 bg-red-50' : ''}`} style={{ borderColor: !errors.price ? Theme.border : undefined }} />
+                {errors.price && <span className="text-xs text-red-500 mt-1 block">{errors.price.message}</span>}
               </div>
               <div>
                 <label className={labelClass}>{t.products.costPrice}</label>
-                <input type="number" placeholder="0" className={inputClass} style={{ borderColor: Theme.border }} value={productForm.costPrice} onChange={(e) => setProductForm({ ...productForm, costPrice: e.target.value })} />
+                <input {...register('costPrice')} type="number" placeholder="0" className={inputClass} style={{ borderColor: Theme.border }} />
               </div>
               <div className={isMobile ? '' : 'col-span-2'}>
                 <label className={labelClass}>{t.products.description}</label>
-                <textarea placeholder="..." className={`${inputClass} h-16 resize-y`} style={{ borderColor: Theme.border }} value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} />
+                <textarea {...register('description')} placeholder="..." className={`${inputClass} h-16 resize-y`} style={{ borderColor: Theme.border }} />
               </div>
               <div>
                 <label className={labelClass}>{t.products.productImage}</label>
-                <ImageUploader ref={productImageRef} value={productForm.image} onChange={(url) => setProductForm({ ...productForm, image: url })} folder="mouchak/products" aspect={1} />
+                <ImageUploader ref={productImageRef} value={watchImage} onChange={(url) => setValue('image', url)} folder="mouchak/products" aspect={1} />
               </div>
             </div>
             <div className={`mt-3 grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-              <div><label className={labelClass}>{t.products.unitType}</label><select className={selectClass} value={productForm.unitType} onChange={(e) => { const ut = e.target.value as 'PIECE' | 'WEIGHT'; setProductForm({ ...productForm, unitType: ut, unitLabel: ut === 'PIECE' ? 'pc' : 'kg' }); }}><option value="PIECE">{t.products.piece}</option><option value="WEIGHT">{t.products.weight}</option></select></div>
-              <div><label className={labelClass}>{t.products.unitLabel}</label><input className={inputClass} value={productForm.unitLabel} onChange={(e) => setProductForm({ ...productForm, unitLabel: e.target.value })} placeholder="e.g. pc, kg, ml" /></div>
+              <div>
+                <label className={labelClass}>{t.products.unitType}</label>
+                <select {...register('unitType', { onChange: (e: any) => setValue('unitLabel', e.target.value === 'PIECE' ? 'pc' : 'kg') })} className={selectClass}>
+                  <option value="PIECE">{t.products.piece}</option>
+                  <option value="WEIGHT">{t.products.weight}</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>{t.products.unitLabel}</label>
+                <input {...register('unitLabel')} placeholder="e.g. pc, kg, ml" className={inputClass} />
+              </div>
             </div>
-            <div className="mt-3"><div className="mb-2 flex items-center justify-between"><label className={labelClass} style={{ marginBottom: 0 }}>{t.products.sizesOptional}</label><Btn variant="ghost" size="sm" onClick={() => setProductForm({ ...productForm, sizes: [...productForm.sizes, { name: '', imageUrl: '', priceOverride: '' }] })}>{t.products.addSize}</Btn></div>
-              {productForm.sizes.length > 0 && <div className="flex flex-col gap-2">{productForm.sizes.map((size, idx) => (<div key={idx} className={`grid items-end gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}><div><label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.sizeName}</label><input className={inputClass} value={size.name} onChange={(e) => { const n = [...productForm.sizes]; n[idx] = { ...n[idx], name: e.target.value }; setProductForm({ ...productForm, sizes: n }); }} placeholder="e.g. S, M, L" /></div><div><label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.priceOverride}</label><input type="number" className={inputClass} value={size.priceOverride} onChange={(e) => { const n = [...productForm.sizes]; n[idx] = { ...n[idx], priceOverride: e.target.value }; setProductForm({ ...productForm, sizes: n }); }} placeholder={t.products.leaveEmpty} /></div><div><Btn variant="ghost" size="sm" onClick={() => setProductForm({ ...productForm, sizes: productForm.sizes.filter((_, i) => i !== idx) })}>{t.products.remove}</Btn></div></div>))}</div>}
+            <div className="mt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <label className={labelClass} style={{ marginBottom: 0 }}>{t.products.sizesOptional}</label>
+                <Btn type="button" variant="ghost" size="sm" onClick={() => append({ name: '', imageUrl: '', priceOverride: '' })}>{t.products.addSize}</Btn>
+              </div>
+              {fields.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {fields.map((field: any, idx: number) => (
+                    <div key={field.id} className={`grid items-end gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.sizeName}</label>
+                        <input {...register(`sizes.${idx}.name` as const)} className={inputClass} placeholder="e.g. S, M, L" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.priceOverride}</label>
+                        <input {...register(`sizes.${idx}.priceOverride` as const)} type="number" className={inputClass} placeholder={t.products.leaveEmpty} />
+                      </div>
+                      <div>
+                        <Btn type="button" variant="ghost" size="sm" onClick={() => remove(idx)}>{t.products.remove}</Btn>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="mt-3 flex gap-2"><Btn variant="ghost" size="sm" onClick={resetForm} disabled={isSavingProduct}>{t.products.cancel}</Btn><Btn variant="primary" size="sm" onClick={handleAddProduct} loading={isSavingProduct}>{editProduct !== null ? t.products.saveChanges : t.products.createProduct}</Btn></div>
-          </div>
+            <div className="mt-3 flex gap-2">
+              <Btn type="button" variant="ghost" size="sm" onClick={resetForm} disabled={isSavingProduct}>{t.products.cancel}</Btn>
+              <Btn type="submit" variant="primary" size="sm" loading={isSavingProduct}>{editProduct !== null ? t.products.saveChanges : t.products.createProduct}</Btn>
+            </div>
+          </form>
         )}
 
         <div className="flex flex-col gap-2.5">

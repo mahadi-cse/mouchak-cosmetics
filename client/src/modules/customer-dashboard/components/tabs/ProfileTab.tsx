@@ -21,14 +21,14 @@ const profileSchema = z.object({
   firstName: z.string().min(1, "First Name is required"),
   lastName: z.string().min(1, "Last Name is required"),
   phone: z.string().min(1, "Phone number is required"),
-  address: z.string().optional().default(''),
-  dateOfBirth: z.string().optional().default(''),
-  gender: z.string().optional().default(''),
-  defaultAddress: z.string().optional().default(''),
-  city: z.string().optional().default(''),
-  postalCode: z.string().optional().default(''),
-  country: z.string().optional().default('Bangladesh'),
-  avatarUrl: z.string().optional().default(''),
+  address: z.string(),
+  dateOfBirth: z.string(),
+  gender: z.string(),
+  defaultAddress: z.string(),
+  city: z.string(),
+  postalCode: z.string(),
+  country: z.string(),
+  avatarUrl: z.string(),
 });
 type ProfileFormData = z.infer<typeof profileSchema>;
 
@@ -79,7 +79,7 @@ export default function ProfileTab() {
   }, [profileQuery.data, reset]);
 
   const updateMutation = useUpdateCustomerDashboardProfile({
-    onSuccess: (data) => { 
+    onSuccess: () => { 
       reset(undefined, { keepValues: true }); // Reset isDirty, keep current values
       setNotice('Profile updated successfully.'); 
     },
@@ -292,6 +292,7 @@ export default function ProfileTab() {
           {notice}
         </p>
       )}
+      </form>
     </SectionContainer>
   );
 }

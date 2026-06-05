@@ -22,12 +22,12 @@ const branchSchema = z.object({
   name: z.string().min(1, "Branch Name is required"),
   branchCode: z.string().min(1, "Branch Code is required"),
   branchType: z.enum(['WAREHOUSE', 'RETAIL', 'OFFICE', 'DISTRIBUTION']),
-  city: z.string().optional().default(''),
-  address: z.string().optional().default(''),
-  phone: z.string().optional().default(''),
-  email: z.string().optional().default(''),
-  managerName: z.string().optional().default(''),
-  managerPhone: z.string().optional().default(''),
+  city: z.string(),
+  address: z.string(),
+  phone: z.string(),
+  email: z.string(),
+  managerName: z.string(),
+  managerPhone: z.string(),
 });
 type BranchFormData = z.infer<typeof branchSchema>;
 
