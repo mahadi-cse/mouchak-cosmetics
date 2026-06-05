@@ -29,23 +29,12 @@ export function createApp(): Express {
   const app = express();
   const env = getEnv();
 
-  // Build allowed origins list from env
-  const allowedOrigins = [
-    env.CLIENT_URL,
-    ...(env.CLIENT_URL_EXTRA ? env.CLIENT_URL_EXTRA.split(',').map(o => o.trim()) : []),
-  ].filter(Boolean);
-
   // Middleware stack
   app.use(helmet());
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(null, false); // Standard CORS rejection (fails in browser, no server 500 error)
-        }
+        callback(null, true);
       },
       credentials: true,
     })
