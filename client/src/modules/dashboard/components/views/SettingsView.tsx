@@ -5,6 +5,7 @@ import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, Btn, Badge } from '../Primitives';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
+import { useSecurityDevicesQuery, useRevokeDeviceMutation, useRevokeAllOtherDevicesMutation } from '@/modules/auth';
 import {
   useListCategories,
   useCreateCategory,
@@ -288,6 +289,11 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     { queryKey: ['products', 'list', { branchId: filterBranchId, includeInactive: true }] }
   );
   const { data: branches = [] } = useListBranches();
+
+  // Security devices hooks
+  const { data: securityDevices = [], isLoading: isLoadingSecurity } = useSecurityDevicesQuery();
+  const revokeDeviceMutation = useRevokeDeviceMutation();
+  const revokeAllOtherDevicesMutation = useRevokeAllOtherDevicesMutation();
 
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
@@ -784,6 +790,39 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       }
     }
   };
+
+  const handleRevokeDevice = async (id: number) => {
+    const confirmed = await confirmDialog({
+      title: t.securityDevices.confirmRevokeDevice,
+      text: t.securityDevices.confirmRevokeDeviceText,
+      confirmButtonText: t.securityDevices.revokeSession,
+      icon: 'warning',
+    });
+    if (!confirmed) return;
+    try {
+      await revokeDeviceMutation.mutateAsync(id);
+      toast.success(t.securityDevices.deviceRevoked);
+    } catch {
+      toast.error('Failed to log out device');
+    }
+  };
+
+  const handleRevokeAllOtherDevices = async () => {
+    const confirmed = await confirmDialog({
+      title: t.securityDevices.confirmRevokeAllOthers,
+      text: t.securityDevices.confirmRevokeAllOthersText,
+      confirmButtonText: t.securityDevices.revokeAllOthers,
+      icon: 'warning',
+    });
+    if (!confirmed) return;
+    try {
+      await revokeAllOtherDevicesMutation.mutateAsync();
+      toast.success(t.securityDevices.allOthersRevoked);
+    } catch {
+      toast.error('Failed to log out all other devices');
+    }
+  };
+
   const triggerSavedIndicator = () => {
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2500);
@@ -1709,6 +1748,102 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       </div>
     ),
 
+    security: (
+      <div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+          <p className="text-[13px] max-w-xl" style={{ color: Theme.mutedFg }}>
+            {t.securityDevices.sub}
+          </p>
+          {securityDevices.some(d => !d.isCurrent) && (
+            <button
+              type="button"
+              onClick={handleRevokeAllOtherDevices}
+              className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 hover:border-red-300 transition-colors cursor-pointer whitespace-nowrap outline-none"
+            >
+              {t.securityDevices.revokeAllOthers}
+            </button>
+          )}
+        </div>
+
+        {isLoadingSecurity ? (
+          <div className="py-8 text-center text-[13px]" style={{ color: Theme.mutedFg }}>
+            {t.securityDevices.loading}
+          </div>
+        ) : securityDevices.length === 0 ? (
+          <div className="py-8 text-center text-[13px]" style={{ color: Theme.mutedFg }}>
+            {t.securityDevices.noDevices}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {securityDevices.map((device) => {
+              // Determine device icon
+              let icon = '🖥️';
+              const type = (device.deviceType || '').toLowerCase();
+              if (type.includes('mobile') || type.includes('phone')) {
+                icon = '📱';
+              } else if (type.includes('tablet') || type.includes('ipad')) {
+                icon = '📟';
+              }
+
+              return (
+                <div
+                  key={device.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border bg-zinc-50/50 hover:bg-white transition-colors gap-3"
+                  style={{
+                    borderColor: device.isCurrent ? Theme.primary : undefined,
+                    background: device.isCurrent ? Theme.secondary : undefined,
+                  }}
+                >
+                  <div className="flex items-start gap-3.5">
+                    <span className="text-2xl mt-0.5">{icon}</span>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[14px] font-bold" style={{ color: Theme.fg }}>
+                          {device.browser} on {device.os}
+                        </span>
+                        {device.isCurrent && (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-50 border border-green-200"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                            {t.securityDevices.activeNow}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="mt-1 flex items-center gap-x-3 gap-y-1 flex-wrap text-xs" style={{ color: Theme.mutedFg }}>
+                         {device.ipAddress && (
+                          <span>
+                            {t.securityDevices.ipAddress}: <code className="bg-zinc-100/80 px-1 py-0.5 rounded font-mono text-[11px]">{['::1', '127.0.0.1', '::ffff:127.0.0.1'].includes(device.ipAddress) ? 'Localhost' : device.ipAddress}</code>
+                          </span>
+                        )}
+                        <span>
+                          {t.securityDevices.loginTime}: {new Date(device.createdAt).toLocaleString(
+                            typeof window !== 'undefined' ? window.navigator.language : 'en-US',
+                            { dateStyle: 'medium', timeStyle: 'short' }
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!device.isCurrent && (
+                    <button
+                      type="button"
+                      onClick={() => handleRevokeDevice(device.id)}
+                      className="inline-flex items-center justify-center px-4 py-2 text-[12px] font-bold rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 hover:border-red-300 transition-colors cursor-pointer whitespace-nowrap outline-none shrink-0 self-end sm:self-center"
+                    >
+                      {t.securityDevices.revokeSession}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    ),
+
   };
 
   return (
@@ -1754,7 +1889,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           </div>
         )}
 
-        {!['products', 'categories', 'trending', 'discounts', 'staff'].includes(tab) && (
+        {!['products', 'categories', 'trending', 'discounts', 'staff', 'security'].includes(tab) && (
           <div className="mt-8 flex items-center justify-end gap-2 border-t border-border pt-6">
             <div className="flex items-center gap-2">
               {saved && (

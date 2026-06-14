@@ -22,6 +22,7 @@ export const SETTINGS_ITEMS = [
   { id: 'staff', label: 'Staff & Roles', icon: '👤' },
   { id: 'trending', label: 'Trending Products', icon: '🔥' },
   { id: 'discounts', label: 'Discount & Sales', icon: '🏷️' },
+  { id: 'security', label: 'Security Devices', icon: '🔒' },
 ];
 
 export const BRANCH_STOCK = {

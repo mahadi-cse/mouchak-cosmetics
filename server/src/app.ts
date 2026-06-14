@@ -29,6 +29,8 @@ export function createApp(): Express {
   const app = express();
   const env = getEnv();
 
+  app.set('trust proxy', true);
+
   // Middleware stack
   app.use(helmet());
   app.use(

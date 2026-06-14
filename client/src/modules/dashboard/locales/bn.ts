@@ -74,6 +74,26 @@ export const bn: DashboardTranslations = {
     staff: "কর্মী ও ভূমিকা",
     trending: "ট্রেন্ডিং পণ্য",
     discounts: "ছাড় ও বিক্রয়",
+    security: "ডিভাইস নিরাপত্তা",
+  },
+
+  // ─── Security Devices ───
+  securityDevices: {
+    title: "লগইন করা ডিভাইসসমূহ",
+    sub: "আপনার অ্যাকাউন্টে বর্তমানে লগইন থাকা সেশনগুলির তালিকা নিচে দেওয়া হলো। যেকোনো সেশন বন্ধ করতে ডিভাইসটি লগআউট করতে পারেন।",
+    activeNow: "বর্তমানে সক্রিয়",
+    ipAddress: "আইপি ঠিকানা",
+    loginTime: "লগইন সময়",
+    revokeSession: "ডিভাইস লগআউট করুন",
+    revokeAllOthers: "অন্যান্য সকল ডিভাইস লগআউট করুন",
+    confirmRevokeDevice: "এই ডিভাইসটি লগআউট করবেন?",
+    confirmRevokeDeviceText: "আপনি কি নিশ্চিত যে আপনি এই সেশনটি বন্ধ করতে চান?",
+    confirmRevokeAllOthers: "অন্যান্য সকল ডিভাইস লগআউট করবেন?",
+    confirmRevokeAllOthersText: "আপনি কি নিশ্চিত যে আপনি বর্তমান ডিভাইস বাদে বাকি সব ডিভাইস থেকে লগআউট করতে চান?",
+    deviceRevoked: "ডিভাইস সফলভাবে লগআউট করা হয়েছে",
+    allOthersRevoked: "অন্যান্য সকল ডিভাইস সফলভাবে লগআউট করা হয়েছে",
+    loading: "সেশন তালিকা লোড হচ্ছে...",
+    noDevices: "অন্য কোনো সক্রিয় সেশন নেই।",
   },
 
   // ─── Overview View ───

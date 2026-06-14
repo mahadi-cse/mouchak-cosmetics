@@ -30,7 +30,7 @@ export const login: RequestHandler = asyncHandler(async (req, res) => {
     throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid login payload');
   }
 
-  const result = await authService.login(parsed.data.email, parsed.data.password);
+  const result = await authService.login(parsed.data.email, parsed.data.password, req.ip, req.headers['user-agent'] as string);
   const env = getEnv();
 
   // Refresh token is intentionally cookie-only to keep it out of JS runtime.
@@ -54,7 +54,7 @@ export const register: RequestHandler = asyncHandler(async (req, res) => {
     throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid registration payload');
   }
 
-  const result = await authService.register(parsed.data);
+  const result = await authService.register(parsed.data, req.ip, req.headers['user-agent'] as string);
   const env = getEnv();
 
   // Keep refresh token HttpOnly and cookie-only.
@@ -78,7 +78,7 @@ export const googleSignIn: RequestHandler = asyncHandler(async (req, res) => {
     throw new ValidationError(parsed.error.issues[0]?.message || 'Invalid Google sign-in payload');
   }
 
-  const result = await authService.loginWithGoogle(parsed.data);
+  const result = await authService.loginWithGoogle(parsed.data, req.ip, req.headers['user-agent'] as string);
   const env = getEnv();
 
   // Keep refresh token HttpOnly and cookie-only.
@@ -102,7 +102,7 @@ export const refresh: RequestHandler = asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Missing refresh token cookie', 'MISSING_REFRESH_TOKEN');
   }
 
-  const result = await authService.refresh(refreshToken);
+  const result = await authService.refresh(refreshToken, req.ip, req.headers['user-agent'] as string);
   const env = getEnv();
 
   // Rotate refresh token on every use (one-time token strategy).
@@ -372,6 +372,59 @@ export const updateUserBranches: RequestHandler = asyncHandler(async (req, res) 
   res.json(ok(result, 'Branches updated'));
 });
 
+export const getSecurityDevices: RequestHandler = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new UnauthorizedError('Unauthorized', 'UNAUTHORIZED');
+  }
+
+  const devices = await authService.getSecurityDevices(req.user.id);
+  
+  // Identify the current device/session by hashing the incoming refresh token
+  const currentToken = getRefreshTokenFromRequest(req);
+  const currentTokenHash = currentToken ? authService.hashToken(currentToken) : null;
+
+  const devicesWithActiveFlag = devices.map(device => ({
+    id: device.id,
+    ipAddress: device.ipAddress,
+    deviceType: device.deviceType || 'Desktop',
+    browser: device.browser || 'Unknown Browser',
+    os: device.os || 'Unknown OS',
+    createdAt: device.createdAt,
+    isCurrent: currentTokenHash ? device.tokenHash === currentTokenHash : false,
+  }));
+
+  res.json(ok(devicesWithActiveFlag));
+});
+
+export const revokeDevice: RequestHandler = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new UnauthorizedError('Unauthorized', 'UNAUTHORIZED');
+  }
+
+  const deviceId = Number(req.params.id);
+  if (!deviceId) {
+    throw new ValidationError('Invalid device id');
+  }
+
+  await authService.revokeDevice(req.user.id, deviceId);
+  res.json(ok(null, 'Device session revoked successfully'));
+});
+
+export const revokeAllOtherDevices: RequestHandler = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new UnauthorizedError('Unauthorized', 'UNAUTHORIZED');
+  }
+
+  const currentToken = getRefreshTokenFromRequest(req);
+  if (!currentToken) {
+    throw new UnauthorizedError('Missing refresh token', 'MISSING_REFRESH_TOKEN');
+  }
+
+  const currentTokenHash = authService.hashToken(currentToken);
+  await authService.revokeAllOtherDevices(req.user.id, currentTokenHash);
+  res.json(ok(null, 'All other device sessions revoked successfully'));
+});
+
 export default {
   login,
   register,
@@ -389,4 +442,7 @@ export default {
   updateUserModules,
   updateUserBranches,
   forceLogout,
+  getSecurityDevices,
+  revokeDevice,
+  revokeAllOtherDevices,
 };

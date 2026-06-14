@@ -71,6 +71,26 @@ export const en = {
     staff: "Staff & Roles",
     trending: "Trending Products",
     discounts: "Discount & Sales",
+    security: "Security Devices",
+  },
+
+  // ─── Security Devices ───
+  securityDevices: {
+    title: "Logged-in Devices",
+    sub: "These are the active sessions logged into your account. You can revoke any session to log it out.",
+    activeNow: "Active Now",
+    ipAddress: "IP Address",
+    loginTime: "Login Time",
+    revokeSession: "Log Out Device",
+    revokeAllOthers: "Log Out All Other Devices",
+    confirmRevokeDevice: "Log out this device?",
+    confirmRevokeDeviceText: "Are you sure you want to log out this session?",
+    confirmRevokeAllOthers: "Log out all other devices?",
+    confirmRevokeAllOthersText: "Are you sure you want to terminate all sessions other than your current one?",
+    deviceRevoked: "Device logged out successfully",
+    allOthersRevoked: "All other devices logged out successfully",
+    loading: "Loading active sessions...",
+    noDevices: "No other active sessions.",
   },
 
   // ─── Overview View ───

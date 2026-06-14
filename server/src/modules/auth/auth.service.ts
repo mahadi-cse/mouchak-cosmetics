@@ -6,6 +6,7 @@ import { ConflictError, UnauthorizedError, ValidationError } from '../../shared/
 import { isRoleCode, RoleCode, USER_TYPE_CODES } from '../../shared/types/auth.types';
 import { signAccessToken } from './auth.jwt';
 import { GoogleSignInInput, RegisterInput } from './auth.schema';
+import { parseUserAgent } from '../../shared/utils/userAgent';
 
 export interface AuthTokenBundle {
   accessToken: string;
@@ -75,7 +76,13 @@ export class AuthService {
     return customerType;
   }
 
-  private async issueTokens(userId: number, role: RoleCode, typeId: number): Promise<AuthTokenBundle> {
+  private async issueTokens(
+    userId: number,
+    role: RoleCode,
+    typeId: number,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<AuthTokenBundle> {
     const accessToken = await signAccessToken({
       sub: userId,
       role,
@@ -83,11 +90,18 @@ export class AuthService {
     });
 
     const refreshToken = generateRefreshToken();
+    const parsedUa = userAgent ? parseUserAgent(userAgent) : null;
+
     await prisma.refreshToken.create({
       data: {
         userId,
         tokenHash: hashRefreshToken(refreshToken),
         expiresAt: getRefreshTokenExpiryDate(),
+        ipAddress,
+        userAgent,
+        deviceType: parsedUa?.deviceType,
+        browser: parsedUa?.browser,
+        os: parsedUa?.os,
       },
     });
 
@@ -149,7 +163,7 @@ export class AuthService {
     return { firstName, lastName };
   }
 
-  async login(email: string, password: string): Promise<AuthTokenBundle> {
+  async login(email: string, password: string, ipAddress?: string, userAgent?: string): Promise<AuthTokenBundle> {
     const user = await prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
       include: { userType: true },
@@ -173,10 +187,10 @@ export class AuthService {
     }
 
     const role = assertRoleCode(user.userType.code);
-    return this.issueTokens(user.id, role, user.userTypeId);
+    return this.issueTokens(user.id, role, user.userTypeId, ipAddress, userAgent);
   }
 
-  async register(input: RegisterInput): Promise<AuthTokenBundle> {
+  async register(input: RegisterInput, ipAddress?: string, userAgent?: string): Promise<AuthTokenBundle> {
     const email = input.email.trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -222,10 +236,10 @@ export class AuthService {
     });
 
     const role = assertRoleCode(resolvedType.code);
-    return this.issueTokens(createdUser.id, role, resolvedType.id);
+    return this.issueTokens(createdUser.id, role, resolvedType.id, ipAddress, userAgent);
   }
 
-  async loginWithGoogle(input: GoogleSignInInput): Promise<AuthTokenBundle> {
+  async loginWithGoogle(input: GoogleSignInInput, ipAddress?: string, userAgent?: string): Promise<AuthTokenBundle> {
     const tokenInfo = await this.verifyGoogleToken(input);
     const email = tokenInfo.email!.trim().toLowerCase();
     const { firstName, lastName } = this.getNameFromGoogle(tokenInfo);
@@ -289,10 +303,10 @@ export class AuthService {
     });
 
     const customerRole = assertRoleCode(USER_TYPE_CODES.CUSTOMER);
-    return this.issueTokens(user.id, customerRole, user.userTypeId || customerType.id);
+    return this.issueTokens(user.id, customerRole, user.userTypeId || customerType.id, ipAddress, userAgent);
   }
 
-  async refresh(rawRefreshToken: string): Promise<AuthTokenBundle> {
+  async refresh(rawRefreshToken: string, ipAddress?: string, userAgent?: string): Promise<AuthTokenBundle> {
     const tokenHash = hashRefreshToken(rawRefreshToken);
     const existingToken = await prisma.refreshToken.findUnique({
       where: { tokenHash },
@@ -347,11 +361,20 @@ export class AuthService {
       });
 
       const nextRefreshToken = generateRefreshToken();
+      const finalIp = ipAddress ?? existingToken.ipAddress ?? null;
+      const finalUa = userAgent ?? existingToken.userAgent ?? null;
+      const parsedUa = finalUa ? parseUserAgent(finalUa) : null;
+
       await tx.refreshToken.create({
         data: {
           userId: existingToken.userId,
           tokenHash: hashRefreshToken(nextRefreshToken),
           expiresAt: getRefreshTokenExpiryDate(),
+          ipAddress: finalIp,
+          userAgent: finalUa,
+          deviceType: parsedUa?.deviceType ?? existingToken.deviceType,
+          browser: parsedUa?.browser ?? existingToken.browser,
+          os: parsedUa?.os ?? existingToken.os,
         },
       });
 
@@ -536,6 +559,57 @@ export class AuthService {
     });
 
     return updatedUser;
+  }
+
+  hashToken(token: string): string {
+    return hashRefreshToken(token);
+  }
+
+  async getSecurityDevices(userId: number) {
+    return prisma.refreshToken.findMany({
+      where: {
+        userId,
+        revoked: false,
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        deviceType: true,
+        browser: true,
+        os: true,
+        createdAt: true,
+        updatedAt: true,
+        tokenHash: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async revokeDevice(userId: number, deviceId: number) {
+    await prisma.refreshToken.updateMany({
+      where: {
+        id: deviceId,
+        userId,
+      },
+      data: {
+        revoked: true,
+      },
+    });
+  }
+
+  async revokeAllOtherDevices(userId: number, currentRefreshTokenHash: string) {
+    await prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        tokenHash: { not: currentRefreshTokenHash },
+        revoked: false,
+      },
+      data: {
+        revoked: true,
+      },
+    });
   }
 }
 

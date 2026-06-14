@@ -31,4 +31,9 @@ router.put('/users/:id/modules', authMiddleware, allowRoles(USER_TYPE_CODES.SYST
 router.put('/users/:id/branches', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.updateUserBranches);
 router.post('/users/:id/force-logout', authMiddleware, allowRoles(USER_TYPE_CODES.SYSTEM_ADMIN), authController.forceLogout);
 
+// Security Devices endpoints
+router.get('/security-devices', authMiddleware, authController.getSecurityDevices);
+router.post('/security-devices/revoke-all-others', authMiddleware, authController.revokeAllOtherDevices);
+router.post('/security-devices/:id/revoke', authMiddleware, authController.revokeDevice);
+
 export default router;

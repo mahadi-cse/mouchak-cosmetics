@@ -3,6 +3,19 @@ import type { JWT } from 'next-auth/jwt';
 import type { Provider } from 'next-auth/providers';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
+import { headers } from 'next/headers';
+
+const getClientHeaders = async () => {
+  try {
+    const reqHeaders = await headers();
+    const ua = reqHeaders.get('user-agent') || undefined;
+    const ip = reqHeaders.get('x-forwarded-for') || reqHeaders.get('x-real-ip') || undefined;
+    return { ua, ip };
+  } catch {
+    return { ua: undefined, ip: undefined };
+  }
+};
+
 
 type AccessTokenClaims = {
   sub: string;
@@ -145,10 +158,13 @@ const authenticateWithGoogle = async ({ idToken, accessToken }: { idToken?: stri
     return null;
   }
 
+  const clientHdrs = await getClientHeaders();
   const response = await fetch(`${getBackendApiBaseUrl()}/auth/google`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(clientHdrs.ua ? { 'User-Agent': clientHdrs.ua } : {}),
+      ...(clientHdrs.ip ? { 'X-Forwarded-For': clientHdrs.ip } : {}),
     },
     body: JSON.stringify({ idToken, accessToken }),
     cache: 'no-store',
@@ -168,10 +184,13 @@ const refreshAccessToken = async (token: JWT): Promise<JWT> => {
     }
 
     const refreshCookieName = getRefreshCookieName();
+    const clientHdrs = await getClientHeaders();
     const response = await fetch(`${getBackendApiBaseUrl()}/auth/refresh`, {
       method: 'POST',
       headers: {
         Cookie: `${refreshCookieName}=${encodeURIComponent(token.refreshToken)}`,
+        ...(clientHdrs.ua ? { 'User-Agent': clientHdrs.ua } : {}),
+        ...(clientHdrs.ip ? { 'X-Forwarded-For': clientHdrs.ip } : {}),
       },
       cache: 'no-store',
     });
@@ -218,10 +237,13 @@ const providers: Provider[] = [
         return null;
       }
 
+      const clientHdrs = await getClientHeaders();
       const response = await fetch(`${getBackendApiBaseUrl()}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(clientHdrs.ua ? { 'User-Agent': clientHdrs.ua } : {}),
+          ...(clientHdrs.ip ? { 'X-Forwarded-For': clientHdrs.ip } : {}),
         },
         body: JSON.stringify({ email, password }),
         cache: 'no-store',
@@ -274,10 +296,13 @@ const providers: Provider[] = [
         return null;
       }
 
+      const clientHdrs = await getClientHeaders();
       const response = await fetch(`${getBackendApiBaseUrl()}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(clientHdrs.ua ? { 'User-Agent': clientHdrs.ua } : {}),
+          ...(clientHdrs.ip ? { 'X-Forwarded-For': clientHdrs.ip } : {}),
         },
         body: JSON.stringify({
           firstName,

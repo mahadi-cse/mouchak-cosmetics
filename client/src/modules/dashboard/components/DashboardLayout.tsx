@@ -171,6 +171,7 @@ const SidebarContent: React.FC<{
                       style={{ borderLeftColor: Theme.border }}
                     >
                       {SETTINGS_ITEMS.filter((item) => {
+                        if (item.id === 'security') return true;
                         if (!userModuleCodes) return true;
                         return userModuleCodes.has(`settings:${item.id}`);
                       }).map((item) => {
