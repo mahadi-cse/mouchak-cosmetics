@@ -6,7 +6,7 @@ import { DashboardPageView, DashboardLocaleProvider } from '@/modules/dashboard'
 export default async function DashboardSectionPage() {
   const session = await auth();
 
-  if (!session?.user?.id) {
+  if (!session?.user?.id || session.error) {
     redirect('/login?callbackUrl=/dashboard');
   }
 

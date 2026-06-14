@@ -5,7 +5,7 @@ import { isCustomerRole, isStaffRole } from '@/shared/constants';
 export default async function StaffDashboardLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth();
 
-	if (!session?.user?.id) {
+	if (!session?.user?.id || session.error) {
 		redirect('/login?callbackUrl=/dashboard');
 	}
 
