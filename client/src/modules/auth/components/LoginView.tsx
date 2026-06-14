@@ -65,9 +65,20 @@ export default function LoginView({ callbackUrl = '/dashboard' }: LoginViewProps
         toast.success('Logged in successfully!');
         router.push(redirectTarget);
       }
-    } catch {
-      setError('Login failed. Please try again.');
-      toast.error('Login failed. Please try again.');
+    } catch (error: any) {
+      const errorMsg = String(error?.message || error?.cause?.err?.message || error || '');
+      if (errorMsg.includes('ACCOUNT_DEACTIVATED')) {
+        const msg = 'Your account has been deactivated. Please contact the system administrator.';
+        setError(msg);
+        toast.error(msg, { duration: 5000 });
+      } else if (errorMsg.includes('CredentialsSignin')) {
+        const msg = 'Invalid email or password. Please try again.';
+        setError(msg);
+        toast.error(msg);
+      } else {
+        setError('Login failed. Please try again.');
+        toast.error('Login failed. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }

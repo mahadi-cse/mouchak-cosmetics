@@ -1,9 +1,13 @@
-import NextAuth from 'next-auth';
+import NextAuth, { CredentialsSignin } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import type { Provider } from 'next-auth/providers';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import { headers } from 'next/headers';
+
+class AccountDeactivatedError extends CredentialsSignin {
+  code = "ACCOUNT_DEACTIVATED";
+}
 
 const getClientHeaders = async () => {
   try {
@@ -199,6 +203,7 @@ const refreshAccessToken = async (token: JWT): Promise<JWT> => {
       return {
         ...token,
         error: 'RefreshAccessTokenError',
+        accessTokenExpiresAt: Infinity, // Prevent immediate retry loop
       };
     }
 
@@ -218,6 +223,7 @@ const refreshAccessToken = async (token: JWT): Promise<JWT> => {
     return {
       ...token,
       error: 'RefreshAccessTokenError',
+      accessTokenExpiresAt: Infinity, // Prevent immediate retry loop
     };
   }
 };
@@ -254,10 +260,10 @@ const providers: Provider[] = [
           const errBody = await response.json();
           const msg = errBody?.message || '';
           if (msg.includes('deactivated') || errBody?.code === 'USER_INACTIVE') {
-            throw new Error('ACCOUNT_DEACTIVATED');
+            throw new AccountDeactivatedError();
           }
         } catch (e) {
-          if (e instanceof Error && e.message === 'ACCOUNT_DEACTIVATED') throw e;
+          if (e instanceof AccountDeactivatedError) throw e;
         }
         return null;
       }
@@ -422,6 +428,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return refreshAccessToken(token);
     },
     async session({ session, token }) {
+      if (token.error === 'RefreshAccessTokenError' || token.error === 'MissingRefreshToken') {
+        // Return an empty session to force "unauthenticated" status, breaking the redirect loop
+        return {} as any;
+      }
+
       session.user = {
         ...session.user,
         id: String(token.userId || token.sub || ''),
