@@ -762,7 +762,7 @@ export default function DashboardLayout({
             { id: 'overview', label: t.mobileNav.home, icon: '◈' },
             { id: 'inventory', label: t.mobileNav.inventory, icon: '📦' },
             { id: 'sales', label: t.mobileNav.sales, icon: '💰' },
-            { id: 'ecommerce', label: t.mobileNav.orders, icon: '🌐' },
+            { id: 'analytics', label: t.nav.analytics, icon: '📈' },
             { id: 'settings', label: t.mobileNav.settings, icon: '⚙️' },
           ].map((n) => {
             const active = activeNav === n.id;

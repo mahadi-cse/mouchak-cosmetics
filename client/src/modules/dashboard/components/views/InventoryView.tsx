@@ -370,7 +370,6 @@ export default function InventoryView({
                     {t.inventory.product}
                   </th>
                   <th
-                    className='hidden md:table-cell'
                     style={{
                       fontSize: '11px',
                       fontWeight: 500,
@@ -386,7 +385,6 @@ export default function InventoryView({
                     {t.inventory.stock}
                   </th>
                   <th
-                    className='hidden md:table-cell'
                     style={{
                       fontSize: '11px',
                       fontWeight: 500,
@@ -461,7 +459,6 @@ export default function InventoryView({
                         </div>
                       </td>
                       <td
-                        className='hidden md:table-cell'
                         style={{
                           padding: '10px 12px',
                           borderBottom: `1px solid ${Theme.border}`,
@@ -474,7 +471,6 @@ export default function InventoryView({
                         {p.stock}
                       </td>
                       <td
-                        className='hidden md:table-cell'
                         style={{
                           padding: '10px 12px',
                           borderBottom: `1px solid ${Theme.border}`,

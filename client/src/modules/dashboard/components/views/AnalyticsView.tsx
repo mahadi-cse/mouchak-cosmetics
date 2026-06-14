@@ -23,7 +23,7 @@ export default function AnalyticsView() {
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b: any) => b.active);
   const [branch, setBranch] = useState('');
-  const [period, setPeriod] = useState('monthly');
+  const [period, setPeriod] = useState('daily');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
 
@@ -166,6 +166,24 @@ export default function AnalyticsView() {
         </div>
       </div>
 
+      <Card className="px-3 py-2">
+        <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
+          <div className="text-[9px] font-bold uppercase tracking-wide shrink-0" style={{ color: Theme.mutedFg }}>📊</div>
+          {[
+            { label: t.analytics.revenue, value: formatCurrency(totalSales), color: Theme.primary },
+            { label: t.analytics.cost, value: formatCurrency(trendTotals.cost), color: Theme.warning },
+            { label: t.analytics.netProfit, value: formatCurrency(trendTotals.netProfit), color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' },
+            { label: t.analytics.qtySold, value: `${overview?.manualSales?.totalQty ?? 0}`, color: Theme.fg },
+            { label: t.analytics.transactions, value: `${transactions}`, color: Theme.fg },
+            { label: t.analytics.avgTicket, value: formatCurrency(avgTicket), color: Theme.fg },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-1.5 rounded px-2.5 py-1" style={{ background: Theme.muted }}>
+              <span className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>{s.label}</span>
+              <span className="text-sm font-black" style={{ color: s.color }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Period Summary — single line */}
  
@@ -293,24 +311,7 @@ export default function AnalyticsView() {
         </Card>
       </div>
 
-      <Card className="px-3 py-2">
-        <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
-          <div className="text-[9px] font-bold uppercase tracking-wide shrink-0" style={{ color: Theme.mutedFg }}>📊</div>
-          {[
-            { label: t.analytics.revenue, value: formatCurrency(totalSales), color: Theme.primary },
-            { label: t.analytics.cost, value: formatCurrency(trendTotals.cost), color: Theme.warning },
-            { label: t.analytics.netProfit, value: formatCurrency(trendTotals.netProfit), color: trendTotals.netProfit >= 0 ? Theme.success : '#dc2626' },
-            { label: t.analytics.qtySold, value: `${overview?.manualSales?.totalQty ?? 0}`, color: Theme.fg },
-            { label: t.analytics.transactions, value: `${transactions}`, color: Theme.fg },
-            { label: t.analytics.avgTicket, value: formatCurrency(avgTicket), color: Theme.fg },
-          ].map((s) => (
-            <div key={s.label} className="flex items-center gap-1.5 rounded px-2.5 py-1" style={{ background: Theme.muted }}>
-              <span className="text-[10px] font-bold uppercase" style={{ color: Theme.mutedFg }}>{s.label}</span>
-              <span className="text-sm font-black" style={{ color: s.color }}>{s.value}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
+
       {/* <Card>
         <SecHead title="Daily Sales by Channel" sub="Online vs Manual · This week" />
         <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
