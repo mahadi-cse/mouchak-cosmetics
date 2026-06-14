@@ -176,7 +176,7 @@ export function Header() {
                       {searchResults.map((product) => (
                         <Link
                           key={product.id}
-                          href={`/products/${product.slug}`}
+                          href={`/product/${product.id}`}
                           onClick={() => setIsSearchOpen(false)}
                           className="flex items-center gap-3 p-3 hover:bg-zinc-50 transition border-b border-zinc-100 last:border-0"
                         >
@@ -339,7 +339,7 @@ export function Header() {
                     {searchResults.map((product) => (
                       <Link 
                         key={product.id} 
-                        href={`/products/${product.slug}`}
+                        href={`/product/${product.id}`}
                         className="flex items-center gap-4 p-2"
                       >
                         <div className="w-16 h-16 bg-zinc-100 rounded-xl overflow-hidden relative">
