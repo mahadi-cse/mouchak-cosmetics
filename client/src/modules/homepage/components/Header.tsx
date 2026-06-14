@@ -318,15 +318,17 @@ export function Header() {
                 <polyline points="12 19 5 12 12 5"></polyline>
               </svg>
             </button>
-            <form onSubmit={handleSearchSubmit} className="flex-1">
-              <input
-                autoFocus
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t.header.searchPlaceholder}
-                className="w-full text-lg font-medium outline-none border-b-2 border-primary py-2"
-              />
-            </form>
+            {isMobileSearchOpen && (
+              <form onSubmit={handleSearchSubmit} className="flex-1">
+                <input
+                  autoFocus
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={t.header.searchPlaceholder}
+                  className="w-full text-lg font-medium outline-none border-b-2 border-primary py-2"
+                />
+              </form>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto">
