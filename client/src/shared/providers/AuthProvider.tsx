@@ -10,15 +10,21 @@ function AuthSessionWatcher() {
   useEffect(() => {
     if (session?.error && !isSigningOut.current) {
       isSigningOut.current = true;
-      const isDashboard = 
-        window.location.pathname.startsWith('/dashboard') || 
-        window.location.pathname.startsWith('/customer/dashboard');
       
-      signOut({ 
-        callbackUrl: isDashboard 
-          ? `/login?callbackUrl=${encodeURIComponent(window.location.pathname)}` 
-          : window.location.pathname 
-      }).finally(() => {
+      let callbackUrl = window.location.pathname;
+      if (session.error === 'ACCOUNT_DEACTIVATED') {
+        callbackUrl = `/login?error=ACCOUNT_DEACTIVATED`;
+      } else {
+        const isDashboard = 
+          window.location.pathname.startsWith('/dashboard') || 
+          window.location.pathname.startsWith('/customer/dashboard');
+        
+        if (isDashboard) {
+          callbackUrl = `/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
+        }
+      }
+
+      signOut({ callbackUrl }).finally(() => {
         isSigningOut.current = false;
       });
     }

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 
@@ -25,6 +25,23 @@ export default function LoginView({ callbackUrl = '/dashboard' }: LoginViewProps
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get('error');
+
+  useEffect(() => {
+    if (errorParam) {
+      if (errorParam.includes('ACCOUNT_DEACTIVATED')) {
+        const msg = 'Your account has been deactivated. Please contact the system administrator.';
+        setError(msg);
+        toast.error(msg, { duration: 5000 });
+      } else if (errorParam.includes('CredentialsSignin') || errorParam.includes('credentials')) {
+        const msg = 'Invalid email or password. Please try again.';
+        setError(msg);
+        toast.error(msg);
+      }
+    }
+  }, [errorParam]);
 
   useEffect(() => {
     if (status === 'authenticated') {

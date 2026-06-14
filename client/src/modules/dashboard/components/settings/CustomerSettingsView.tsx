@@ -12,6 +12,7 @@ interface Customer {
   id: number;
   user: {
     isActive: boolean;
+    email?: string;
   };
   segment: string;
   totalSpent: number;
@@ -149,6 +150,9 @@ export default function CustomerSettingsView() {
                   <tr key={c.id} className="hover:bg-zinc-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-bold text-zinc-900">{name}</div>
+                      {c.user?.email && (
+                        <div className="text-xs text-zinc-400 font-medium mt-0.5">{c.user.email}</div>
+                      )}
                       <div className="text-xs text-zinc-500 mt-1 font-medium">{c.segment || 'NEW'}</div>
                     </td>
                     <td className="px-6 py-4">

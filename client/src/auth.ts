@@ -157,7 +157,7 @@ const getGoogleProviderConfig = (): { clientId: string; clientSecret: string } |
   return { clientId, clientSecret };
 };
 
-const authenticateWithGoogle = async ({ idToken, accessToken }: { idToken?: string; accessToken?: string }): Promise<{ accessToken: string; refreshToken: string; claims: AccessTokenClaims } | null> => {
+const authenticateWithGoogle = async ({ idToken, accessToken }: { idToken?: string; accessToken?: string }): Promise<{ accessToken?: string; refreshToken?: string; claims?: AccessTokenClaims; error?: string } | null> => {
   if (!idToken && !accessToken) {
     return null;
   }
@@ -175,10 +175,17 @@ const authenticateWithGoogle = async ({ idToken, accessToken }: { idToken?: stri
   });
 
   if (!response.ok) {
+    try {
+      const errBody = await response.json();
+      if (errBody?.code === 'USER_INACTIVE' || errBody?.message?.includes('inactive') || errBody?.message?.includes('deactivated')) {
+        return { error: 'ACCOUNT_DEACTIVATED' };
+      }
+    } catch {}
     return null;
   }
 
-  return parseBackendToken(response);
+  const parsed = await parseBackendToken(response);
+  return { ...parsed };
 };
 
 const refreshAccessToken = async (token: JWT): Promise<JWT> => {
@@ -382,13 +389,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
+        if (parsed.error) {
+          return {
+            ...token,
+            error: parsed.error,
+          };
+        }
+
         return {
           ...token,
-          userId: parsed.claims.sub,
-          role: parsed.claims.role,
-          typeId: parsed.claims.typeId,
+          userId: parsed.claims?.sub,
+          role: parsed.claims?.role,
+          typeId: parsed.claims?.typeId,
           accessToken: parsed.accessToken,
-          accessTokenExpiresAt: parsed.claims.exp * 1000,
+          accessTokenExpiresAt: parsed.claims?.exp ? parsed.claims.exp * 1000 : 0,
           refreshToken: parsed.refreshToken,
           error: undefined,
         };
