@@ -3,12 +3,23 @@ import apiClient from '@/shared/lib/apiClient';
 
 export interface CreateProductPayload {
   name: string;
-  slug: string;
-  description: string;
+  description?: string;
+  shortDescription?: string;
   price: number;
   sku: string;
   categoryId: number;
   images: string[];
+  branchId?: number;
+  openingStock?: number;
+  unitType?: 'PIECE' | 'WEIGHT';
+  unitLabel?: string;
+  sizes?: Array<{
+    name: string;
+    sortOrder?: number;
+    imageUrl?: string | null;
+    priceOverride?: number | null;
+    isActive?: boolean;
+  }>;
 }
 
 export interface UpdateProductPayload extends Partial<CreateProductPayload> {

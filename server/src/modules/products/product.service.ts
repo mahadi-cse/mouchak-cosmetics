@@ -70,7 +70,7 @@ export class ProductService {
       data: {
         productId: product.id,
         warehouseId: defaultBranchId,
-        quantity: 0,
+        quantity: data.openingStock || 0,
         reservedQty: 0,
         lowStockThreshold: 10,
       },

@@ -260,6 +260,7 @@ export const bn: DashboardTranslations = {
     category: "ক্যাটাগরি *",
     sellingPrice: "বিক্রয় মূল্য (৳) *",
     costPrice: "ক্রয় মূল্য (৳)",
+    openingStock: "প্রারম্ভিক স্টক",
     description: "বিবরণ",
     productImage: "পণ্যের ছবি",
     unitType: "ইউনিটের ধরন *",

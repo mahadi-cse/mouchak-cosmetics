@@ -91,7 +91,20 @@ export default function ProductsView() {
       const defaultImage = 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=800&auto=format&fit=crop';
       const images = imageUrl ? [imageUrl] : [defaultImage];
       const sizesPayload = productForm.sizes.filter(s => s.name.trim()).map((s, i) => ({ name: s.name.trim(), sortOrder: i, imageUrl: s.imageUrl || null, priceOverride: s.priceOverride ? Number(s.priceOverride) : null }));
-      const payload = { name: productForm.name, sku: productForm.sku, price: Number(productForm.price), costPrice: productForm.costPrice ? Number(productForm.costPrice) : undefined, categoryId: Number(productForm.categoryId), branchId: Number(productForm.branchId), description: productForm.description, images, unitType: productForm.unitType, unitLabel: productForm.unitLabel, sizes: sizesPayload } as any;
+      const payload = {
+        name: productForm.name,
+        sku: productForm.sku,
+        price: Number(productForm.price),
+        costPrice: productForm.costPrice ? Number(productForm.costPrice) : undefined,
+        categoryId: Number(productForm.categoryId),
+        branchId: Number(productForm.branchId),
+        description: productForm.description,
+        images,
+        unitType: productForm.unitType,
+        unitLabel: productForm.unitLabel,
+        sizes: sizesPayload,
+        ...(editProduct === null && productForm.stock ? { openingStock: Number(productForm.stock) } : {}),
+      } as any;
       if (editProduct) { await updateProduct.mutateAsync({ id: editProduct, ...payload }); }
       else { await createProduct.mutateAsync(payload); }
       resetForm();
@@ -147,6 +160,9 @@ export default function ProductsView() {
               <div><label className={labelClass}>{t.products.category}</label><select className={selectClass} value={productForm.categoryId} disabled={!productForm.branchId || isLoadingProductCategories} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}><option value="">{!productForm.branchId ? t.products.selectBranchFirst : isLoadingProductCategories ? t.products.loading : t.products.selectCategory}</option>{productCategories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
               <div><label className={labelClass}>{t.products.sellingPrice}</label><input type="number" placeholder="0" className={inputClass} value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} /></div>
               <div><label className={labelClass}>{t.products.costPrice}</label><input type="number" placeholder="0" className={inputClass} value={productForm.costPrice} onChange={(e) => setProductForm({ ...productForm, costPrice: e.target.value })} /></div>
+              {editProduct === null && (
+                <div><label className={labelClass}>{t.products.openingStock}</label><input type="number" placeholder="0" className={inputClass} value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} /></div>
+              )}
               <div className={isMobile ? '' : 'col-span-2'}><label className={labelClass}>{t.products.description}</label><textarea placeholder="..." className={`${inputClass} h-16 resize-y`} value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></div>
               <div><label className={labelClass}>{t.products.productImage}</label><ImageUploader ref={productImageRef} value={productForm.image} onChange={(url) => setProductForm({ ...productForm, image: url })} folder="mouchak/products" aspect={1} /></div>
             </div>

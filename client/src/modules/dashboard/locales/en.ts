@@ -257,6 +257,7 @@ export const en = {
     category: "Category *",
     sellingPrice: "Selling Price (৳) *",
     costPrice: "Cost Price (৳)",
+    openingStock: "Opening Stock",
     description: "Description",
     productImage: "Product Image",
     unitType: "Unit Type *",
