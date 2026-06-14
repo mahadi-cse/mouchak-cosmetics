@@ -216,6 +216,9 @@ export const bn: DashboardTranslations = {
 
   // ─── Sales View ───
   sales: {
+    step1: "শাখা নির্বাচন করুন",
+    step2: "পণ্য যোগ করুন",
+    step3: "বিক্রয় নিশ্চিত করুন",
     addNewSale: "নতুন বিক্রয় যোগ করুন",
     recordManualTx: "একটি ম্যানুয়াল বিক্রয় লেনদেন রেকর্ড করুন",
     branch: "শাখা",

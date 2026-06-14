@@ -1440,21 +1440,21 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         ) : (
           <>
             {/* Toolbar */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-3">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <input
                   value={staffSearch}
                   onChange={(e) => setStaffSearch(e.target.value)}
                   placeholder={t.settings.searchStaff}
-                  className={inputClass}
-                  style={{ maxWidth: 280 }}
+                  className={`${inputClass} w-full sm:w-auto`}
+                  style={{ maxWidth: isMobile ? '100%' : 280 }}
                 />
-                <div className="text-[13px]" style={{ color: Theme.mutedFg }}>
+                <div className="text-[13px] whitespace-nowrap" style={{ color: Theme.mutedFg }}>
                   {isLoadingStaff ? 'Loading…' : `${filteredStaffUsers.length} ${filteredStaffUsers.length !== 1 ? t.settings.users : t.settings.user}`}
                 </div>
                 <Btn variant="ghost" size="sm" onClick={() => refetchStaff()}>↻ {t.ecommerce.refresh}</Btn>
               </div>
-              <Btn variant="primary" size="sm" onClick={() => setStaffFormView('new')}>{t.settings.addUser}</Btn>
+              <Btn variant="primary" size="sm" className="w-full sm:w-auto justify-center" onClick={() => setStaffFormView('new')}>{t.settings.addUser}</Btn>
             </div>
 
             {/* User list */}
@@ -1468,19 +1468,21 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   const initials = `${u.firstName[0] ?? ''}${u.lastName?.[0] ?? ''}`.toUpperCase();
                   const typeName = u.userType?.name || '—';
                   return (
-                    <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3 transition" style={{ opacity: u.isActive ? 1 : 0.55 }}>
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold" style={{ background: Theme.secondary, color: Theme.primary }}>{initials || '?'}</div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-bold" style={{ color: Theme.fg }}>{u.firstName} {u.lastName}</span>
-                          {!u.isActive && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-500">{t.settings.inactive}</span>}
-                        </div>
-                        <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
-                          {u.email}
-                          {u.userModules && u.userModules.length > 0 && <span className="ml-2 opacity-70">· {u.userModules.length} {t.settings.modules}</span>}
+                    <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[10px] border border-border bg-white px-[14px] py-3 transition" style={{ opacity: u.isActive ? 1 : 0.55 }}>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold" style={{ background: Theme.secondary, color: Theme.primary }}>{initials || '?'}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-bold" style={{ color: Theme.fg }}>{u.firstName} {u.lastName}</span>
+                            {!u.isActive && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-500">{t.settings.inactive}</span>}
+                          </div>
+                          <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
+                            {u.email}
+                            {u.userModules && u.userModules.length > 0 && <span className="ml-2 opacity-70">· {u.userModules.length} {t.settings.modules}</span>}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-gray-100 sm:justify-end">
                         <Badge label={typeName} bg={Theme.secondary} color={Theme.primary} />
                         <Btn variant="ghost" size="sm" onClick={() => { setStaffEditId(u.id); setStaffFormView('edit'); }}>{t.settings.edit}</Btn>
                         <Btn variant="ghost" size="sm" onClick={() => handleToggleUserActive(u)}>{u.isActive ? t.settings.deactivate : t.settings.activate}</Btn>

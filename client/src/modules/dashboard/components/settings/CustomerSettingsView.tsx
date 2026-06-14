@@ -110,7 +110,7 @@ export default function CustomerSettingsView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-lg font-black text-zinc-900 tracking-tight">{t.customers.title}</h2>
           <p className="text-sm text-zinc-500 font-medium mt-1">{t.customers.sub}</p>
@@ -118,13 +118,14 @@ export default function CustomerSettingsView() {
         <input
           type="text"
           placeholder={t.customers.searchPlaceholder}
-          className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-primary/20"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+      {/* Desktop Table */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -167,33 +168,39 @@ export default function CustomerSettingsView() {
                       />
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <Btn 
                           variant="ghost" 
                           size="sm" 
                           onClick={() => handleToggleStatus(c.id, isActive)}
                           className={isActive ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}
-                          title={isActive ? t.customers.blockAccount : t.customers.activateAccount}
                         >
-                          {isActive ? <XCircle size={16} /> : <CheckCircle size={16} />}
+                          <span className="flex items-center gap-1.5 whitespace-nowrap">
+                            {isActive ? <XCircle size={14} /> : <CheckCircle size={14} />}
+                            {isActive ? t.customers.blockAccount : t.customers.activateAccount}
+                          </span>
                         </Btn>
                         <Btn 
                           variant="ghost" 
                           size="sm" 
                           onClick={() => handleResetPassword(c.id)}
                           className="text-zinc-600 hover:bg-zinc-100"
-                          title={t.customers.resetPassword}
                         >
-                          <Key size={16} />
+                          <span className="flex items-center gap-1.5 whitespace-nowrap">
+                            <Key size={14} />
+                            {t.customers.resetPassword}
+                          </span>
                         </Btn>
                         <Btn 
                           variant="ghost" 
                           size="sm" 
                           onClick={() => handleRevokeSessions(c.id)}
                           className="text-orange-600 hover:bg-orange-50"
-                          title={t.customers.revokeSessions}
                         >
-                          <LogOut size={16} />
+                          <span className="flex items-center gap-1.5 whitespace-nowrap">
+                            <LogOut size={14} />
+                            {t.customers.revokeSessions}
+                          </span>
                         </Btn>
                       </div>
                     </td>
@@ -210,6 +217,98 @@ export default function CustomerSettingsView() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card List */}
+      <div className="block sm:hidden space-y-3">
+        {customers.map((c: Customer) => {
+          const isActive = c.user?.isActive ?? true;
+          let name = c.customerName || (c.firstName ? `${c.firstName} ${c.lastName || ''}`.trim() : '');
+          
+          if (!name && c.user) {
+            name = (c.user as any).email || (c.user as any).phone || t.na;
+          } else if (!name) {
+            name = t.na;
+          }
+
+          const initials = name.slice(0, 2).toUpperCase();
+
+          return (
+            <div key={c.id} className="flex flex-col gap-3 rounded-[12px] border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-black uppercase" style={{ background: Theme.secondary, color: Theme.primary }}>
+                  {initials || '??'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-sm font-bold text-zinc-900">{name}</span>
+                    <Badge 
+                      label={isActive ? t.customers.active : t.customers.blocked} 
+                      bg={isActive ? '#dcfce7' : '#fee2e2'} 
+                      color={isActive ? '#166534' : '#991b1b'} 
+                    />
+                  </div>
+                  {c.user?.email && (
+                    <div className="text-[11px] text-zinc-400 font-medium mt-0.5">{c.user.email}</div>
+                  )}
+                  <div className="text-[11px] text-zinc-500 font-semibold mt-0.5">{c.segment || 'NEW'}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 text-xs border-t border-dashed border-zinc-100 pt-2 pb-0.5">
+                <div className="flex justify-between pr-3 border-r border-zinc-100">
+                  <span className="text-zinc-500 font-medium">Spent:</span>
+                  <span className="font-extrabold text-primary">৳{c.totalSpent || 0}</span>
+                </div>
+                <div className="flex justify-between pl-3">
+                  <span className="text-zinc-500 font-medium">Orders:</span>
+                  <span className="font-bold text-zinc-700">{c.totalOrders || 0}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5 pt-2.5 border-t border-zinc-100">
+                <Btn 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleToggleStatus(c.id, isActive)}
+                  className={isActive ? 'text-red-600 hover:bg-red-50 justify-center w-full px-1' : 'text-green-600 hover:bg-green-50 justify-center w-full px-1'}
+                >
+                  <span className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+                    {isActive ? <XCircle size={13} /> : <CheckCircle size={13} />}
+                    {isActive ? t.customers.blockAccount : t.customers.activateAccount}
+                  </span>
+                </Btn>
+                <Btn 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleResetPassword(c.id)}
+                  className="text-zinc-600 hover:bg-zinc-100 justify-center w-full px-1"
+                >
+                  <span className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+                    <Key size={13} />
+                    {t.customers.resetPassword}
+                  </span>
+                </Btn>
+                <Btn 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleRevokeSessions(c.id)}
+                  className="text-orange-600 hover:bg-orange-50 justify-center w-full col-span-2 px-1"
+                >
+                  <span className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+                    <LogOut size={13} />
+                    {t.customers.revokeSessions}
+                  </span>
+                </Btn>
+              </div>
+            </div>
+          );
+        })}
+        {customers.length === 0 && (
+          <div className="py-8 text-center text-zinc-500 font-medium bg-white rounded-[12px] border border-zinc-200 shadow-sm">
+            {t.customers.noCustomers}
+          </div>
+        )}
       </div>
     </div>
   );

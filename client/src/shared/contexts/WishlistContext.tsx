@@ -3,6 +3,19 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import apiClient from '@/shared/lib/apiClient';
+import { isCustomerRole } from '@/shared/constants';
+
+const getRoleFromToken = (token?: string | null): string | null => {
+  if (!token) return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload?.role ?? null;
+  } catch {
+    return null;
+  }
+};
 
 export interface WishlistItem {
   id: string;
@@ -29,10 +42,13 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const isCustomer = session?.accessToken ? isCustomerRole(getRoleFromToken(session.accessToken)) : false;
+  const isDbWishlistActive = status === 'authenticated' && isCustomer;
 
   // Sync wishlist from database or localStorage based on session status
   const fetchDbWishlist = useCallback(async () => {
@@ -60,9 +76,9 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (isDbWishlistActive) {
       fetchDbWishlist();
-    } else if (status === 'unauthenticated') {
+    } else {
       const saved = localStorage.getItem('wishlist');
       if (saved) {
         try {
@@ -74,20 +90,20 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         setItems([]);
       }
     }
-  }, [status, fetchDbWishlist]);
+  }, [isDbWishlistActive, fetchDbWishlist]);
 
-  // Save wishlist to localStorage only for unauthenticated users
+  // Save wishlist to localStorage only for unauthenticated or non-customer users
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!isDbWishlistActive) {
       localStorage.setItem('wishlist', JSON.stringify(items));
     }
-  }, [items, status]);
+  }, [items, isDbWishlistActive]);
 
   const count = items.length;
 
   const addToWishlist = useCallback(
     async (item: WishlistItem) => {
-      if (status === 'authenticated') {
+      if (isDbWishlistActive) {
         try {
           await apiClient.post('/customer-dashboard/wishlist', {
             productId: Number(item.id),
@@ -104,12 +120,12 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [status, fetchDbWishlist]
+    [isDbWishlistActive, fetchDbWishlist]
   );
 
   const removeFromWishlist = useCallback(
     async (id: string) => {
-      if (status === 'authenticated') {
+      if (isDbWishlistActive) {
         try {
           await apiClient.delete(`/customer-dashboard/wishlist/${id}`);
           await fetchDbWishlist();
@@ -120,7 +136,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         setItems((prev) => prev.filter((item) => item.id !== id));
       }
     },
-    [status, fetchDbWishlist]
+    [isDbWishlistActive, fetchDbWishlist]
   );
 
   const isInWishlist = useCallback(
@@ -131,7 +147,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   );
 
   const clearWishlist = useCallback(async () => {
-    if (status === 'authenticated') {
+    if (isDbWishlistActive) {
       try {
         await Promise.all(
           items.map((item) => apiClient.delete(`/customer-dashboard/wishlist/${item.id}`))
@@ -143,7 +159,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     } else {
       setItems([]);
     }
-  }, [status, items, fetchDbWishlist]);
+  }, [isDbWishlistActive, items, fetchDbWishlist]);
 
   return (
     <WishlistContext.Provider

@@ -39,7 +39,7 @@ export default function SalesView({
   products,
 }: SalesViewProps) {
   const { isMobile } = useResponsive();
-  const { t } = useDashboardLocale();
+  const { t, locale } = useDashboardLocale();
   const { data: session } = useSession();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b) => b.active);
@@ -289,19 +289,25 @@ export default function SalesView({
       <Card className="border border-pink-100 shadow-sm">
         
         <div className="px-3.5 py-3.5 flex flex-col gap-3">
-          {/* Header + Branch selector on same row */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Header & Branch Selection Side-by-Side */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b" style={{ borderColor: Theme.border }}>
             <div>
               <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>{t.sales.addNewSale}</div>
               <div className="text-[12px]" style={{ color: Theme.mutedFg }}>{t.sales.recordManualTx}</div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <label className="text-xs font-semibold whitespace-nowrap" style={{ color: Theme.mutedFg }}>{t.sales.branch}</label>
+            
+            <div className="flex items-center gap-2">
+              <div className="w-5.5 h-5.5 min-w-[22px] rounded-full flex items-center justify-center text-[10px] font-extrabold text-white" style={{ background: Theme.primary }}>
+                {locale === 'bn' ? '১' : '1'}
+              </div>
+              <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                {t.sales.step1}:
+              </label>
               <select
                 value={saleBranchId}
                 onChange={(e) => setSaleBranchId(e.target.value)}
-                className="rounded-lg border px-3 py-2 text-sm font-semibold outline-none"
-                style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
+                className="rounded-lg border px-3 py-1.5 text-xs font-semibold outline-none bg-white transition focus:border-pink-300 min-w-[140px]"
+                style={{ borderColor: Theme.border, color: Theme.fg }}
               >
                 {activeBranches.map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
@@ -310,88 +316,203 @@ export default function SalesView({
             </div>
           </div>
 
-          {/* Search Row */}
-          <div className="relative" ref={searchBoxRef}>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder={t.sales.searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowDropdown(true);
-                }}
-                onFocus={() => setShowDropdown(true)}
-                className="w-full px-3 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-pink-100"
-                style={{
-                  borderColor: Theme.border,
-                  color: Theme.fg,
-                  background: '#fff',
-                }}
-              />
-              {showDropdown && (
-                <div
-                  className="absolute top-full left-0 right-0 bg-white border rounded-b-lg max-h-60 overflow-y-auto z-10"
-                  style={{
-                    borderColor: Theme.border,
-                    borderTop: 'none',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => handleSelectProduct(p)}
-                        className="w-full px-3 py-2 border-b text-left cursor-pointer text-xs flex justify-between items-center font-medium"
-                        style={{
-                          background: 'transparent',
-                          color: Theme.fg,
-                          borderColor: Theme.border,
-                        }}
-                      >
-                        <div>
-                          <div className="font-semibold">{p.name}</div>
-                          <div className="text-xs" style={{ color: Theme.mutedFg }}>{t.modal.sku}: {p.sku}</div>
+          {/* Step 2 — Product Search */}
+          <div className="flex gap-3">
+            <div className="w-6 h-6 min-w-[24px] rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5" style={{ background: Theme.primary }}>
+              {locale === 'bn' ? '২' : '2'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <label className="block text-[13px] font-semibold mb-1.5" style={{ color: Theme.fg }}>
+                {t.sales.step2}
+              </label>
+              
+              {/* Search Row */}
+              <div className="relative mb-3" ref={searchBoxRef}>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={t.sales.searchPlaceholder}
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    className="w-full px-3 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-pink-100 transition"
+                    style={{
+                      borderColor: Theme.border,
+                      color: Theme.fg,
+                      background: '#fff',
+                    }}
+                  />
+                  {showDropdown && (
+                    <div
+                      className="absolute top-full left-0 right-0 bg-white border rounded-b-lg max-h-60 overflow-y-auto z-10"
+                      style={{
+                        borderColor: Theme.border,
+                        borderTop: 'none',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      }}
+                    >
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => handleSelectProduct(p)}
+                            className="w-full px-3 py-2 border-b text-left cursor-pointer text-xs flex justify-between items-center font-medium hover:bg-pink-50/30 transition-colors"
+                            style={{
+                              background: 'transparent',
+                              color: Theme.fg,
+                              borderColor: Theme.border,
+                            }}
+                          >
+                            <div>
+                              <div className="font-semibold">{p.name}</div>
+                              <div className="text-xs" style={{ color: Theme.mutedFg }}>{t.modal.sku}: {p.sku}</div>
+                            </div>
+                            <div className="text-xs ml-2" style={{ color: Theme.mutedFg }}>
+                              {t.inventory.stock}: {p.stock}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>
+                          {t.sales.noProductsBranch}
                         </div>
-                        <div className="text-xs ml-2" style={{ color: Theme.mutedFg }}>
-                          {t.inventory.stock}: {p.stock}
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-3 text-center text-xs" style={{ color: Theme.mutedFg }}>
-                      {t.sales.noProductsBranch}
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Cart List */}
-          <div className="rounded-xl border overflow-hidden bg-white" style={{ borderColor: Theme.border }}>
-            {!isMobile && (
-              <div className="grid grid-cols-12 gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wide bg-gray-50" style={{ color: Theme.mutedFg }}>
-                <div className="col-span-4">{t.sales.product}</div>
-                <div className="col-span-3 text-center">{t.sales.qty}</div>
-                <div className="col-span-2 text-right">{t.sales.unitPrice}</div>
-                <div className="col-span-2 text-right">{t.sales.lineTotal}</div>
-                <div className="col-span-1 text-right"> </div>
               </div>
-            )}
 
-            {lineItems.length > 0 ? (
-              lineItems.map((item, idx) => {
-                const maxQty = getMaxEditableQty(item.productId, idx);
+              {/* Cart List */}
+              <div className="rounded-xl border overflow-hidden bg-white" style={{ borderColor: Theme.border }}>
+                {!isMobile && (
+                  <div className="grid grid-cols-12 gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wide bg-gray-50" style={{ color: Theme.mutedFg }}>
+                    <div className="col-span-4">{t.sales.product}</div>
+                    <div className="col-span-3 text-center">{t.sales.qty}</div>
+                    <div className="col-span-2 text-right">{t.sales.unitPrice}</div>
+                    <div className="col-span-2 text-right">{t.sales.lineTotal}</div>
+                    <div className="col-span-1 text-right"> </div>
+                  </div>
+                )}
 
-                if (isMobile) {
-                  return (
-                    <div key={`${item.productId}-${idx}`} className="px-3 py-3 border-t border-gray-100 hover:bg-gray-50">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold truncate" style={{ color: Theme.fg }}>{item.name}</div>
-                          <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
+                {lineItems.length > 0 ? (
+                  lineItems.map((item, idx) => {
+                    const maxQty = getMaxEditableQty(item.productId, idx);
+
+                    if (isMobile) {
+                      return (
+                        <div key={`${item.productId}-${idx}`} className="px-3 py-3 border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold truncate" style={{ color: Theme.fg }}>{item.name}</div>
+                              <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
+                                {item.sku} · {item.unitType === 'WEIGHT' ? '⚖️' : '📦'} {item.unitLabel}
+                              </div>
+                              {item.sizes.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {item.sizes.map((s: any) => (
+                                    <button
+                                      key={s.name}
+                                      type="button"
+                                      onClick={() => {
+                                        setLineItems((prev) =>
+                                          prev.map((li, i) => {
+                                            if (i !== idx) return li;
+                                            const newPrice = s.priceOverride ? Number(s.priceOverride) : li.unitPrice;
+                                            return { ...li, sizeName: s.name, unitPrice: newPrice, total: li.qty * newPrice };
+                                          })
+                                        );
+                                      }}
+                                      className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer transition-colors"
+                                      style={{
+                                        borderColor: item.sizeName === s.name ? Theme.primary : Theme.border,
+                                        background: item.sizeName === s.name ? Theme.primary : '#fff',
+                                        color: item.sizeName === s.name ? '#fff' : Theme.fg,
+                                      }}
+                                    >
+                                      {s.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeLineItem(idx)}
+                              className="text-sm font-bold px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                              style={{ color: '#dc2626' }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 mt-2.5">
+                            <div>
+                              <div className="text-[10px] mb-1 font-semibold uppercase tracking-wide" style={{ color: Theme.mutedFg }}>
+                                {t.sales.qty}
+                              </div>
+                              <div className="inline-flex items-center rounded-lg border bg-white overflow-hidden" style={{ borderColor: Theme.border }}>
+                                <button
+                                  className="w-8 h-8 text-sm font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  style={{ color: Theme.fg }}
+                                  onClick={() => updateLineItem(idx, { qty: item.qty - 1 })}
+                                  disabled={item.qty <= 1}
+                                >
+                                  −
+                                </button>
+                                <span className="w-px h-4 bg-gray-200" />
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={maxQty}
+                                  value={item.qty}
+                                  onChange={(e) => updateLineItem(idx, { qty: Number(e.target.value) || 1 })}
+                                  className="w-10 text-center text-xs font-bold outline-none bg-transparent"
+                                  style={{ color: Theme.fg }}
+                                />
+                                <span className="w-px h-4 bg-gray-200" />
+                                <button
+                                  className="w-8 h-8 text-sm font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  style={{ color: Theme.fg }}
+                                  onClick={() => updateLineItem(idx, { qty: item.qty + 1 })}
+                                  disabled={item.qty >= maxQty}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-[10px] mb-1 font-semibold uppercase tracking-wide text-right" style={{ color: Theme.mutedFg }}>
+                                {t.sales.unitPrice}
+                              </div>
+                              <input
+                                type="number"
+                                min={0}
+                                value={item.unitPrice}
+                                onChange={(e) => updateLineItem(idx, { unitPrice: Number(e.target.value) || 0 })}
+                                className="w-full px-2.5 py-1.5 border rounded text-sm text-right outline-none bg-white focus:border-pink-300 transition"
+                                style={{ borderColor: Theme.border }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-[11px] font-semibold" style={{ color: Theme.mutedFg }}>{t.sales.lineTotal}</span>
+                            <span className="text-sm font-bold" style={{ color: Theme.primary }}>
+                              {formatCurrency(item.total)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={`${item.productId}-${idx}`} className="grid grid-cols-12 gap-2 px-3 py-2.5 border-t border-gray-100 items-center hover:bg-gray-50 transition-colors">
+                        <div className="col-span-4 min-w-0">
+                          <div className="text-xs font-semibold truncate" style={{ color: Theme.fg }}>{item.name}</div>
+                          <div className="text-[10px]" style={{ color: Theme.mutedFg }}>
                             {item.sku} · {item.unitType === 'WEIGHT' ? '⚖️' : '📦'} {item.unitLabel}
                           </div>
                           {item.sizes.length > 0 && (
@@ -409,7 +530,7 @@ export default function SalesView({
                                       })
                                     );
                                   }}
-                                  className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer"
+                                  className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer transition-colors"
                                   style={{
                                     borderColor: item.sizeName === s.name ? Theme.primary : Theme.border,
                                     background: item.sizeName === s.name ? Theme.primary : '#fff',
@@ -422,42 +543,29 @@ export default function SalesView({
                             </div>
                           )}
                         </div>
-                        <button
-                          onClick={() => removeLineItem(idx)}
-                          className="text-sm font-bold px-2 py-1 rounded"
-                          style={{ color: '#dc2626' }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 mt-2.5">
-                        <div>
-                          <div className="text-[10px] mb-1 font-semibold uppercase tracking-wide" style={{ color: Theme.mutedFg }}>
-                            {t.sales.qty}
-                          </div>
+                        <div className="col-span-3 flex justify-center">
                           <div className="inline-flex items-center rounded-lg border bg-white overflow-hidden" style={{ borderColor: Theme.border }}>
                             <button
-                              className="w-8 h-8 text-sm font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="w-9 h-9 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                               style={{ color: Theme.fg }}
                               onClick={() => updateLineItem(idx, { qty: item.qty - 1 })}
                               disabled={item.qty <= 1}
                             >
                               −
                             </button>
-                            <span className="w-px h-4 bg-gray-200" />
+                            <span className="w-px h-5 bg-gray-200" />
                             <input
                               type="number"
                               min={1}
                               max={maxQty}
                               value={item.qty}
                               onChange={(e) => updateLineItem(idx, { qty: Number(e.target.value) || 1 })}
-                              className="w-10 text-center text-xs font-bold outline-none bg-transparent"
+                              className="w-11 text-center text-sm font-bold outline-none bg-transparent"
                               style={{ color: Theme.fg }}
                             />
-                            <span className="w-px h-4 bg-gray-200" />
+                            <span className="w-px h-5 bg-gray-200" />
                             <button
-                              className="w-8 h-8 text-sm font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="w-9 h-9 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                               style={{ color: Theme.fg }}
                               onClick={() => updateLineItem(idx, { qty: item.qty + 1 })}
                               disabled={item.qty >= maxQty}
@@ -466,173 +574,102 @@ export default function SalesView({
                             </button>
                           </div>
                         </div>
-
-                        <div>
-                          <div className="text-[10px] mb-1 font-semibold uppercase tracking-wide text-right" style={{ color: Theme.mutedFg }}>
-                            {t.sales.unitPrice}
-                          </div>
+                        <div className="col-span-2">
                           <input
                             type="number"
                             min={0}
                             value={item.unitPrice}
                             onChange={(e) => updateLineItem(idx, { unitPrice: Number(e.target.value) || 0 })}
-                            className="w-full px-2.5 py-1.5 border rounded text-sm text-right outline-none bg-white"
+                            className="w-full px-2 py-1 border rounded text-xs text-right outline-none bg-white focus:border-pink-300 transition"
                             style={{ borderColor: Theme.border }}
                           />
                         </div>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-[11px] font-semibold" style={{ color: Theme.mutedFg }}>{t.sales.lineTotal}</span>
-                        <span className="text-sm font-bold" style={{ color: Theme.primary }}>
+                        <div className="col-span-2 text-right text-xs font-bold" style={{ color: Theme.primary }}>
                           {formatCurrency(item.total)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={`${item.productId}-${idx}`} className="grid grid-cols-12 gap-2 px-3 py-2.5 border-t border-gray-100 items-center hover:bg-gray-50">
-                    <div className="col-span-4 min-w-0">
-                      <div className="text-xs font-semibold truncate" style={{ color: Theme.fg }}>{item.name}</div>
-                      <div className="text-[10px]" style={{ color: Theme.mutedFg }}>
-                        {item.sku} · {item.unitType === 'WEIGHT' ? '⚖️' : '📦'} {item.unitLabel}
-                      </div>
-                      {item.sizes.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {item.sizes.map((s: any) => (
-                            <button
-                              key={s.name}
-                              type="button"
-                              onClick={() => {
-                                setLineItems((prev) =>
-                                  prev.map((li, i) => {
-                                    if (i !== idx) return li;
-                                    const newPrice = s.priceOverride ? Number(s.priceOverride) : li.unitPrice;
-                                    return { ...li, sizeName: s.name, unitPrice: newPrice, total: li.qty * newPrice };
-                                  })
-                                );
-                              }}
-                              className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer"
-                              style={{
-                                borderColor: item.sizeName === s.name ? Theme.primary : Theme.border,
-                                background: item.sizeName === s.name ? Theme.primary : '#fff',
-                                color: item.sizeName === s.name ? '#fff' : Theme.fg,
-                              }}
-                            >
-                              {s.name}
-                            </button>
-                          ))}
                         </div>
-                      )}
-                    </div>
-                    <div className="col-span-3 flex justify-center">
-                      <div className="inline-flex items-center rounded-lg border bg-white overflow-hidden" style={{ borderColor: Theme.border }}>
-                        <button
-                          className="w-9 h-9 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                          style={{ color: Theme.fg }}
-                          onClick={() => updateLineItem(idx, { qty: item.qty - 1 })}
-                          disabled={item.qty <= 1}
-                        >
-                          −
-                        </button>
-                        <span className="w-px h-5 bg-gray-200" />
-                        <input
-                          type="number"
-                          min={1}
-                          max={maxQty}
-                          value={item.qty}
-                          onChange={(e) => updateLineItem(idx, { qty: Number(e.target.value) || 1 })}
-                          className="w-11 text-center text-sm font-bold outline-none bg-transparent"
-                          style={{ color: Theme.fg }}
-                        />
-                        <span className="w-px h-5 bg-gray-200" />
-                        <button
-                          className="w-9 h-9 text-base font-bold flex items-center justify-center transition hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                          style={{ color: Theme.fg }}
-                          onClick={() => updateLineItem(idx, { qty: item.qty + 1 })}
-                          disabled={item.qty >= maxQty}
-                        >
-                          +
-                        </button>
+                        <div className="col-span-1 text-right">
+                          <button
+                            onClick={() => removeLineItem(idx)}
+                            className="text-xs font-bold px-1.5 py-1 rounded hover:bg-red-50 transition-colors"
+                            style={{ color: '#dc2626' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        min={0}
-                        value={item.unitPrice}
-                        onChange={(e) => updateLineItem(idx, { unitPrice: Number(e.target.value) || 0 })}
-                        className="w-full px-2 py-1 border rounded text-xs text-right outline-none bg-white"
-                        style={{ borderColor: Theme.border }}
-                      />
-                    </div>
-                    <div className="col-span-2 text-right text-xs font-bold" style={{ color: Theme.primary }}>
-                      {formatCurrency(item.total)}
-                    </div>
-                    <div className="col-span-1 text-right">
-                      <button
-                        onClick={() => removeLineItem(idx)}
-                        className="text-xs font-bold px-1.5 py-1 rounded"
-                        style={{ color: '#dc2626' }}
-                      >
-                        ✕
-                      </button>
-                    </div>
+                    );
+                  })
+                ) : (
+                  <div className="px-3 py-5 text-center text-xs" style={{ color: Theme.mutedFg }}>
+                    {t.sales.noProductsAdded}
                   </div>
-                );
-              })
-            ) : (
-              <div className="px-3 py-5 text-center text-xs" style={{ color: Theme.mutedFg }}>
-                {t.sales.noProductsAdded}
+                )}
               </div>
-            )}
-          </div>
-
-          {/* Footer Row */}
-          <div className={`pt-1 flex ${isMobile ? 'flex-col gap-1.5' : 'items-center justify-between'}`}>
-            <div className="text-xs" style={{ color: Theme.mutedFg }}>
-              <span className="font-semibold">{t.sales.totalItems}: {totalItems}</span>
-              <span className="mx-2">•</span>
-              <span className="font-semibold">{t.sales.totalQty}: {totalQty}</span>
-            </div>
-            <div className={`flex items-center text-sm font-black ${isMobile ? 'justify-between w-full' : 'gap-1.5'}`} style={{ color: Theme.primary }}>
-              <span>{t.sales.grandTotal}: ৳</span>
-              <input
-                type="number"
-                min={0}
-                value={lineItems.length > 0 ? parseFloat(grandTotal.toFixed(2)) : 0}
-                disabled={lineItems.length === 0}
-                onChange={(e) => handleGrandTotalChange(Number(e.target.value) || 0)}
-                className="w-24 px-2 py-1 border rounded-lg text-sm font-black text-right outline-none bg-white focus:ring-2 focus:ring-pink-100 transition-all"
-                style={{ borderColor: Theme.border, color: Theme.primary }}
-              />
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className={`flex gap-2 ${isMobile ? 'flex-col-reverse' : 'justify-end'}`}>
-            <Btn
-              variant="ghost"
-              onClick={() => {
-                setSearchQuery('');
-                setShowDropdown(false);
-                setLineItems([]);
-              }}
-              className={isMobile ? 'w-full' : ''}
-            >
-              {t.sales.reset}
-            </Btn>
-            <Btn
-              variant="primary"
-              disabled={lineItems.length === 0 || hasInvalidLine || createManualSaleMutation.isPending}
-              onClick={handleConfirm}
-              className={isMobile ? 'w-full' : ''}
-            >
-              {createManualSaleMutation.isPending ? t.sales.recording : `${t.sales.recordSale} · ${formatCurrency(grandTotal)}`}
-            </Btn>
+          <div className="h-px ml-9" style={{ background: Theme.border }} />
+
+          {/* Step 3 — Summary & Record */}
+          <div className="flex gap-3">
+            <div className="w-6 h-6 min-w-[24px] rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5" style={{ background: Theme.primary }}>
+              {locale === 'bn' ? '৩' : '3'}
+            </div>
+            <div className="flex-1">
+              <label className="block text-[13px] font-semibold mb-1.5" style={{ color: Theme.fg }}>
+                {t.sales.step3}
+              </label>
+              
+              {/* Summary Box */}
+              <div className="rounded-xl border p-3.5 mb-3.5 transition-shadow hover:shadow-sm" style={{ borderColor: Theme.border, background: '#fff' }}>
+                <div className="flex justify-between mb-2 text-xs" style={{ color: Theme.mutedFg }}>
+                  <span>{t.sales.totalItems}</span>
+                  <span className="font-semibold" style={{ color: Theme.fg }}>{totalItems}</span>
+                </div>
+                <div className="flex justify-between mb-2 text-xs" style={{ color: Theme.mutedFg }}>
+                  <span>{t.sales.totalQty}</span>
+                  <span className="font-semibold" style={{ color: Theme.fg }}>{totalQty}</span>
+                </div>
+                <div className="h-px my-2" style={{ background: Theme.border }} />
+                <div className="flex justify-between items-center text-sm font-black" style={{ color: Theme.primary }}>
+                  <span>{t.sales.grandTotal}: ৳</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={lineItems.length > 0 ? parseFloat(grandTotal.toFixed(2)) : 0}
+                    disabled={lineItems.length === 0}
+                    onChange={(e) => handleGrandTotalChange(Number(e.target.value) || 0)}
+                    className="w-24 px-2 py-1 border rounded-lg text-sm font-black text-right outline-none bg-white focus:ring-2 focus:ring-pink-100 transition-all"
+                    style={{ borderColor: Theme.border, color: Theme.primary }}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className={`flex gap-2 ${isMobile ? 'flex-col-reverse' : 'justify-end'}`}>
+                <Btn
+                  variant="ghost"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setShowDropdown(false);
+                    setLineItems([]);
+                  }}
+                  className={isMobile ? 'w-full' : ''}
+                >
+                  {t.sales.reset}
+                </Btn>
+                <Btn
+                  variant="primary"
+                  disabled={lineItems.length === 0 || hasInvalidLine || createManualSaleMutation.isPending}
+                  onClick={handleConfirm}
+                  className={isMobile ? 'w-full' : ''}
+                >
+                  {createManualSaleMutation.isPending ? t.sales.recording : `${t.sales.recordSale} · ${formatCurrency(grandTotal)}`}
+                </Btn>
+              </div>
+            </div>
           </div>
+
         </div>
       </Card>
 

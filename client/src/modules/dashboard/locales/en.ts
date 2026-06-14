@@ -213,6 +213,9 @@ export const en = {
 
   // ─── Sales View ───
   sales: {
+    step1: "Choose Branch",
+    step2: "Add Products",
+    step3: "Confirm Sale",
     addNewSale: "Add New Sale",
     recordManualTx: "Record a manual sales transaction",
     branch: "Branch",
