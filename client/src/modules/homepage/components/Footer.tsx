@@ -19,36 +19,18 @@ const itemVariants = {
 
 export function Footer() {
   const { t } = useHomepageLocale();
-  const { data: stats, isLoading: statsLoading } = useHomepageStats();
-  const { data: settings, isLoading: settingsLoading } = useSiteSettings();
-  
-  const isLoading = statsLoading || settingsLoading;
+  const { data: stats } = useHomepageStats();
+  const { data: settings } = useSiteSettings();
   
   const paymentMethods = (stats?.paymentMethods || [])
     .filter(m => m.isActive)
     .map(m => m.name);
   
-  // Show nothing or a skeleton while loading to avoid jump
-  if (isLoading) {
-    return (
-      <footer className="bg-zinc-950 text-zinc-400">
-        <div className="mx-auto max-w-[1600px] px-6 py-16 sm:px-10">
-          <div className="animate-pulse flex flex-col gap-8">
-            <div className="h-20 bg-zinc-900/50 rounded-xl w-full" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-              {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-zinc-900/30 rounded-xl" />)}
-            </div>
-          </div>
-        </div>
-      </footer>
-    );
-  }
-
-  // Only use fallback if data is fetched and definitely empty
+  // Use custom payment methods if set in DB stats, otherwise fallback to defaults
   const displayMethods = paymentMethods.length > 0 
     ? paymentMethods 
-    : (stats ? ["bKash", "Nagad", "Visa", "MC"] : []);
-
+    : ["bKash", "Nagad", "Visa", "MC"];
+ 
   return (
     <footer className="bg-zinc-950 text-zinc-400">
       <motion.div

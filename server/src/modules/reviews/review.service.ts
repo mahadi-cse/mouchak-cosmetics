@@ -1,4 +1,5 @@
 import { prisma } from '../../config/database';
+import { cacheGet, cacheSet, cacheDel, TTL } from '../../shared/utils/cache';
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -31,6 +32,8 @@ async function hasDeliveredPurchase(customerId: number, productId: number): Prom
   return hit !== null;
 }
 
+const REVIEWS_KEY = (productId: number) => `reviews:product:${productId}`;
+
 // ─────────────────────────────────────────────────────────────
 // SERVICE
 // ─────────────────────────────────────────────────────────────
@@ -38,6 +41,10 @@ async function hasDeliveredPurchase(customerId: number, productId: number): Prom
 const reviewService = {
   /** Get all approved reviews for a product, newest first */
   async getProductReviews(productId: number) {
+    const key = REVIEWS_KEY(productId);
+    const cached = await cacheGet<any>(key);
+    if (cached) return cached;
+
     const reviews = await prisma.productReview.findMany({
       where: { productId, isApproved: true },
       orderBy: { createdAt: 'desc' },
@@ -57,7 +64,9 @@ const reviewService = {
     const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     reviews.forEach((r) => { distribution[r.rating] = (distribution[r.rating] || 0) + 1; });
 
-    return { reviews, total, avgRating, distribution };
+    const result = { reviews, total, avgRating, distribution };
+    await cacheSet(key, result, TTL.SHORT);
+    return result;
   },
 
   /** Check if the logged-in customer can review and if they already have */
@@ -111,6 +120,9 @@ const reviewService = {
       },
     });
 
+    // Invalidate reviews cache
+    await cacheDel(REVIEWS_KEY(productId));
+
     return review;
   },
 
@@ -143,6 +155,9 @@ const reviewService = {
       update: { avgRating: agg._avg.rating ?? 0, reviewCount: agg._count.id },
     });
 
+    // Invalidate reviews cache
+    await cacheDel(REVIEWS_KEY(productId));
+
     return updated;
   },
 
@@ -168,6 +183,9 @@ const reviewService = {
       create: { productId, avgRating: agg._avg.rating ?? 0, reviewCount: agg._count.id },
       update: { avgRating: agg._avg.rating ?? 0, reviewCount: agg._count.id },
     });
+
+    // Invalidate reviews cache
+    await cacheDel(REVIEWS_KEY(productId));
   },
 };
 
