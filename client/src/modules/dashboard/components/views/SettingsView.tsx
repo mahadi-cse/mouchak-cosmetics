@@ -27,6 +27,7 @@ import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 import { useSession } from 'next-auth/react';
 import apiClient from '@/shared/lib/apiClient';
 import StaffFormView from '../settings/StaffFormView';
+import CustomerSettingsView from '../settings/CustomerSettingsView';
 import {
   usePromotions,
   useCreatePromotion,
@@ -1748,6 +1749,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       </div>
     ),
 
+    customers: (
+      <CustomerSettingsView />
+    ),
+
     security: (
       <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
@@ -1889,7 +1894,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           </div>
         )}
 
-        {!['products', 'categories', 'trending', 'discounts', 'staff', 'security'].includes(tab) && (
+        {!['products', 'categories', 'trending', 'discounts', 'staff', 'customers', 'security'].includes(tab) && (
           <div className="mt-8 flex items-center justify-end gap-2 border-t border-border pt-6">
             <div className="flex items-center gap-2">
               {saved && (

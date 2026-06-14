@@ -77,6 +77,24 @@ export const getCustomerMetrics: RequestHandler = asyncHandler(async (req, res) 
   res.json(ok(metrics));
 });
 
+export const toggleCustomerStatus: RequestHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await customerService.toggleCustomerStatus(Number(id));
+  res.json(ok(result, result.isActive ? 'Customer activated' : 'Customer deactivated and sessions revoked'));
+});
+
+export const resetCustomerPassword: RequestHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await customerService.resetCustomerPassword(Number(id));
+  res.json(ok(result, 'Password reset successfully'));
+});
+
+export const revokeCustomerSessions: RequestHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await customerService.revokeCustomerSessions(Number(id));
+  res.json(ok(result, 'All active sessions for this customer have been revoked'));
+});
+
 export default {
   listCustomers,
   getCustomerDetails,
@@ -85,4 +103,7 @@ export default {
   updateLoyaltyPoints,
   deleteCustomer,
   getCustomerMetrics,
+  toggleCustomerStatus,
+  resetCustomerPassword,
+  revokeCustomerSessions,
 };

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 
 interface LoginViewProps {
   callbackUrl?: string;
@@ -46,20 +47,27 @@ export default function LoginView({ callbackUrl = '/dashboard' }: LoginViewProps
 
       if (!result || result.error) {
         if (result?.error?.includes('ACCOUNT_DEACTIVATED')) {
-          setError('Your account has been deactivated. Please contact the system administrator.');
+          const msg = 'Your account has been deactivated. Please contact the system administrator.';
+          setError(msg);
+          toast.error(msg, { duration: 5000 });
         } else {
-          setError('Invalid email or password. Please try again.');
+          const msg = 'Invalid email or password. Please try again.';
+          setError(msg);
+          toast.error(msg);
         }
         return;
       }
 
       if (result.url) {
+        toast.success('Logged in successfully!');
         router.push(result.url);
       } else {
+        toast.success('Logged in successfully!');
         router.push(redirectTarget);
       }
     } catch {
       setError('Login failed. Please try again.');
+      toast.error('Login failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
