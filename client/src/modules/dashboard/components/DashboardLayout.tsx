@@ -11,6 +11,7 @@ import { useProfileQuery } from '@/modules/auth';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useSiteSettings } from '@/modules/homepage/queries';
 import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
@@ -68,6 +69,8 @@ const SidebarContent: React.FC<{
 }) => {
     const settingsRef = useRef<HTMLDivElement>(null);
     const { t } = useDashboardLocale();
+    const { data: settings } = useSiteSettings();
+    const storeName = settings?.storeName || 'Mouchak';
 
     useEffect(() => {
       if (settingsOpen && settingsRef.current) {
@@ -94,7 +97,7 @@ const SidebarContent: React.FC<{
                   letterSpacing: '-0.02em',
                 }}
               >
-                Mouchak
+                {storeName}
               </div>
               <div
                 style={{

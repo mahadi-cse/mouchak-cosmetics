@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useCustomerDashboardProfile, useCustomerDashboardSummary } from '@/modules/customer-dashboard';
 import { DESIGN } from '../tokens';
+import Link from 'next/link';
+import { useSiteSettings } from '@/modules/homepage/queries';
 
 // Tab components — each owns its own queries and local state
 import OverviewTab  from './tabs/OverviewTab';
@@ -44,16 +46,21 @@ function Sidebar({
   onNavigate: (id: CustomerNavId) => void;
   onClose?: () => void;
 }) {
+  const { data: settings } = useSiteSettings();
+  const storeName = settings?.storeName || 'Mouchak';
+
   return (
     <>
       {/* Logo */}
       <div className="px-5 pb-4 pt-5" style={{ borderBottom: `1px solid ${DESIGN.border}` }}>
-        <div style={{ fontSize: 20, fontWeight: 900, color: DESIGN.primary, letterSpacing: '-0.02em' }}>
-          Mouchak
-        </div>
-        <div className="mt-0.5" style={{ fontSize: 10, color: DESIGN.mutedFg, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          Customer Dashboard
-        </div>
+        <Link href="/" className="block no-underline select-none group">
+          <div className="transition group-hover:text-pink-600" style={{ fontSize: 20, fontWeight: 900, color: DESIGN.primary, letterSpacing: '-0.02em' }}>
+            {storeName}
+          </div>
+          <div className="mt-0.5" style={{ fontSize: 10, color: DESIGN.mutedFg, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Customer Dashboard
+          </div>
+        </Link>
       </div>
 
       {/* Nav */}
@@ -100,6 +107,8 @@ export default function CustomerDashboardView() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const { data: session } = useSession();
+  const { data: settings } = useSiteSettings();
+  const storeName = settings?.storeName || 'Mouchak';
 
   const profileQuery = useCustomerDashboardProfile();
   const summaryQuery = useCustomerDashboardSummary();
@@ -180,12 +189,14 @@ export default function CustomerDashboardView() {
             style={{ borderColor: DESIGN.border, background: DESIGN.card }}
           >
             <div className="flex items-center justify-between px-5 pb-4 pt-5" style={{ borderBottom: `1px solid ${DESIGN.border}` }}>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: DESIGN.primary, letterSpacing: '-0.02em' }}>Mouchak</div>
+              <Link href="/" className="block no-underline select-none group">
+                <div className="transition group-hover:text-pink-600" style={{ fontSize: 20, fontWeight: 900, color: DESIGN.primary, letterSpacing: '-0.02em' }}>
+                  {storeName}
+                </div>
                 <div className="mt-0.5" style={{ fontSize: 10, color: DESIGN.mutedFg, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                   Customer Dashboard
                 </div>
-              </div>
+              </Link>
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="border-0 bg-transparent text-xl"
