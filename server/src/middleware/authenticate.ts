@@ -28,14 +28,28 @@ export const authMiddleware: RequestHandler = async (req, res, next) => {
       exp: payload.exp,
     };
 
-    // Check if user still has active (non-revoked) refresh tokens
-    // If all tokens are revoked (force logout), reject the request
+    // Check if user is active and if the specific session is still valid (consolidated query)
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { isActive: true },
+      select: {
+        isActive: true,
+        refreshTokens: payload.jti ? {
+          where: { tokenHash: payload.jti },
+          select: { revoked: true, expiresAt: true },
+          take: 1
+        } : false
+      },
     });
+
     if (!user || !user.isActive) {
-      return res.status(401).json(fail('User account is inactive or has been logged out', 'USER_INACTIVE'));
+      return res.status(401).json(fail('User account is inactive', 'USER_INACTIVE'));
+    }
+
+    if (payload.jti) {
+      const activeSession = user.refreshTokens?.[0];
+      if (!activeSession || activeSession.revoked || activeSession.expiresAt.getTime() <= Date.now()) {
+        return res.status(401).json(fail('Session has been logged out or expired', 'SESSION_REVOKED'));
+      }
     }
 
     return next();

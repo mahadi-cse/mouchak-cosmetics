@@ -214,7 +214,7 @@ export function Header() {
           {/* Right Actions */}
           <div className="flex items-center gap-1 lg:gap-3">
             {/* Search Icon (Mobile Only) */}
-            <button 
+            <button
               className="lg:hidden p-2 text-zinc-700"
               onClick={() => setIsMobileSearchOpen(true)}
               aria-label="Search"
@@ -256,8 +256,8 @@ export function Header() {
             </button>
 
             {/* Hamburger (Mobile Only) - Moved to Right */}
-            <button 
-              className="lg:hidden p-2 text-zinc-700" 
+            <button
+              className="lg:hidden p-2 text-zinc-700"
               onClick={() => setIsMenuOpen(true)}
               aria-label="Open Menu"
             >
@@ -304,12 +304,12 @@ export function Header() {
       </div>
 
       {/* Mobile Search Overlay */}
-      <div 
+      <div
         className={`lg:hidden fixed inset-0 bg-white z-[100] transition-transform duration-300 ${isMobileSearchOpen ? 'translate-y-0' : '-translate-y-full'}`}
       >
         <div className="p-4 flex flex-col h-full">
           <div className="flex items-center gap-3 mb-6">
-            <button 
+            <button
               onClick={() => setIsMobileSearchOpen(false)}
               className="p-2 text-zinc-500"
             >
@@ -337,15 +337,15 @@ export function Header() {
                 ) : searchResults && searchResults.length > 0 ? (
                   <div className="grid gap-4">
                     {searchResults.map((product) => (
-                      <Link 
-                        key={product.id} 
+                      <Link
+                        key={product.id}
                         href={`/product/${product.id}`}
                         className="flex items-center gap-4 p-2"
                       >
                         <div className="w-16 h-16 bg-zinc-100 rounded-xl overflow-hidden relative">
-                           {product.images?.[0] && (
-                             <Image src={typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as any).url} alt={product.name} fill className="object-cover" />
-                           )}
+                          {product.images?.[0] && (
+                            <Image src={typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as any).url} alt={product.name} fill className="object-cover" />
+                          )}
                         </div>
                         <div>
                           <p className="font-bold text-zinc-900">{product.name}</p>
@@ -353,7 +353,7 @@ export function Header() {
                         </div>
                       </Link>
                     ))}
-                    <button 
+                    <button
                       onClick={handleSearchSubmit}
                       className="w-full py-4 text-primary font-bold text-center border-t border-zinc-100 mt-4"
                     >
@@ -407,7 +407,7 @@ export function Header() {
       </nav>
 
       {/* Mobile Drawer Overlay */}
-      <div 
+      <div
         className={`fixed inset-0 bg-black/50 transition-opacity duration-300 z-[60] lg:hidden ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsMenuOpen(false)}
       />
@@ -436,23 +436,23 @@ export function Header() {
           <div className="space-y-4">
             {isAuthenticated ? (
               <div className="grid grid-cols-2 gap-3">
-                <Link 
-                  href="/dashboard" 
+                <Link
+                  href="/dashboard"
                   className="flex items-center justify-center gap-2 bg-primary/10 text-primary p-3 rounded-xl font-bold text-sm transition active:scale-95"
                 >
                   <User size={18} />
                   {t.header.dashboard}
                 </Link>
-                <button 
-                  onClick={handleSignOut} 
+                <button
+                  onClick={handleSignOut}
                   className="flex items-center justify-center gap-2 bg-zinc-100 text-zinc-600 p-3 rounded-xl font-bold text-sm transition active:scale-95"
                 >
                   {t.header.signOut}
                 </button>
               </div>
             ) : (
-              <Link 
-                href="/login" 
+              <Link
+                href="/login"
                 className="flex items-center gap-3 bg-primary text-white p-4 rounded-xl font-bold justify-center shadow-lg shadow-primary/20 transition active:scale-95"
               >
                 <User size={18} />

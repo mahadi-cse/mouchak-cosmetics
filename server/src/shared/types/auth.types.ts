@@ -15,6 +15,7 @@ export interface AccessTokenPayload {
   typeId: number;
   iat: number;
   exp: number;
+  jti?: string;
 }
 
 export interface AuthUser {
@@ -24,6 +25,7 @@ export interface AuthUser {
   typeId: number;
   iat: number;
   exp: number;
+  jti?: string;
 }
 
 export const STAFF_ROLE_CODES: RoleCode[] = [

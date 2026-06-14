@@ -83,19 +83,21 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string
   ): Promise<AuthTokenBundle> {
+    const refreshToken = generateRefreshToken();
+    const tokenHash = hashRefreshToken(refreshToken);
+    const parsedUa = userAgent ? parseUserAgent(userAgent) : null;
+
     const accessToken = await signAccessToken({
       sub: userId,
       role,
       typeId,
+      jti: tokenHash,
     });
-
-    const refreshToken = generateRefreshToken();
-    const parsedUa = userAgent ? parseUserAgent(userAgent) : null;
 
     await prisma.refreshToken.create({
       data: {
         userId,
-        tokenHash: hashRefreshToken(refreshToken),
+        tokenHash,
         expiresAt: getRefreshTokenExpiryDate(),
         ipAddress,
         userAgent,
@@ -361,6 +363,7 @@ export class AuthService {
       });
 
       const nextRefreshToken = generateRefreshToken();
+      const nextTokenHash = hashRefreshToken(nextRefreshToken);
       const finalIp = ipAddress ?? existingToken.ipAddress ?? null;
       const finalUa = userAgent ?? existingToken.userAgent ?? null;
       const parsedUa = finalUa ? parseUserAgent(finalUa) : null;
@@ -368,7 +371,7 @@ export class AuthService {
       await tx.refreshToken.create({
         data: {
           userId: existingToken.userId,
-          tokenHash: hashRefreshToken(nextRefreshToken),
+          tokenHash: nextTokenHash,
           expiresAt: getRefreshTokenExpiryDate(),
           ipAddress: finalIp,
           userAgent: finalUa,
@@ -382,6 +385,7 @@ export class AuthService {
         sub: existingToken.userId,
         role,
         typeId,
+        jti: nextTokenHash,
       });
 
       return {
