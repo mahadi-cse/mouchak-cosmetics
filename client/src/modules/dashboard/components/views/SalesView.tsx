@@ -66,17 +66,7 @@ export default function SalesView({
     }
   }, [showPrintToast]);
 
-  const handlePrintReceipt = (sale: any) => {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0px';
-    iframe.style.height = '0px';
-    iframe.style.border = 'none';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document || iframe.contentDocument;
-    if (!doc) return;
-
+  const buildReceiptHtml = (sale: any) => {
     const itemsHtml = (sale.items || []).map((item: any) => `
       <tr>
         <td style="padding: 4px 0; font-size: 11px; font-family: monospace; line-height: 1.2;">
@@ -211,23 +201,100 @@ export default function SalesView({
           <div class="footer text-center">
             <p style="margin: 0 0 4px 0;">Thank you for shopping with us!</p>
           </div>
-
-          <script>
-            window.onload = function() {
-              window.focus();
-              window.print();
-              setTimeout(function() {
-                window.frameElement.parentNode.removeChild(window.frameElement);
-              }, 1000);
-            };
-          </script>
         </body>
       </html>
     `;
 
+    return receiptHtml;
+  };
+
+  const triggerPrint = (targetWindow: Window, cleanup: () => void) => {
+    let cleaned = false;
+    const runCleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      cleanup();
+    };
+
+    const doPrint = () => {
+      targetWindow.focus();
+      targetWindow.print();
+      targetWindow.addEventListener('afterprint', runCleanup, { once: true });
+      setTimeout(runCleanup, 2000);
+    };
+
+    if (isMobile) {
+      setTimeout(doPrint, 300);
+    } else {
+      doPrint();
+    }
+  };
+
+  const printReceiptInIframe = (receiptHtml: string) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      iframe.remove();
+      return;
+    }
+
     doc.open();
     doc.write(receiptHtml);
     doc.close();
+
+    const iframeWindow = iframe.contentWindow;
+    if (!iframeWindow) {
+      iframe.remove();
+      return;
+    }
+
+    const cleanup = () => iframe.remove();
+    let printed = false;
+    const startPrint = () => {
+      if (printed) return;
+      printed = true;
+      triggerPrint(iframeWindow, cleanup);
+    };
+
+    iframe.onload = startPrint;
+    if (doc.readyState === 'complete') {
+      startPrint();
+    }
+  };
+
+  const handlePrintReceipt = (sale: any) => {
+    const receiptHtml = buildReceiptHtml(sale);
+
+    if (isMobile) {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        printReceiptInIframe(receiptHtml);
+        return;
+      }
+
+      printWindow.document.open();
+      printWindow.document.write(receiptHtml);
+      printWindow.document.close();
+
+      triggerPrint(printWindow, () => {
+        try {
+          printWindow.close();
+        } catch {
+          // Window may already be closed by the user.
+        }
+      });
+      return;
+    }
+
+    printReceiptInIframe(receiptHtml);
   };
 
   const searchBoxRef = useRef<HTMLDivElement | null>(null);
