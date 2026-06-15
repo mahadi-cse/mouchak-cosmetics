@@ -286,27 +286,27 @@ export default function SalesView({
   return (
     <div className={`flex flex-col ${isMobile ? 'gap-3' : 'gap-3.5'}`}>
       {/* Add Sale Form Card */}
-      <Card className="border border-pink-100 shadow-sm">
+      <Card className="border border-pink-100 shadow-sm !p-3 sm:!p-5" pad={0}>
         
-        <div className="px-3.5 py-3.5 flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           {/* Header & Branch Selection Side-by-Side */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b" style={{ borderColor: Theme.border }}>
+          <div className="flex items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: Theme.border }}>
             <div>
               <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>{t.sales.addNewSale}</div>
-              <div className="text-[12px]" style={{ color: Theme.mutedFg }}>{t.sales.recordManualTx}</div>
+              <div className="text-[12px] hidden sm:block" style={{ color: Theme.mutedFg }}>{t.sales.recordManualTx}</div>
             </div>
             
             <div className="flex items-center gap-2">
-              <div className="w-5.5 h-5.5 min-w-[22px] rounded-full flex items-center justify-center text-[10px] font-extrabold text-white" style={{ background: Theme.primary }}>
+              <div className="w-5.5 h-5.5 min-w-[22px] rounded-full hidden sm:flex items-center justify-center text-[10px] font-extrabold text-white" style={{ background: Theme.primary }}>
                 {locale === 'bn' ? '১' : '1'}
               </div>
-              <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+              <label className="text-xs font-semibold hidden sm:inline" style={{ color: Theme.fg }}>
                 {t.sales.step1}:
               </label>
               <select
                 value={saleBranchId}
                 onChange={(e) => setSaleBranchId(e.target.value)}
-                className="rounded-lg border px-3 py-1.5 text-xs font-semibold outline-none bg-white transition focus:border-pink-300 min-w-[140px]"
+                className="rounded-lg border px-3 py-1.5 text-xs font-semibold outline-none bg-white transition focus:border-pink-300 min-w-[120px] max-w-[160px] sm:max-w-none"
                 style={{ borderColor: Theme.border, color: Theme.fg }}
               >
                 {activeBranches.map((b) => (
@@ -608,7 +608,7 @@ export default function SalesView({
             </div>
           </div>
 
-          <div className="h-px ml-9" style={{ background: Theme.border }} />
+          <div className="h-px ml-0 sm:ml-9" style={{ background: Theme.border }} />
 
           {/* Step 3 — Summary & Record */}
           <div className="flex gap-3">
@@ -674,13 +674,13 @@ export default function SalesView({
       </Card>
 
       {/* Sales History */}
-      <Card>
+      <Card className="!p-3 sm:!p-5" pad={0}>
         <SecHead 
           title={t.sales.salesHistory} 
           sub={`${t.sales.totalSales}: ${historyMeta?.total ?? 0}`}
         />
         
-        <div className="p-3.5">
+        <div className="mt-3.5">
           {/* Controls */}
           <div className="mb-3 grid gap-2 md:grid-cols-3">
             <input
