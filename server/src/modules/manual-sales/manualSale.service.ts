@@ -65,8 +65,35 @@ export class ManualSaleService {
       const totalQty = lineItems.reduce((sum, item) => sum + item.quantity, 0);
       const totalAmount = lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
 
-      const count = await tx.manualSale.count();
-      const saleNumber = `MS-${String(count + 1).padStart(6, '0')}`;
+      // Get branch details to find the branchCode
+      const branch = await tx.branch.findUnique({
+        where: { id: data.branchId },
+      });
+      const branchCode = branch?.branchCode ? branch.branchCode.toUpperCase() : 'HQ';
+
+      const today = new Date();
+      const yy = String(today.getFullYear()).slice(-2);
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${yy}${mm}${dd}`;
+
+      // Start & end of today in local system time (for daily count reset)
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+      // Count sales for this branch today
+      const dailyCount = await tx.manualSale.count({
+        where: {
+          branchId: data.branchId,
+          createdAt: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+        },
+      });
+
+      const sequence = String(dailyCount + 1).padStart(4, '0');
+      const saleNumber = `${branchCode}-${dateStr}-${sequence}`;
 
       const sale = await tx.manualSale.create({
         data: {
