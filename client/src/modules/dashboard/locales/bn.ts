@@ -261,6 +261,8 @@ export const bn: DashboardTranslations = {
     recorded: "রেকর্ড করা হয়েছে",
     failedRecord: "বিক্রয় রেকর্ড করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।",
     noProductsAdded: "এখনও কোন পণ্য যোগ করা হয়নি — আইটেম যোগ করতে উপরে অনুসন্ধান করুন।",
+    printReceipt: "রসিদ প্রিন্ট",
+    actions: "অ্যাকশন",
     selectSizeTitle: "সাইজ নির্বাচন করুন",
     selectSizeDesc: "এই পণ্যটির একাধিক সাইজ রয়েছে। কার্টে যোগ করতে একটি সাইজ নির্বাচন করুন:",
   },

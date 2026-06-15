@@ -53,6 +53,183 @@ export default function SalesView({
   const [historySortBy, setHistorySortBy] = useState<'createdAt' | 'totalAmount' | 'totalQty' | 'saleNumber'>('createdAt');
   const [historySortOrder, setHistorySortOrder] = useState<'asc' | 'desc'>('desc');
   const [branchInitialized, setBranchInitialized] = useState(false);
+  const [lastRecordedSale, setLastRecordedSale] = useState<any>(null);
+  const [showPrintToast, setShowPrintToast] = useState(false);
+
+  useEffect(() => {
+    if (showPrintToast) {
+      const timer = setTimeout(() => {
+        setShowPrintToast(false);
+        setLastRecordedSale(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showPrintToast]);
+
+  const handlePrintReceipt = (sale: any) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) return;
+
+    const itemsHtml = (sale.items || []).map((item: any) => `
+      <tr>
+        <td style="padding: 4px 0; font-size: 11px; font-family: monospace; line-height: 1.2;">
+          ${item.productNameSnapshot}
+          ${item.sizeName ? `<span style="font-size: 9px; display: block; color: #555;">Size: ${item.sizeName}</span>` : ''}
+        </td>
+        <td style="padding: 4px 0; text-align: center; font-size: 11px; font-family: monospace;">${item.quantity}</td>
+        <td style="padding: 4px 0; text-align: right; font-size: 11px; font-family: monospace;">৳${item.unitPrice}</td>
+        <td style="padding: 4px 0; text-align: right; font-size: 11px; font-family: monospace;">৳${item.lineTotal || (item.quantity * item.unitPrice)}</td>
+      </tr>
+    `).join('');
+
+    const formattedDate = new Date(sale.createdAt).toLocaleString();
+
+    const receiptHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt ${sale.saleNumber}</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              color: #000;
+              margin: 10px;
+              padding: 0;
+              width: 70mm;
+            }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .header {
+              margin-bottom: 12px;
+              border-bottom: 1px dashed #000;
+              padding-bottom: 8px;
+            }
+            .title {
+              font-size: 16px;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              margin: 0 0 4px 0;
+            }
+            .subtitle {
+              font-size: 10px;
+              margin: 0 0 2px 0;
+              color: #333;
+            }
+            .info-table {
+              width: 100%;
+              font-size: 10px;
+              margin-bottom: 8px;
+              border-collapse: collapse;
+            }
+            .info-table td {
+              padding: 1px 0;
+            }
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              border-bottom: 1px dashed #000;
+              margin-bottom: 8px;
+            }
+            .items-table th {
+              border-bottom: 1px dashed #000;
+              font-size: 10px;
+              padding: 4px 0;
+              text-align: left;
+            }
+            .totals-table {
+              width: 100%;
+              font-size: 11px;
+              margin-bottom: 12px;
+            }
+            .totals-table td {
+              padding: 2px 0;
+            }
+            .footer {
+              border-top: 1px dashed #000;
+              padding-top: 8px;
+              margin-top: 8px;
+              font-size: 9px;
+              color: #333;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header text-center">
+            <div class="title">Mouchak Cosmetics</div>
+            <div class="subtitle">Premium Quality Cosmetics & Skincare</div>
+            <div class="subtitle">${sale.branchName || 'Main Branch'}</div>
+          </div>
+
+          <table class="info-table">
+            <tr>
+              <td><strong>Invoice:</strong> ${sale.saleNumber}</td>
+              <td class="text-right"><strong>Date:</strong> ${formattedDate.split(',')[0]}</td>
+            </tr>
+            <tr>
+              <td><strong>Served By:</strong> ${sale.soldBy || 'Staff'}</td>
+              <td class="text-right"><strong>Time:</strong> ${formattedDate.split(',')[1]?.trim() || ''}</td>
+            </tr>
+          </table>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th style="width: 45%;">Item</th>
+                <th style="width: 15%; text-align: center;">Qty</th>
+                <th style="width: 20%; text-align: right;">Price</th>
+                <th style="width: 20%; text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <table class="totals-table">
+            <tr>
+              <td><strong>Total Quantity:</strong></td>
+              <td class="text-right">${sale.totalQty}</td>
+            </tr>
+            <tr style="font-size: 13px; font-weight: bold;">
+              <td>Grand Total:</td>
+              <td class="text-right">৳${sale.totalAmount}</td>
+            </tr>
+          </table>
+
+          <div class="footer text-center">
+            <p style="margin: 0 0 4px 0;">Thank you for shopping with us!</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+              setTimeout(function() {
+                window.frameElement.parentNode.removeChild(window.frameElement);
+              }, 1000);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    doc.open();
+    doc.write(receiptHtml);
+    doc.close();
+  };
+
   const searchBoxRef = useRef<HTMLDivElement | null>(null);
   const branchInventoryQuery = useInventorySummary({ page: 1, limit: 500, warehouseId: Number(saleBranchId) });
   const createManualSaleMutation = useCreateManualSaleMutation();
@@ -200,7 +377,7 @@ export default function SalesView({
   const handleConfirm = async () => {
     if (lineItems.length > 0 && !hasInvalidLine) {
       try {
-        await createManualSaleMutation.mutateAsync({
+        const result = await createManualSaleMutation.mutateAsync({
           soldBy: session?.user?.name || session?.user?.email || t.sales.staff,
           note: t.manualSale,
           branchId: Number(saleBranchId),
@@ -213,6 +390,10 @@ export default function SalesView({
           })),
         });
         toast.success(`${t.sales.recorded} ${lineItems.length} ${t.inventory.product}(s), ${totalQty} ${t.sales.qty} ${t.modal.total.toLowerCase()}`);
+        if (result) {
+          setLastRecordedSale(result);
+          setShowPrintToast(true);
+        }
         setSearchQuery('');
         setLineItems([]);
       } catch {
@@ -761,12 +942,13 @@ export default function SalesView({
                   <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.date}</th>
                   <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.branch}</th>
                   <th className="px-2 py-2 font-bold text-left" style={{ color: Theme.mutedFg }}>{t.sales.by}</th>
+                  <th className="px-2 py-2 font-bold text-center" style={{ color: Theme.mutedFg }}>{t.sales.actions}</th>
                 </tr>
               </thead>
               <tbody>
                 {manualSalesQuery.isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>
+                    <td colSpan={8} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>
                       {t.sales.loadingSales}
                     </td>
                   </tr>
@@ -800,11 +982,22 @@ export default function SalesView({
                       <td className="px-2 py-2.5" style={{ color: Theme.mutedFg }}>
                         {sale.soldBy || t.sales.staff}
                       </td>
+                      <td className="px-2 py-2.5 text-center">
+                        <Btn
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePrintReceipt(sale)}
+                          className="p-1 min-w-[28px] h-7 inline-flex items-center justify-center text-primary hover:bg-primary/10 rounded-lg transition-all"
+                          title={t.sales.printReceipt}
+                        >
+                          🖨️
+                        </Btn>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>
+                    <td colSpan={8} className="px-2 py-6 text-center text-xs" style={{ color: Theme.mutedFg }}>
                       {searchLog ? t.sales.noSalesMatch : t.sales.noSalesYet}
                     </td>
                   </tr>
@@ -834,6 +1027,42 @@ export default function SalesView({
           </div>
         </div>
       </Card>
+
+      {showPrintToast && lastRecordedSale && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[150] flex items-center justify-between gap-4 w-[90%] max-w-md p-4 rounded-xl border border-primary/20 bg-white/95 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex flex-col">
+            <span className="text-xs font-bold text-foreground">
+              {t.sales.recorded}! {lastRecordedSale.saleNumber}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {lastRecordedSale.totalQty} {t.sales.qty} · ৳{lastRecordedSale.totalAmount}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Btn
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                handlePrintReceipt(lastRecordedSale);
+                setShowPrintToast(false);
+                setLastRecordedSale(null);
+              }}
+              className="flex items-center gap-1 text-xs font-semibold py-1.5"
+            >
+              🖨️ {t.sales.printReceipt}
+            </Btn>
+            <button
+              onClick={() => {
+                setShowPrintToast(false);
+                setLastRecordedSale(null);
+              }}
+              className="p-1 hover:bg-gray-100 rounded text-muted-foreground text-sm"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

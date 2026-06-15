@@ -258,6 +258,8 @@ export const en = {
     recorded: "Recorded",
     failedRecord: "Failed to record sale. Please try again.",
     noProductsAdded: "No products added yet — search above to add items.",
+    printReceipt: "Print Receipt",
+    actions: "Actions",
     selectSizeTitle: "Select Size",
     selectSizeDesc: "This product has multiple sizes. Please select a size to add it to the cart:",
   },
