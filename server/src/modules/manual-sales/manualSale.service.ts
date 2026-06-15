@@ -22,6 +22,9 @@ export class ManualSaleService {
           inventories: {
             where: { warehouseId: data.branchId },
           },
+          sizes: {
+            where: { isActive: true },
+          },
         },
       });
 
@@ -49,7 +52,22 @@ export class ManualSaleService {
 
       const lineItems = data.items.map((item) => {
         const product = productMap.get(item.productId)!;
-        const unitPrice = item.unitPrice && item.unitPrice > 0 ? item.unitPrice : toNumber(product.price);
+        const matchedSize = item.sizeName
+          ? product.sizes.find((s) => s.name === item.sizeName)
+          : null;
+
+        const unitPrice = item.unitPrice && item.unitPrice > 0
+          ? item.unitPrice
+          : matchedSize && matchedSize.priceOverride !== null
+            ? toNumber(matchedSize.priceOverride)
+            : toNumber(product.price);
+
+        const costPrice = matchedSize && matchedSize.costPriceOverride !== null
+          ? toNumber(matchedSize.costPriceOverride)
+          : product.costPrice !== null
+            ? toNumber(product.costPrice)
+            : null;
+
         const lineTotal = unitPrice * item.quantity;
         return {
           productId: product.id,
@@ -58,6 +76,7 @@ export class ManualSaleService {
           quantity: item.quantity,
           unitPrice,
           lineTotal,
+          costPrice,
           sizeName: item.sizeName || null,
         };
       });
@@ -112,6 +131,7 @@ export class ManualSaleService {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               lineTotal: item.lineTotal,
+              costPrice: item.costPrice,
               sizeName: item.sizeName,
             })),
           },

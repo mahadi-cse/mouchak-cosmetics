@@ -258,6 +258,8 @@ export const en = {
     recorded: "Recorded",
     failedRecord: "Failed to record sale. Please try again.",
     noProductsAdded: "No products added yet — search above to add items.",
+    selectSizeTitle: "Select Size",
+    selectSizeDesc: "This product has multiple sizes. Please select a size to add it to the cart:",
   },
 
   // ─── Products View ───
@@ -288,9 +290,12 @@ export const en = {
     weight: "Weight",
     unitLabel: "Unit Label *",
     sizesOptional: "Sizes (optional)",
+    hasSizes: "Has Sizes?",
+    differentPricePerSize: "Different price per size?",
     addSize: "＋ Add Size",
     sizeName: "Size Name *",
     priceOverride: "Price Override (৳)",
+    costPriceOverride: "Cost Price Override (৳)",
     remove: "🗑️ Remove",
     cancel: "Cancel",
     saveChanges: "Save Changes",

@@ -69,6 +69,7 @@ export class ProductService {
                   sortOrder: s.sortOrder ?? i,
                   imageUrl: s.imageUrl || null,
                   priceOverride: s.priceOverride || null,
+                  costPriceOverride: s.costPriceOverride || null,
                   isActive: s.isActive ?? true,
                 })),
               },
@@ -231,6 +232,7 @@ export class ProductService {
             sortOrder: s.sortOrder ?? i,
             imageUrl: s.imageUrl || null,
             priceOverride: s.priceOverride || null,
+            costPriceOverride: s.costPriceOverride || null,
             isActive: s.isActive ?? true,
           })),
         });

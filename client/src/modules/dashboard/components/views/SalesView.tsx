@@ -150,19 +150,21 @@ export default function SalesView({
     setSearchQuery('');
   }, [saleBranchId]);
 
-  const handleSelectProduct = (product: Product) => {
+  const addCartItem = (product: Product, sizeName: string, sizes: any[]) => {
     const meta = getProductMeta(product.id) as any;
     const unitType = meta?.unitType || 'PIECE';
     const unitLabel = meta?.unitLabel || 'pc';
-    const sizes = (meta?.sizes || []).filter((s: any) => s.isActive !== false);
-    const defaultSize = sizes.length > 0 ? sizes[0].name : '';
-    const defaultQty = unitType === 'WEIGHT' ? 1 : 1;
+    const defaultQty = 1;
+    const matchedSizeObj = sizes.find((s: any) => s.name === sizeName);
+    const resolvedPrice = matchedSizeObj && matchedSizeObj.priceOverride !== null && matchedSizeObj.priceOverride !== undefined
+      ? Number(matchedSizeObj.priceOverride)
+      : Number(product.price ?? 0);
 
     setLineItems((prev) => {
-      const existing = prev.find((i) => i.productId === product.id);
-      if (existing) {
-        return prev.map((i) => {
-          if (i.productId !== product.id) return i;
+      const existingIdx = prev.findIndex((i) => i.productId === product.id && i.sizeName === sizeName);
+      if (existingIdx !== -1) {
+        return prev.map((i, idx) => {
+          if (idx !== existingIdx) return i;
           const maxQty = product.stock;
           const nextQty = Math.min(maxQty, i.qty + 1);
           return { ...i, qty: nextQty, total: nextQty * i.unitPrice };
@@ -175,17 +177,24 @@ export default function SalesView({
           name: product.name,
           sku: product.sku,
           qty: defaultQty,
-          unitPrice: Number(product.price ?? 0),
-          total: Number(product.price ?? 0) * defaultQty,
+          unitPrice: resolvedPrice,
+          total: resolvedPrice * defaultQty,
           unitType,
           unitLabel,
-          sizeName: defaultSize,
+          sizeName,
           sizes,
         },
       ];
     });
     setSearchQuery('');
     setShowDropdown(false);
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    const meta = getProductMeta(product.id) as any;
+    const sizes = (meta?.sizes || []).filter((s: any) => s.isActive !== false);
+    const defaultSize = sizes.length > 0 ? sizes[0].name : '';
+    addCartItem(product, defaultSize, sizes);
   };
 
   const handleConfirm = async () => {
@@ -411,30 +420,30 @@ export default function SalesView({
                                 {item.sku} · {item.unitType === 'WEIGHT' ? '⚖️' : '📦'} {item.unitLabel}
                               </div>
                               {item.sizes.length > 0 && (
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                  {item.sizes.map((s: any) => (
-                                    <button
-                                      key={s.name}
-                                      type="button"
-                                      onClick={() => {
-                                        setLineItems((prev) =>
-                                          prev.map((li, i) => {
-                                            if (i !== idx) return li;
-                                            const newPrice = s.priceOverride ? Number(s.priceOverride) : li.unitPrice;
-                                            return { ...li, sizeName: s.name, unitPrice: newPrice, total: li.qty * newPrice };
-                                          })
-                                        );
-                                      }}
-                                      className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer transition-colors"
-                                      style={{
-                                        borderColor: item.sizeName === s.name ? Theme.primary : Theme.border,
-                                        background: item.sizeName === s.name ? Theme.primary : '#fff',
-                                        color: item.sizeName === s.name ? '#fff' : Theme.fg,
-                                      }}
-                                    >
-                                      {s.name}
-                                    </button>
-                                  ))}
+                                <div className="mt-1">
+                                  <select
+                                    value={item.sizeName}
+                                    onChange={(e) => {
+                                      const selectedName = e.target.value;
+                                      setLineItems((prev) =>
+                                        prev.map((li, i) => {
+                                          if (i !== idx) return li;
+                                          const matchedSize = li.sizes.find((sz: any) => sz.name === selectedName);
+                                          const basePrice = Number(products.find((p) => p.id === li.productId)?.price ?? 0);
+                                          const newPrice = matchedSize && matchedSize.priceOverride ? Number(matchedSize.priceOverride) : basePrice;
+                                          return { ...li, sizeName: selectedName, unitPrice: newPrice, total: li.qty * newPrice };
+                                        })
+                                      );
+                                    }}
+                                    className="rounded border px-2 py-1 text-xs outline-none bg-white font-semibold cursor-pointer"
+                                    style={{ borderColor: Theme.border, color: Theme.fg }}
+                                  >
+                                    {item.sizes.map((s: any) => (
+                                      <option key={s.name} value={s.name}>
+                                        {s.name}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
                               )}
                             </div>
@@ -516,30 +525,30 @@ export default function SalesView({
                             {item.sku} · {item.unitType === 'WEIGHT' ? '⚖️' : '📦'} {item.unitLabel}
                           </div>
                           {item.sizes.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {item.sizes.map((s: any) => (
-                                <button
-                                  key={s.name}
-                                  type="button"
-                                  onClick={() => {
-                                    setLineItems((prev) =>
-                                      prev.map((li, i) => {
-                                        if (i !== idx) return li;
-                                        const newPrice = s.priceOverride ? Number(s.priceOverride) : li.unitPrice;
-                                        return { ...li, sizeName: s.name, unitPrice: newPrice, total: li.qty * newPrice };
-                                      })
-                                    );
-                                  }}
-                                  className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer transition-colors"
-                                  style={{
-                                    borderColor: item.sizeName === s.name ? Theme.primary : Theme.border,
-                                    background: item.sizeName === s.name ? Theme.primary : '#fff',
-                                    color: item.sizeName === s.name ? '#fff' : Theme.fg,
-                                  }}
-                                >
-                                  {s.name}
-                                </button>
-                              ))}
+                            <div className="mt-1">
+                              <select
+                                value={item.sizeName}
+                                onChange={(e) => {
+                                  const selectedName = e.target.value;
+                                  setLineItems((prev) =>
+                                    prev.map((li, i) => {
+                                      if (i !== idx) return li;
+                                      const matchedSize = li.sizes.find((sz: any) => sz.name === selectedName);
+                                      const basePrice = Number(products.find((p) => p.id === li.productId)?.price ?? 0);
+                                      const newPrice = matchedSize && matchedSize.priceOverride ? Number(matchedSize.priceOverride) : basePrice;
+                                      return { ...li, sizeName: selectedName, unitPrice: newPrice, total: li.qty * newPrice };
+                                    })
+                                  );
+                                }}
+                                className="rounded border px-2 py-1 text-xs outline-none bg-white font-semibold cursor-pointer"
+                                style={{ borderColor: Theme.border, color: Theme.fg }}
+                              >
+                                {item.sizes.map((s: any) => (
+                                  <option key={s.name} value={s.name}>
+                                    {s.name}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           )}
                         </div>

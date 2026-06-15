@@ -24,6 +24,7 @@ export interface ProductSize {
   sortOrder: number;
   imageUrl?: string | null;
   priceOverride?: number | null;
+  costPriceOverride?: number | null;
   isActive: boolean;
 }
 

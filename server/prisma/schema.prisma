@@ -329,16 +329,17 @@ model ProductReview {
 // ─────────────────────────────────────────────────────────────
 
 model ProductSize {
-  id          Int       @id @default(autoincrement())
-  productId   Int
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name        String    // e.g. "S", "M", "L", "XL", "100ml", "250ml"
-  sortOrder   Int       @default(0)
-  imageUrl    String?   // Each size can have its own image
-  priceOverride Decimal? @db.Decimal(10,2) // Optional price override for this size
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                Int       @id @default(autoincrement())
+  productId         Int
+  product           Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name              String    // e.g. "S", "M", "L", "XL", "100ml", "250ml"
+  sortOrder         Int       @default(0)
+  imageUrl          String?   // Each size can have its own image
+  priceOverride     Decimal?  @db.Decimal(10,2) // Optional price override for this size
+  costPriceOverride Decimal?  @db.Decimal(10,2) // Optional cost price override for this size
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([productId, name])
   @@index([productId])
@@ -382,6 +383,7 @@ model ManualSaleItem {
   quantity           Int
   unitPrice          Decimal    @db.Decimal(10,2)
   lineTotal          Decimal    @db.Decimal(12,2)
+  costPrice          Decimal?   @db.Decimal(10,2) // Snapshot of cost price at time of sale
   sizeName           String?    // Snapshot of size at time of sale
   createdAt          DateTime   @default(now())
 

@@ -113,13 +113,16 @@ export default function ReturnsView() {
     const unitLabel = meta?.unitLabel || 'pc';
     const sizes = (meta?.sizes || []).filter((s: any) => s.isActive !== false);
     const defaultSize = sizes.length > 0 ? sizes[0].name : '';
+    const defaultPrice = sizes.length > 0 && sizes[0].priceOverride !== null && sizes[0].priceOverride !== undefined
+      ? Number(sizes[0].priceOverride)
+      : Number(product.price ?? 0);
 
     setLineItems((prev) => {
       const existing = prev.find((i) => i.productId === product.id);
       if (existing) {
         return prev.map((i) => i.productId !== product.id ? i : { ...i, qty: i.qty + 1, total: (i.qty + 1) * i.unitPrice });
       }
-      return [...prev, { productId: product.id, name: product.name, sku: product.sku, qty: 1, unitPrice: Number(product.price ?? 0), total: Number(product.price ?? 0), unitType, unitLabel, sizeName: defaultSize, sizes }];
+      return [...prev, { productId: product.id, name: product.name, sku: product.sku, qty: 1, unitPrice: defaultPrice, total: defaultPrice, unitType, unitLabel, sizeName: defaultSize, sizes }];
     });
     setSearchQuery('');
     setShowDropdown(false);
@@ -235,7 +238,12 @@ export default function ReturnsView() {
                     <div className="mt-1 flex flex-wrap gap-1">
                       {item.sizes.map((s: any) => (
                         <button key={s.name} type="button"
-                          onClick={() => setLineItems((prev) => prev.map((li, i) => i !== idx ? li : { ...li, sizeName: s.name, unitPrice: s.priceOverride ? Number(s.priceOverride) : li.unitPrice, total: li.qty * (s.priceOverride ? Number(s.priceOverride) : li.unitPrice) }))}
+                          onClick={() => setLineItems((prev) => prev.map((li, i) => {
+                            if (i !== idx) return li;
+                            const basePrice = Number(branchProducts.find((bp) => bp.id === li.productId)?.price ?? 0);
+                            const newPrice = s.priceOverride ? Number(s.priceOverride) : basePrice;
+                            return { ...li, sizeName: s.name, unitPrice: newPrice, total: li.qty * newPrice };
+                          }))}
                           className="rounded border px-1.5 py-0.5 text-[9px] font-semibold cursor-pointer"
                           style={{ borderColor: item.sizeName === s.name ? '#10b981' : Theme.border, background: item.sizeName === s.name ? '#10b981' : '#fff', color: item.sizeName === s.name ? '#fff' : Theme.fg }}>
                           {s.name}

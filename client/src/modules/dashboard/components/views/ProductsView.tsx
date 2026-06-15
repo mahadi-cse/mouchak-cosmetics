@@ -53,7 +53,9 @@ export default function ProductsView() {
   const [productForm, setProductForm] = useState({
     name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', stock: '', description: '', image: '',
     unitType: 'PIECE' as 'PIECE' | 'WEIGHT', unitLabel: 'pc',
-    sizes: [] as Array<{ name: string; imageUrl: string; priceOverride: string }>,
+    hasSizes: false,
+    diffPricePerSize: false,
+    sizes: [] as Array<{ name: string; priceOverride: string; costPriceOverride: string }>,
   });
 
   React.useEffect(() => {
@@ -66,7 +68,13 @@ export default function ProductsView() {
   }, [productCategories, productForm.categoryId]);
 
   const resetForm = () => {
-    setProductForm({ name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', stock: '', description: '', image: '', unitType: 'PIECE', unitLabel: 'pc', sizes: [] });
+    setProductForm({
+      name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', stock: '', description: '', image: '',
+      unitType: 'PIECE', unitLabel: 'pc',
+      hasSizes: false,
+      diffPricePerSize: false,
+      sizes: []
+    });
     setIsSkuManual(false);
     setShowAddProduct(false); setEditProduct(null); setProductCategoryBranchId('');
   };
@@ -74,11 +82,21 @@ export default function ProductsView() {
   const openProductEditor = (product: any) => {
     const editBranchId = product.inventories?.[0]?.warehouseId?.toString() || '';
     setProductCategoryBranchId(editBranchId);
+    const existingSizes = product.sizes || [];
+    const hasSizes = existingSizes.length > 0;
+    const diffPricePerSize = existingSizes.some((s: any) => s.priceOverride !== null || s.costPriceOverride !== null);
+
     setProductForm({
       name: product.name, sku: product.sku, categoryId: product.categoryId?.toString() || '', branchId: editBranchId,
       price: product.price?.toString() || '', costPrice: product.costPrice?.toString() || '', stock: '', description: product.description || '',
       image: product.images?.[0] || '', unitType: product.unitType || 'PIECE', unitLabel: product.unitLabel || 'pc',
-      sizes: (product.sizes || []).map((s: any) => ({ name: s.name, imageUrl: s.imageUrl || '', priceOverride: s.priceOverride?.toString() || '' })),
+      hasSizes,
+      diffPricePerSize,
+      sizes: existingSizes.map((s: any) => ({
+        name: s.name,
+        priceOverride: s.priceOverride?.toString() || '',
+        costPriceOverride: s.costPriceOverride?.toString() || ''
+      })),
     });
     setIsSkuManual(true);
     setEditProduct(product.id); setShowAddProduct(true);
@@ -93,7 +111,17 @@ export default function ProductsView() {
       if (productImageRef.current?.hasPending()) { const uploaded = await productImageRef.current.upload(); if (uploaded) imageUrl = uploaded; }
       const defaultImage = 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=800&auto=format&fit=crop';
       const images = imageUrl ? [imageUrl] : [defaultImage];
-      const sizesPayload = productForm.sizes.filter(s => s.name.trim()).map((s, i) => ({ name: s.name.trim(), sortOrder: i, imageUrl: s.imageUrl || null, priceOverride: s.priceOverride ? Number(s.priceOverride) : null }));
+      const sizesPayload = productForm.hasSizes
+        ? productForm.sizes
+            .filter((s) => s.name.trim())
+            .map((s, i) => ({
+              name: s.name.trim(),
+              sortOrder: i,
+              imageUrl: null,
+              priceOverride: productForm.diffPricePerSize && s.priceOverride ? Number(s.priceOverride) : null,
+              costPriceOverride: productForm.diffPricePerSize && s.costPriceOverride ? Number(s.costPriceOverride) : null,
+            }))
+        : [];
       const payload = {
         name: productForm.name,
         sku: productForm.sku,
@@ -185,9 +213,123 @@ export default function ProductsView() {
               <div><label className={labelClass}>{t.products.unitType}</label><select className={selectClass} value={productForm.unitType} onChange={(e) => { const ut = e.target.value as 'PIECE' | 'WEIGHT'; setProductForm({ ...productForm, unitType: ut, unitLabel: ut === 'PIECE' ? 'pc' : 'kg' }); }}><option value="PIECE">{t.products.piece}</option><option value="WEIGHT">{t.products.weight}</option></select></div>
               <div><label className={labelClass}>{t.products.unitLabel}</label><input className={inputClass} value={productForm.unitLabel} onChange={(e) => setProductForm({ ...productForm, unitLabel: e.target.value })} placeholder="e.g. pc, kg, ml" /></div>
             </div>
-            <div className="mt-3"><div className="mb-2 flex items-center justify-between"><label className={labelClass} style={{ marginBottom: 0 }}>{t.products.sizesOptional}</label><Btn variant="ghost" size="sm" onClick={() => setProductForm({ ...productForm, sizes: [...productForm.sizes, { name: '', imageUrl: '', priceOverride: '' }] })}>{t.products.addSize}</Btn></div>
-              {productForm.sizes.length > 0 && <div className="flex flex-col gap-2">{productForm.sizes.map((size, idx) => (<div key={idx} className={`grid items-end gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}><div><label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.sizeName}</label><input className={inputClass} value={size.name} onChange={(e) => { const n = [...productForm.sizes]; n[idx] = { ...n[idx], name: e.target.value }; setProductForm({ ...productForm, sizes: n }); }} placeholder="e.g. S, M, L" /></div><div><label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.priceOverride}</label><input type="number" className={inputClass} value={size.priceOverride} onChange={(e) => { const n = [...productForm.sizes]; n[idx] = { ...n[idx], priceOverride: e.target.value }; setProductForm({ ...productForm, sizes: n }); }} placeholder={t.products.leaveEmpty} /></div><div><Btn variant="ghost" size="sm" onClick={() => setProductForm({ ...productForm, sizes: productForm.sizes.filter((_, i) => i !== idx) })}>{t.products.remove}</Btn></div></div>))}</div>}
+            <div className={`mt-3 grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-foreground">
+                <input
+                  type="checkbox"
+                  checked={productForm.hasSizes}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setProductForm(prev => ({
+                      ...prev,
+                      hasSizes: checked,
+                      sizes: checked && prev.sizes.length === 0 ? [{ name: '', priceOverride: '', costPriceOverride: '' }] : prev.sizes
+                    }));
+                  }}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                />
+                {t.products.hasSizes}
+              </label>
+
+              {productForm.hasSizes && (
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-foreground animate-in fade-in duration-200">
+                  <input
+                    type="checkbox"
+                    checked={productForm.diffPricePerSize}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setProductForm(prev => ({
+                        ...prev,
+                        diffPricePerSize: checked
+                      }));
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                  />
+                  {t.products.differentPricePerSize}
+                </label>
+              )}
             </div>
+
+            {productForm.hasSizes && (
+              <div className="mt-3 p-3 rounded-xl border bg-gray-50/50" style={{ borderColor: Theme.border }}>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className={labelClass} style={{ marginBottom: 0 }}>{t.products.sizesOptional}</label>
+                  <Btn variant="ghost" size="sm" onClick={() => setProductForm({ ...productForm, sizes: [...productForm.sizes, { name: '', priceOverride: '', costPriceOverride: '' }] })}>{t.products.addSize}</Btn>
+                </div>
+                {productForm.sizes.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {productForm.sizes.map((size, idx) => (
+                      <div
+                        key={idx}
+                        className={`grid items-end gap-2 p-2 rounded-lg bg-white border border-gray-100 ${
+                          productForm.diffPricePerSize
+                            ? (isMobile ? 'grid-cols-1' : 'grid-cols-4')
+                            : (isMobile ? 'grid-cols-1' : 'grid-cols-2')
+                        }`}
+                      >
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.sizeName}</label>
+                          <input
+                            className={inputClass}
+                            value={size.name}
+                            onChange={(e) => {
+                              const n = [...productForm.sizes];
+                              n[idx] = { ...n[idx], name: e.target.value };
+                              setProductForm({ ...productForm, sizes: n });
+                            }}
+                            placeholder="e.g. S, M, L"
+                          />
+                        </div>
+
+                        {productForm.diffPricePerSize && (
+                          <>
+                            <div>
+                              <label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.costPriceOverride}</label>
+                              <input
+                                type="number"
+                                className={inputClass}
+                                value={size.costPriceOverride || ''}
+                                onChange={(e) => {
+                                  const n = [...productForm.sizes];
+                                  n[idx] = { ...n[idx], costPriceOverride: e.target.value };
+                                  setProductForm({ ...productForm, sizes: n });
+                                }}
+                                placeholder={t.products.leaveEmpty}
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-[10px] font-semibold text-foreground">{t.products.priceOverride}</label>
+                              <input
+                                type="number"
+                                className={inputClass}
+                                value={size.priceOverride}
+                                onChange={(e) => {
+                                  const n = [...productForm.sizes];
+                                  n[idx] = { ...n[idx], priceOverride: e.target.value };
+                                  setProductForm({ ...productForm, sizes: n });
+                                }}
+                                placeholder={t.products.leaveEmpty}
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        <div className={`${!productForm.diffPricePerSize && !isMobile ? 'text-right' : ''}`}>
+                          <Btn
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setProductForm({ ...productForm, sizes: productForm.sizes.filter((_, i) => i !== idx) })}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            {t.products.remove}
+                          </Btn>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="mt-3 flex gap-2"><Btn variant="ghost" size="sm" onClick={resetForm} disabled={isSavingProduct}>{t.products.cancel}</Btn><Btn variant="primary" size="sm" onClick={handleAddProduct} loading={isSavingProduct}>{editProduct !== null ? t.products.saveChanges : t.products.createProduct}</Btn></div>
           </div>
         )}

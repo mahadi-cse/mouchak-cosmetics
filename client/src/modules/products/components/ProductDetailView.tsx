@@ -81,13 +81,7 @@ export default function ProductDetailView() {
   const unitType = product?.unitType || 'PIECE';
   const unitLabel = product?.unitLabel || 'pc';
 
-  // If selected size has an image, show it as the main image
-  const displayImages = useMemo(() => {
-    if (selectedSize?.imageUrl) {
-      return [selectedSize.imageUrl, ...images.filter((img: string) => img !== selectedSize.imageUrl)];
-    }
-    return images;
-  }, [images, selectedSize]);
+  const displayImages = images;
 
   // Mock data for reviews and FAQs
   type MockReview = { name: string; rating: number; date: string; text: string; verified: boolean };
@@ -366,7 +360,6 @@ export default function ProductDetailView() {
                       key={size.name}
                       onClick={() => {
                         setSelectedSizeIndex(i);
-                        if (size.imageUrl) setActiveImageIndex(0);
                       }}
                       style={{
                         padding: '8px 16px',
@@ -383,13 +376,6 @@ export default function ProductDetailView() {
                         gap: 6,
                       }}
                     >
-                      {size.imageUrl && (
-                        <img
-                          src={size.imageUrl}
-                          alt={size.name}
-                          style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }}
-                        />
-                      )}
                       {size.name}
                       {size.priceOverride && (
                         <span style={{ fontSize: 11, color: GRAY_LIGHT }}>

@@ -258,6 +258,7 @@ export class AnalyticsService {
           productSkuSnapshot: true,
           quantity: true,
           lineTotal: true,
+          costPrice: true,
           product: {
             select: {
               costPrice: true,
@@ -350,7 +351,8 @@ export class AnalyticsService {
     for (const item of manualSaleItems) {
       const elapsed = item.manualSale.createdAt.getTime() - currentStart.getTime();
       const idx = Math.min(trendBucketCount - 1, Math.max(0, Math.floor(elapsed / bucketSizeMs)));
-      trendBuckets[idx].cost += toNumber(item.product.costPrice) * item.quantity;
+      const costPerUnit = item.costPrice !== null ? toNumber(item.costPrice) : toNumber(item.product.costPrice);
+      trendBuckets[idx].cost += costPerUnit * item.quantity;
     }
 
     const categorySalesMap = new Map<string, { categoryName: string; totalRevenue: number; totalItems: number }>();

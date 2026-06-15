@@ -5,6 +5,7 @@ const productSizeSchema = z.object({
   sortOrder: z.coerce.number().int().nonnegative().optional(),
   imageUrl: z.string().optional().nullable(),
   priceOverride: z.coerce.number().positive().optional().nullable(),
+  costPriceOverride: z.coerce.number().positive().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
