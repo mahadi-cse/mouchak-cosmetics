@@ -573,8 +573,6 @@ export class AuthService {
     return prisma.refreshToken.findMany({
       where: {
         userId,
-        revoked: false,
-        expiresAt: { gt: new Date() },
       },
       select: {
         id: true,
@@ -586,16 +584,31 @@ export class AuthService {
         createdAt: true,
         updatedAt: true,
         tokenHash: true,
+        revoked: true,
+        expiresAt: true,
       },
+      take: 100,
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async revokeDevice(userId: number, deviceId: number) {
-    await prisma.refreshToken.updateMany({
+    const token = await prisma.refreshToken.findFirst({
       where: {
         id: deviceId,
         userId,
+      },
+    });
+
+    if (!token) return;
+
+    await prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        browser: token.browser,
+        os: token.os,
+        deviceType: token.deviceType,
+        revoked: false,
       },
       data: {
         revoked: true,

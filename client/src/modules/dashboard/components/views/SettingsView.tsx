@@ -1761,7 +1761,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           <p className="text-[13px] max-w-xl" style={{ color: Theme.mutedFg }}>
             {t.securityDevices.sub}
           </p>
-          {securityDevices.some(d => !d.isCurrent) && (
+          {securityDevices.some(d => !d.isCurrent && d.isActive) && (
             <button
               type="button"
               onClick={handleRevokeAllOtherDevices}
@@ -1799,6 +1799,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                   style={{
                     borderColor: device.isCurrent ? Theme.primary : undefined,
                     background: device.isCurrent ? Theme.secondary : undefined,
+                    opacity: device.isActive ? 1 : 0.65,
                   }}
                 >
                   <div className="flex items-start gap-3.5">
@@ -1814,6 +1815,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                             {t.securityDevices.activeNow}
+                          </span>
+                        )}
+                        {!device.isCurrent && !device.isActive && (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 border border-gray-200"
+                          >
+                            {t.settings.inactive}
                           </span>
                         )}
                       </div>
@@ -1834,7 +1842,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
                     </div>
                   </div>
 
-                  {!device.isCurrent && (
+                  {!device.isCurrent && device.isActive && (
                     <button
                       type="button"
                       onClick={() => handleRevokeDevice(device.id)}

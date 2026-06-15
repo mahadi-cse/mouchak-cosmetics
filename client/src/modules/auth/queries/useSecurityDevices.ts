@@ -12,6 +12,7 @@ export interface SecurityDevice {
   os: string;
   createdAt: string;
   isCurrent: boolean;
+  isActive: boolean;
 }
 
 export function useSecurityDevicesQuery() {

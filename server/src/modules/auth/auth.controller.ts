@@ -377,23 +377,54 @@ export const getSecurityDevices: RequestHandler = asyncHandler(async (req, res) 
     throw new UnauthorizedError('Unauthorized', 'UNAUTHORIZED');
   }
 
-  const devices = await authService.getSecurityDevices(req.user.id);
+  const tokens = await authService.getSecurityDevices(req.user.id);
   
   // Identify the current device/session by hashing the incoming refresh token
   const currentToken = getRefreshTokenFromRequest(req);
   const currentTokenHash = currentToken ? authService.hashToken(currentToken) : null;
 
-  const devicesWithActiveFlag = devices.map(device => ({
-    id: device.id,
-    ipAddress: device.ipAddress,
-    deviceType: device.deviceType || 'Desktop',
-    browser: device.browser || 'Unknown Browser',
-    os: device.os || 'Unknown OS',
-    createdAt: device.createdAt,
-    isCurrent: currentTokenHash ? device.tokenHash === currentTokenHash : false,
-  }));
+  const uniqueDevicesMap = new Map<string, any>();
+  const now = new Date();
 
-  res.json(ok(devicesWithActiveFlag));
+  for (const token of tokens) {
+    const browser = token.browser || 'Unknown Browser';
+    const os = token.os || 'Unknown OS';
+    const deviceType = token.deviceType || 'Desktop';
+    
+    // Group by the full userAgent string to distinguish different physical devices/versions,
+    // falling back to browser-os-deviceType if userAgent is missing.
+    const key = token.userAgent || `${browser}-${os}-${deviceType}`;
+
+    const isCurrent = currentTokenHash && token.tokenHash === currentTokenHash;
+    const isActive = !token.revoked && new Date(token.expiresAt) > now;
+
+    if (!uniqueDevicesMap.has(key)) {
+      uniqueDevicesMap.set(key, {
+        id: token.id,
+        ipAddress: token.ipAddress, // Show the most recent IP address for this device
+        deviceType,
+        browser,
+        os,
+        createdAt: token.createdAt,
+        isCurrent: !!isCurrent,
+        isActive,
+      });
+    } else {
+      const existing = uniqueDevicesMap.get(key);
+      if (isCurrent) {
+        existing.isCurrent = true;
+      }
+      if (isActive) {
+        existing.isActive = true;
+      }
+    }
+  }
+
+  // Filter out the legacy "Unknown Browser on Unknown OS" group if it is not active
+  const uniqueDevices = Array.from(uniqueDevicesMap.values()).filter(
+    device => !(device.browser === 'Unknown Browser' && device.os === 'Unknown OS' && !device.isActive)
+  );
+  res.json(ok(uniqueDevices));
 });
 
 export const revokeDevice: RequestHandler = asyncHandler(async (req, res) => {
