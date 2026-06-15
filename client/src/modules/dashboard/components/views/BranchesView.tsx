@@ -283,7 +283,7 @@ export default function BranchesView() {
                     setForm((p) => {
                       const next = { ...p, name: val };
                       if (!isCodeManual) {
-                        next.branchCode = generateCodeFromName(val);
+                        next.branchCode = generateCodeFromName(val, 4);
                       }
                       return next;
                     });

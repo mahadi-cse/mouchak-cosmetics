@@ -36,7 +36,7 @@ export const stockStatusStyle = (status: 'active' | 'low' | 'out') => {
   }
 };
 
-export function generateCodeFromName(name: string): string {
+export function generateCodeFromName(name: string, maxLength?: number): string {
   const banglaToEnglishMap: Record<string, string> = {
     'ক': 'K', 'খ': 'KH', 'গ': 'G', 'ঘ': 'GH', 'ঙ': 'N',
     'চ': 'CH', 'ছ': 'CH', 'জ': 'J', 'ঝ': 'JH', 'ঞ': 'N',
@@ -60,9 +60,11 @@ export function generateCodeFromName(name: string): string {
     }
   }
 
-  return result
+  const code = result
     .replace(/[^a-zA-Z0-9\s-]/g, '')
     .trim()
     .replace(/[\s-]+/g, '-')
     .toUpperCase();
+
+  return maxLength ? code.slice(0, maxLength) : code;
 }
