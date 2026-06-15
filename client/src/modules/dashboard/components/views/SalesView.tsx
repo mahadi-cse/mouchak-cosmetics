@@ -290,17 +290,17 @@ export default function SalesView({
         
         <div className="flex flex-col gap-3">
           {/* Header & Branch Selection Side-by-Side */}
-          <div className="flex items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: Theme.border }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: Theme.border }}>
             <div>
               <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>{t.sales.addNewSale}</div>
               <div className="text-[12px] hidden sm:block" style={{ color: Theme.mutedFg }}>{t.sales.recordManualTx}</div>
             </div>
             
             <div className="flex items-center gap-2">
-              <div className="w-5.5 h-5.5 min-w-[22px] rounded-full hidden sm:flex items-center justify-center text-[10px] font-extrabold text-white" style={{ background: Theme.primary }}>
+              <div className="w-5.5 h-5.5 min-w-[22px] rounded-full flex items-center justify-center text-[10px] font-extrabold text-white" style={{ background: Theme.primary }}>
                 {locale === 'bn' ? '১' : '1'}
               </div>
-              <label className="text-xs font-semibold hidden sm:inline" style={{ color: Theme.fg }}>
+              <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
                 {t.sales.step1}:
               </label>
               <select

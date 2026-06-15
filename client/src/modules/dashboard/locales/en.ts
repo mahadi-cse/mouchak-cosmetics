@@ -366,6 +366,7 @@ export const en = {
     branchNameReq: "Branch name and code are required",
     branchNamePlaceholder: "Branch name",
     branchCodePlaceholder: "Branch code",
+    branchType: "Branch Type",
     warehouse: "Warehouse",
     retail: "Retail",
     office: "Office",

@@ -369,6 +369,7 @@ export const bn: DashboardTranslations = {
     branchNameReq: "শাখার নাম এবং কোড প্রয়োজন",
     branchNamePlaceholder: "শাখার নাম",
     branchCodePlaceholder: "শাখা কোড",
+    branchType: "শাখার ধরন",
     warehouse: "গুদাম",
     retail: "খুচরা",
     office: "অফিস",
