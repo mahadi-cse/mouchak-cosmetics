@@ -58,7 +58,6 @@ export default function ProductDetailView() {
     { category: categorySlug, limit: 8 },
     {
       enabled: !!categorySlug,
-      queryKey: ['products', 'list', 'related', categorySlug],
       staleTime: 10 * 60 * 1000,
     }
   );
