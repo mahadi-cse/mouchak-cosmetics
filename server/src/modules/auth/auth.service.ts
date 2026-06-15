@@ -5,7 +5,7 @@ import { getEnv } from '../../config/env';
 import { ConflictError, UnauthorizedError, ValidationError } from '../../shared/utils/AppError';
 import { isRoleCode, RoleCode, USER_TYPE_CODES } from '../../shared/types/auth.types';
 import { signAccessToken } from './auth.jwt';
-import { GoogleSignInInput, RegisterInput } from './auth.schema';
+import { GoogleSignInInput, RegisterInput, ChangePasswordInput } from './auth.schema';
 import { parseUserAgent } from '../../shared/utils/userAgent';
 
 export interface AuthTokenBundle {
@@ -626,6 +626,27 @@ export class AuthService {
       data: {
         revoked: true,
       },
+    });
+  }
+
+  async changePassword(userId: number, input: ChangePasswordInput) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !user.password) {
+      throw new UnauthorizedError('User not found or password login not supported', 'USER_NOT_FOUND');
+    }
+
+    const passwordMatches = await bcrypt.compare(input.currentPassword, user.password);
+    if (!passwordMatches) {
+      throw new ValidationError('Incorrect current password', 'INCORRECT_CURRENT_PASSWORD');
+    }
+
+    const newHashedPassword = await hashPassword(input.newPassword);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: newHashedPassword },
     });
   }
 }

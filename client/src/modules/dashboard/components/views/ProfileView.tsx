@@ -12,6 +12,51 @@ export default function ProfileView() {
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    setUpdatingPassword(true);
+    try {
+      await apiClient.post('/auth/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setPasswordSuccess('Your password has been changed successfully.');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (error: any) {
+      console.error('Failed to change password', error);
+      const errMsg = error.response?.data?.message || 'Failed to change password. Please check your current password and try again.';
+      setPasswordError(errMsg);
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -162,6 +207,66 @@ export default function ProfileView() {
                   </li>
                 ))}
               </ul>
+            </div>
+
+            {/* Change Password Card */}
+            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                <p className="text-sm font-bold text-gray-700">Security & Password</p>
+                <p className="text-xs text-gray-400 mt-0.5">Manage and update your login password</p>
+              </div>
+              <form onSubmit={handlePasswordChange} className="p-6 space-y-4">
+                {passwordError && (
+                  <div className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+                    ⚠️ {passwordError}
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div className="text-xs font-semibold text-green-600 bg-green-50 border border-green-100 rounded-lg p-3">
+                    ✅ {passwordSuccess}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3.5 py-2 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 outline-none bg-zinc-50/30 transition-all font-medium"
+                    placeholder="Enter current password"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3.5 py-2 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 outline-none bg-zinc-50/30 transition-all font-medium"
+                    placeholder="Min 8 characters"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="w-full text-sm text-gray-900 border border-gray-200 rounded-lg px-3.5 py-2 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 outline-none bg-zinc-50/30 transition-all font-medium"
+                    placeholder="Confirm new password"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={updatingPassword}
+                  className="w-full text-xs font-bold text-white bg-pink-500 hover:bg-pink-600 transition-colors px-4 py-2.5 rounded-lg disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm shadow-pink-100 cursor-pointer"
+                >
+                  {updatingPassword ? 'Updating...' : 'Change Password'}
+                </button>
+              </form>
             </div>
             
           </div>

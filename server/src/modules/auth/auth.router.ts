@@ -16,6 +16,7 @@ router.post('/logout', authController.logout);
 router.get('/me', authMiddleware, authController.me);
 router.get('/profile', authMiddleware, authController.profile);
 router.patch('/profile', authMiddleware, authController.updateProfile);
+router.post('/change-password', authMiddleware, authController.changePassword);
 router.get(
   '/admin-health',
   authMiddleware,

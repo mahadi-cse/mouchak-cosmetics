@@ -5,7 +5,7 @@ import { UnauthorizedError, ValidationError } from '../../shared/utils/AppError'
 import { ok } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import authService from './auth.service';
-import { googleSignInSchema, loginSchema, registerSchema } from './auth.schema';
+import { googleSignInSchema, loginSchema, registerSchema, changePasswordSchema } from './auth.schema';
 
 const buildRefreshCookieOptions = () => {
   const env = getEnv();
@@ -456,6 +456,20 @@ export const revokeAllOtherDevices: RequestHandler = asyncHandler(async (req, re
   res.json(ok(null, 'All other device sessions revoked successfully'));
 });
 
+export const changePassword: RequestHandler = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new UnauthorizedError('Unauthorized', 'UNAUTHORIZED');
+  }
+
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.errors[0]?.message || 'Invalid input');
+  }
+
+  await authService.changePassword(req.user.id, parsed.data);
+  res.json(ok(null, 'Password changed successfully'));
+});
+
 export default {
   login,
   register,
@@ -476,4 +490,5 @@ export default {
   getSecurityDevices,
   revokeDevice,
   revokeAllOtherDevices,
+  changePassword,
 };
