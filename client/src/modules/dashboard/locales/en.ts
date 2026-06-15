@@ -133,7 +133,7 @@ export const en = {
     recordSale: "Record Sale",
     product: "Product",
     searchPlaceholder: "Search product name or SKU...",
-    sku: "SKU",
+    sku: "SKU/Code",
     inStock: "in stock",
     noProductsFound: "No products found",
     quantity: "Quantity",

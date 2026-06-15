@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Theme, formatCurrency } from '@/modules/dashboard/utils/theme';
+import { Theme, formatCurrency, generateCodeFromName } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, KpiCard, Btn } from '../Primitives';
 import {
@@ -48,6 +48,7 @@ export default function BranchesView() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<BranchDTO | null>(null);
   const [form, setForm] = useState<BranchFormState>(EMPTY_FORM);
+  const [isCodeManual, setIsCodeManual] = useState(false);
 
   const branches = dbBranches.map((b) => ({
     ...b,
@@ -62,6 +63,7 @@ export default function BranchesView() {
 
   const openCreateModal = () => {
     resetForm();
+    setIsCodeManual(false);
     setModalOpen(true);
   };
 
@@ -78,6 +80,7 @@ export default function BranchesView() {
       managerName: branch.managerName || '',
       managerPhone: branch.managerPhone || '',
     });
+    setIsCodeManual(true);
     setModalOpen(true);
   };
 
@@ -271,18 +274,30 @@ export default function BranchesView() {
               </div>
 
               <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                <div className="flex flex-col gap-1">
+                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
                     {t.branches.branchNamePlaceholder} *
                   </label>
-                  <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder={t.branches.branchNamePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                  <input value={form.name} onChange={(e) => {
+                    const val = e.target.value;
+                    setForm((p) => {
+                      const next = { ...p, name: val };
+                      if (!isCodeManual) {
+                        next.branchCode = generateCodeFromName(val);
+                      }
+                      return next;
+                    });
+                  }} placeholder={t.branches.branchNamePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
                     {t.branches.branchCodePlaceholder} *
                   </label>
-                  <input value={form.branchCode} onChange={(e) => setForm((p) => ({ ...p, branchCode: e.target.value }))} placeholder={t.branches.branchCodePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                  <input value={form.branchCode} onChange={(e) => {
+                    setIsCodeManual(true);
+                    setForm((p) => ({ ...p, branchCode: e.target.value }));
+                  }} placeholder={t.branches.branchCodePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
                 </div>
 
                 <div className="flex flex-col gap-1">

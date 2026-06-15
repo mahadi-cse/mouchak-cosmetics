@@ -275,7 +275,7 @@ export const bn: DashboardTranslations = {
     editProduct: "পণ্য সম্পাদনা",
     newProduct: "নতুন পণ্য",
     productName: "পণ্যের নাম *",
-    sku: "SKU *",
+    sku: "SKU / কোড",
     branch: "শাখা *",
     selectBranch: "শাখা নির্বাচন করুন",
     selectBranchFirst: "প্রথমে শাখা নির্বাচন করুন",

@@ -25,10 +25,23 @@ export class ProductService {
   }
 
   async createProduct(data: CreateProductInput) {
-    const existing = await prisma.product.findUnique({ where: { sku: data.sku } });
-    if (existing) throw new ConflictError('Product with this SKU already exists');
+    let sku = data.sku;
+    let existingSku = await prisma.product.findUnique({ where: { sku } });
+    let counterSku = 1;
+    while (existingSku) {
+      sku = `${data.sku}-${counterSku}`;
+      existingSku = await prisma.product.findUnique({ where: { sku } });
+      counterSku++;
+    }
 
-    const slug = generateSlug(data.name);
+    let slug = generateSlug(data.name);
+    let existingSlug = await prisma.product.findUnique({ where: { slug } });
+    let counterSlug = 1;
+    while (existingSlug) {
+      slug = `${generateSlug(data.name)}-${counterSlug}`;
+      existingSlug = await prisma.product.findUnique({ where: { slug } });
+      counterSlug++;
+    }
 
     const product = await prisma.product.create({
       data: {
@@ -39,7 +52,7 @@ export class ProductService {
         price: data.price,
         compareAtPrice: data.compareAtPrice,
         costPrice: data.costPrice,
-        sku: data.sku,
+        sku,
         barcode: data.barcode,
         categoryId: data.categoryId,
         images: data.images || [],
@@ -161,22 +174,44 @@ export class ProductService {
     const product = await prisma.product.findUnique({ where: { id } });
     if (!product) throw new NotFoundError('Product not found');
 
-    if (data.sku && data.sku !== product.sku) {
-      const existing = await prisma.product.findUnique({ where: { sku: data.sku } });
-      if (existing) throw new ConflictError('Product with this SKU already exists');
+    let sku = data.sku;
+    if (sku && sku !== product.sku) {
+      let existingSku = await prisma.product.findFirst({
+        where: { id: { not: id }, sku },
+      });
+      let counterSku = 1;
+      while (existingSku) {
+        sku = `${data.sku}-${counterSku}`;
+        existingSku = await prisma.product.findFirst({
+          where: { id: { not: id }, sku },
+        });
+        counterSku++;
+      }
     }
 
     const updateData: any = {};
     if (data.name) {
       updateData.name = data.name;
-      updateData.slug = generateSlug(data.name);
+      let slug = generateSlug(data.name);
+      let existingSlug = await prisma.product.findFirst({
+        where: { id: { not: id }, slug },
+      });
+      let counterSlug = 1;
+      while (existingSlug) {
+        slug = `${generateSlug(data.name)}-${counterSlug}`;
+        existingSlug = await prisma.product.findFirst({
+          where: { id: { not: id }, slug },
+        });
+        counterSlug++;
+      }
+      updateData.slug = slug;
     }
     if (data.description !== undefined) updateData.description = data.description;
     if (data.shortDescription !== undefined) updateData.shortDescription = data.shortDescription;
     if (data.price !== undefined) updateData.price = data.price;
     if (data.compareAtPrice !== undefined) updateData.compareAtPrice = data.compareAtPrice;
     if (data.costPrice !== undefined) updateData.costPrice = data.costPrice;
-    if (data.sku) updateData.sku = data.sku;
+    if (sku) updateData.sku = sku;
     if (data.barcode !== undefined) updateData.barcode = data.barcode;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.images !== undefined) updateData.images = data.images;
@@ -236,40 +271,54 @@ export class ProductService {
 
     for (const productData of products) {
       try {
-        const existing = await prisma.product.findUnique({ where: { sku: productData.sku } });
-        if (!existing) {
-          const slug = generateSlug(productData.name);
-          await prisma.product.create({
-            data: {
-              name: productData.name,
-              slug,
-              description: productData.description,
-              shortDescription: productData.shortDescription,
-              price: productData.price,
-              compareAtPrice: productData.compareAtPrice,
-              costPrice: productData.costPrice,
-              sku: productData.sku,
-              barcode: productData.barcode,
-              categoryId: productData.categoryId,
-              images: productData.images || [],
-              isFeatured: productData.isFeatured || false,
-              tags: productData.tags || [],
-              weight: productData.weight,
-            },
-          });
-
-          const defaultBranchId = await this.getDefaultBranchId();
-          await prisma.inventory.create({
-            data: {
-              productId: productData.id,
-              warehouseId: defaultBranchId,
-              quantity: 0,
-              reservedQty: 0,
-              lowStockThreshold: 10,
-            },
-          });
-          results.imported++;
+        let sku = productData.sku;
+        let existingSku = await prisma.product.findUnique({ where: { sku } });
+        let counterSku = 1;
+        while (existingSku) {
+          sku = `${productData.sku}-${counterSku}`;
+          existingSku = await prisma.product.findUnique({ where: { sku } });
+          counterSku++;
         }
+
+        let slug = generateSlug(productData.name);
+        let existingSlug = await prisma.product.findUnique({ where: { slug } });
+        let counterSlug = 1;
+        while (existingSlug) {
+          slug = `${generateSlug(productData.name)}-${counterSlug}`;
+          existingSlug = await prisma.product.findUnique({ where: { slug } });
+          counterSlug++;
+        }
+
+        const created = await prisma.product.create({
+          data: {
+            name: productData.name,
+            slug,
+            description: productData.description,
+            shortDescription: productData.shortDescription,
+            price: productData.price,
+            compareAtPrice: productData.compareAtPrice,
+            costPrice: productData.costPrice,
+            sku,
+            barcode: productData.barcode,
+            categoryId: productData.categoryId,
+            images: productData.images || [],
+            isFeatured: productData.isFeatured || false,
+            tags: productData.tags || [],
+            weight: productData.weight,
+          },
+        });
+
+        const defaultBranchId = await this.getDefaultBranchId();
+        await prisma.inventory.create({
+          data: {
+            productId: created.id,
+            warehouseId: defaultBranchId,
+            quantity: 0,
+            reservedQty: 0,
+            lowStockThreshold: 10,
+          },
+        });
+        results.imported++;
       } catch (error: any) {
         results.failed++;
         results.errors.push({ sku: productData.sku, error: error.message });

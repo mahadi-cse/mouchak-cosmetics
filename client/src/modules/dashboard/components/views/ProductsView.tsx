@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Theme } from '@/modules/dashboard/utils/theme';
+import { Theme, generateCodeFromName } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, Btn } from '../Primitives';
 import {
@@ -49,6 +49,7 @@ export default function ProductsView() {
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editProduct, setEditProduct] = useState<number | null>(null);
+  const [isSkuManual, setIsSkuManual] = useState(false);
   const [productForm, setProductForm] = useState({
     name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', stock: '', description: '', image: '',
     unitType: 'PIECE' as 'PIECE' | 'WEIGHT', unitLabel: 'pc',
@@ -66,6 +67,7 @@ export default function ProductsView() {
 
   const resetForm = () => {
     setProductForm({ name: '', sku: '', categoryId: '', branchId: '', price: '', costPrice: '', stock: '', description: '', image: '', unitType: 'PIECE', unitLabel: 'pc', sizes: [] });
+    setIsSkuManual(false);
     setShowAddProduct(false); setEditProduct(null); setProductCategoryBranchId('');
   };
 
@@ -78,6 +80,7 @@ export default function ProductsView() {
       image: product.images?.[0] || '', unitType: product.unitType || 'PIECE', unitLabel: product.unitLabel || 'pc',
       sizes: (product.sizes || []).map((s: any) => ({ name: s.name, imageUrl: s.imageUrl || '', priceOverride: s.priceOverride?.toString() || '' })),
     });
+    setIsSkuManual(true);
     setEditProduct(product.id); setShowAddProduct(true);
   };
 
@@ -154,8 +157,20 @@ export default function ProductsView() {
               <button type="button" onClick={resetForm} className="cursor-pointer border-none bg-transparent text-lg leading-none" style={{ color: Theme.mutedFg }}>✕</button>
             </div>
             <div className={`grid gap-[14px] ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
-              <div><label className={labelClass}>{t.products.productName}</label><input placeholder="e.g. Rose Glow Serum" className={inputClass} value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} /></div>
-              <div><label className={labelClass}>{t.products.sku}</label><input placeholder="e.g. SKU-019" className={inputClass} value={productForm.sku} onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} /></div>
+              <div><label className={labelClass}>{t.products.productName}</label><input placeholder="e.g. Rose Glow Serum" className={inputClass} value={productForm.name} onChange={(e) => {
+                const val = e.target.value;
+                setProductForm(prev => {
+                  const next = { ...prev, name: val };
+                  if (!isSkuManual) {
+                    next.sku = generateCodeFromName(val);
+                  }
+                  return next;
+                });
+              }} /></div>
+              <div><label className={labelClass}>{t.products.sku}</label><input placeholder="e.g. SKU-019" className={inputClass} value={productForm.sku} onChange={(e) => {
+                setIsSkuManual(true);
+                setProductForm({ ...productForm, sku: e.target.value });
+              }} /></div>
               <div><label className={labelClass}>{t.products.branch}</label><select className={selectClass} value={productForm.branchId} onChange={(e) => { setProductCategoryBranchId(e.target.value); setProductForm({ ...productForm, branchId: e.target.value, categoryId: '' }); }}><option value="">{t.products.selectBranch}</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
               <div><label className={labelClass}>{t.products.category}</label><select className={selectClass} value={productForm.categoryId} disabled={!productForm.branchId || isLoadingProductCategories} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}><option value="">{!productForm.branchId ? t.products.selectBranchFirst : isLoadingProductCategories ? t.products.loading : t.products.selectCategory}</option>{productCategories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
               <div><label className={labelClass}>{t.products.sellingPrice}</label><input type="number" placeholder="0" className={inputClass} value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} /></div>
