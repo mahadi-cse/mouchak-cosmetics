@@ -1,6 +1,5 @@
 import React from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
-import { toast } from 'react-hot-toast';
 
 export interface TrendingSettingsTabProps {
   trendingSearch: string;
@@ -9,10 +8,10 @@ export interface TrendingSettingsTabProps {
   setTrendingBranchId: (val: string) => void;
   isLoadingProducts: boolean;
   productsList: any[];
-  updateProduct: any;
   branches: any[];
-  triggerSavedIndicator: () => void;
   t: any;
+  pendingFeaturedChanges: Record<number, boolean>;
+  toggleProductFeatured: (id: number, initiallyFeatured: boolean) => void;
 }
 
 const inputClass =
@@ -38,10 +37,10 @@ export default function TrendingSettingsTab({
   setTrendingBranchId,
   isLoadingProducts,
   productsList,
-  updateProduct,
   branches,
-  triggerSavedIndicator,
   t,
+  pendingFeaturedChanges,
+  toggleProductFeatured,
 }: TrendingSettingsTabProps) {
   const q = trendingSearch.trim().toLowerCase();
   const filtered = productsList.filter((p: any) => {
@@ -50,8 +49,20 @@ export default function TrendingSettingsTab({
     return true;
   });
 
+  const getIsFeatured = (p: any) => {
+    return pendingFeaturedChanges.hasOwnProperty(p.id)
+      ? pendingFeaturedChanges[p.id]
+      : p.isFeatured;
+  };
+
   // Show featured first, then the rest
-  const sorted = [...filtered].sort((a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+  const sorted = [...filtered].sort((a: any, b: any) => {
+    const aFeatured = getIsFeatured(a);
+    const bFeatured = getIsFeatured(b);
+    return (bFeatured ? 1 : 0) - (aFeatured ? 1 : 0);
+  });
+
+  const featuredCount = productsList.filter(getIsFeatured).length;
 
   return (
     <div>
@@ -59,8 +70,13 @@ export default function TrendingSettingsTab({
         <div className="mb-[14px] text-[13px]" style={{ color: Theme.mutedFg }}>
           {t.settings.trendingDesc}
           <span className="ml-1 font-semibold" style={{ color: Theme.primary }}>
-            {productsList.filter((p: any) => p.isFeatured).length} {t.settings.featured}
+            {featuredCount} {t.settings.featured}
           </span>
+          {Object.keys(pendingFeaturedChanges).length > 0 && (
+            <span className="ml-2 text-xs italic font-medium text-amber-600">
+              ({Object.keys(pendingFeaturedChanges).length} pending changes)
+            </span>
+          )}
         </div>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
@@ -90,57 +106,49 @@ export default function TrendingSettingsTab({
           ) : filtered.length === 0 ? (
             <div className="py-4 text-center text-sm">{t.settings.noProductsFound}</div>
           ) : (
-            sorted.map((p: any) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 rounded-[10px] border bg-white px-[14px] py-3"
-                style={{ borderColor: p.isFeatured ? Theme.primary : Theme.border }}
-              >
-                <input
-                  type="checkbox"
-                  checked={p.isFeatured}
-                  onChange={async (e) => {
-                    try {
-                      await updateProduct.mutateAsync({
-                        id: p.id,
-                        isFeatured: e.target.checked,
-                      } as any);
-                      triggerSavedIndicator();
-                      toast.success(e.target.checked ? 'Added to featured' : 'Removed from featured');
-                    } catch {
-                      toast.error('Failed to update product');
-                    }
-                  }}
-                  className="h-4 w-4 shrink-0 cursor-pointer"
-                  style={{ accentColor: Theme.primary }}
-                />
+            sorted.map((p: any) => {
+              const isFeatured = getIsFeatured(p);
+              return (
                 <div
-                  className="h-9 w-9 shrink-0 overflow-hidden rounded"
-                  style={{ background: Theme.muted }}
+                  key={p.id}
+                  className="flex items-center gap-3 rounded-[10px] border bg-white px-[14px] py-3"
+                  style={{ borderColor: isFeatured ? Theme.primary : Theme.border }}
                 >
-                  {p.images?.[0] ? (
-                    <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-sm">📦</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
-                      {p.name}
-                    </span>
-                    {p.isFeatured && (
-                      <span className="rounded bg-pink-50 px-1.5 py-0.5 text-[9px] font-bold text-pink-600 border border-pink-100">
-                        {t.settings.featured}
-                      </span>
+                  <input
+                    type="checkbox"
+                    checked={isFeatured}
+                    onChange={() => toggleProductFeatured(p.id, p.isFeatured)}
+                    className="h-4 w-4 shrink-0 cursor-pointer"
+                    style={{ accentColor: Theme.primary }}
+                  />
+                  <div
+                    className="h-9 w-9 shrink-0 overflow-hidden rounded"
+                    style={{ background: Theme.muted }}
+                  >
+                    {p.images?.[0] ? (
+                      <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-sm">📦</span>
                     )}
                   </div>
-                  <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
-                    {p.category?.name} · ৳{p.price} · {branches.find((b: any) => b.id === p.inventories?.[0]?.warehouseId)?.name || 'Default'}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
+                        {p.name}
+                      </span>
+                      {isFeatured && (
+                        <span className="rounded bg-pink-50 px-1.5 py-0.5 text-[9px] font-bold text-pink-600 border border-pink-100">
+                          {t.settings.featured}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px]" style={{ color: Theme.mutedFg }}>
+                      {p.category?.name} · ৳{p.price} · {branches.find((b: any) => b.id === p.inventories?.[0]?.warehouseId)?.name || 'Default'}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </FormSection>

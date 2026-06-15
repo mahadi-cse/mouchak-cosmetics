@@ -497,6 +497,23 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
 
   const [trendingSearch, setTrendingSearch] = useState('');
   const [trendingBranchId, setTrendingBranchId] = useState('');
+  const [pendingFeaturedChanges, setPendingFeaturedChanges] = useState<Record<number, boolean>>({});
+
+  const toggleProductFeatured = (productId: number, initiallyFeatured: boolean) => {
+    setPendingFeaturedChanges(prev => {
+      const currentVal = prev.hasOwnProperty(productId) ? prev[productId] : initiallyFeatured;
+      const newVal = !currentVal;
+      
+      const next = { ...prev };
+      if (newVal === initiallyFeatured) {
+        delete next[productId];
+      } else {
+        next[productId] = newVal;
+      }
+      return next;
+    });
+  };
+
 
 
   React.useEffect(() => {
@@ -744,6 +761,12 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       }));
     }
 
+    if (tab === 'trending') {
+      setPendingFeaturedChanges({});
+      toast.success('Reset trending product selections');
+      return;
+    }
+
     if (tab === 'staff') {
       setStaff(STAFF_LIST);
     }
@@ -787,6 +810,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       }
 
       if (targetTab === 'trending') {
+        const changeEntries = Object.entries(pendingFeaturedChanges);
+        if (changeEntries.length > 0) {
+          await Promise.all(
+            changeEntries.map(([idStr, isFeatured]) =>
+              updateProduct.mutateAsync({
+                id: Number(idStr),
+                isFeatured,
+              } as any)
+            )
+          );
+          setPendingFeaturedChanges({});
+        }
         toast.success('Featured products published');
       } else if (targetTab === 'discounts') {
         toast.success('Promotions published');
@@ -931,10 +966,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         setTrendingBranchId={setTrendingBranchId}
         isLoadingProducts={isLoadingProducts}
         productsList={productsList}
-        updateProduct={updateProduct}
         branches={branches}
-        triggerSavedIndicator={triggerSavedIndicator}
         t={t}
+        pendingFeaturedChanges={pendingFeaturedChanges}
+        toggleProductFeatured={toggleProductFeatured}
       />
     ),
     discounts: (
