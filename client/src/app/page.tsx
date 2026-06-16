@@ -12,6 +12,8 @@ import {
 } from "@/modules/homepage";
 import { promotionsAPI, PROMOTION_KEYS } from "@/modules/promotions";
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const queryClient = new QueryClient({
     defaultOptions: {
