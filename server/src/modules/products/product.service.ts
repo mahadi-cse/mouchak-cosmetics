@@ -288,7 +288,38 @@ export class ProductService {
 
     try {
       const deleted = await prisma.$transaction(async (tx) => {
-        // Safe to delete. Prisma Cascade handles Inventories, Sizes, Reviews, OrderItems, etc.
+        // 1. Inventories and their transactions
+        const inventories = await tx.inventory.findMany({ where: { productId: id } });
+        const invIds = inventories.map((inv) => inv.id);
+        if (invIds.length > 0) {
+          await tx.inventoryTransaction.deleteMany({ where: { inventoryId: { in: invIds } } });
+        }
+        await tx.inventory.deleteMany({ where: { productId: id } });
+
+        // 2. Order Items and their Returns
+        const orderItems = await tx.orderItem.findMany({ where: { productId: id } });
+        const orderItemIds = orderItems.map((o) => o.id);
+        if (orderItemIds.length > 0) {
+          await tx.return.deleteMany({ where: { orderItemId: { in: orderItemIds } } });
+          await tx.orderItem.deleteMany({ where: { productId: id } });
+        }
+
+        // 3. Other transactional history
+        await tx.manualSaleItem.deleteMany({ where: { productId: id } });
+        await tx.manualReturnItem.deleteMany({ where: { productId: id } });
+        await tx.supplierTransactionItem.deleteMany({ where: { productId: id } });
+        await tx.stockTransfer.deleteMany({ where: { productId: id } });
+
+        // 4. Product dependencies
+        await tx.productSize.deleteMany({ where: { productId: id } });
+        await tx.productReview.deleteMany({ where: { productId: id } });
+        await tx.productAnalytics.deleteMany({ where: { productId: id } });
+        await tx.wishlist.deleteMany({ where: { productId: id } });
+        
+        // Using executeRaw to avoid Prisma casing issues with SKUHistory
+        await tx.$executeRaw`DELETE FROM "sku_history" WHERE "productId" = ${id}`;
+
+        // 5. Finally delete the product itself
         return await tx.product.delete({ where: { id } });
       });
 
