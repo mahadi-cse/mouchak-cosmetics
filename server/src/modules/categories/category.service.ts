@@ -111,9 +111,18 @@ export class CategoryService {
     const category = await prisma.category.findUnique({ where: { id: Number(id) } });
     if (!category) throw new NotFoundError('Category not found');
 
-    const deleted = await prisma.category.delete({ where: { id: Number(id) } });
-    await cacheInvalidatePattern('categories:*');
-    return deleted;
+    try {
+      const deleted = await prisma.category.delete({ where: { id: Number(id) } });
+      await cacheInvalidatePattern('categories:*');
+      return deleted;
+    } catch (error: any) {
+      if (error.code === 'P2003') {
+        throw new ConflictError(
+          'Cannot delete this category because it contains products. Please move or delete the products first, or deactivate the category instead.'
+        );
+      }
+      throw error;
+    }
   }
 
   async updateCategoryStatus(id: number, data: { isActive?: boolean }) {
