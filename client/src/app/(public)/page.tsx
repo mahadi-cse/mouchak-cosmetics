@@ -2,7 +2,6 @@ import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query
 import {
   Features,
   FeaturedProducts,
-  FeaturedProducts,
   Hero,
   Newsletter,
   HomepageLocaleProvider,
@@ -67,4 +66,4 @@ export default async function HomePage() {
       </HydrationBoundary>
     </HomepageLocaleProvider>
   );
-
+}
