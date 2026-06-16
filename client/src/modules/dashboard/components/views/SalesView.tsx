@@ -13,6 +13,7 @@ import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 import BarcodeScannerModal from '../BarcodeScannerModal';
+import { useSiteSettings } from '@/modules/homepage';
 
 interface SalesViewProps {
   products: Product[];
@@ -42,6 +43,7 @@ export default function SalesView({
   const { isMobile } = useResponsive();
   const { t, locale } = useDashboardLocale();
   const { data: session } = useSession();
+  const { data: siteSettings } = useSiteSettings();
   const { data: branches = [] } = useListBranches();
   const activeBranches = branches.filter((b) => b.active);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,7 +70,15 @@ export default function SalesView({
     }
   }, [showPrintToast]);
 
-  const buildReceiptHtml = (sale: any) => {
+  const buildReceiptHtml = (sale: any, storeInfo?: { storeName: string; tagline: string; address: string; phone: string }) => {
+    const store = {
+      storeName: storeInfo?.storeName || 'Mouchak Cosmetics',
+      tagline: storeInfo?.tagline || 'Premium Quality Cosmetics & Skincare',
+      address: storeInfo?.address || '',
+      phone: storeInfo?.phone || '',
+    };
+    // Use saleNumber as the document title — browsers use this as the PDF filename
+    const docTitle = sale.saleNumber || 'Receipt';
     const itemsHtml = (sale.items || []).map((item: any) => `
       <tr>
         <td style="padding: 4px 0; font-size: 11px; font-family: monospace; line-height: 1.2;">
@@ -83,11 +93,15 @@ export default function SalesView({
 
     const formattedDate = new Date(sale.createdAt).toLocaleString();
 
+    const autoprint = `<script>window.onload = function() { setTimeout(function() { window.print(); }, 150); };<\/script>`;  
+
     const receiptHtml = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Receipt ${sale.saleNumber}</title>
+          <title>${docTitle}</title>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <style>
             @page {
               size: 80mm auto;
@@ -156,11 +170,14 @@ export default function SalesView({
               color: #333;
             }
           </style>
+          ${autoprint}
         </head>
         <body>
           <div class="header text-center">
-            <div class="title">Mouchak Cosmetics</div>
-            <div class="subtitle">Premium Quality Cosmetics & Skincare</div>
+            <div class="title">${store.storeName}</div>
+            <div class="subtitle">${store.tagline}</div>
+            ${store.address ? `<div class="subtitle">${store.address}</div>` : ''}
+            ${store.phone ? `<div class="subtitle">${store.phone}</div>` : ''}
             <div class="subtitle">${sale.branchName || 'Main Branch'}</div>
           </div>
 
@@ -275,26 +292,39 @@ export default function SalesView({
   };
 
   const handlePrintReceipt = (sale: any) => {
-    const receiptHtml = buildReceiptHtml(sale);
+    const storeInfo = {
+      storeName: siteSettings?.storeName || 'Mouchak Cosmetics',
+      tagline: siteSettings?.tagline || 'Premium Quality Cosmetics & Skincare',
+      address: siteSettings?.contactAddress || '',
+      phone: siteSettings?.contactPhone || '',
+    };
+    const receiptHtml = buildReceiptHtml(sale, storeInfo);
 
     if (isMobile) {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        printReceiptInIframe(receiptHtml);
-        return;
-      }
-
-      printWindow.document.open();
-      printWindow.document.write(receiptHtml);
-      printWindow.document.close();
-
-      triggerPrint(printWindow, () => {
-        try {
-          printWindow.close();
-        } catch {
-          // Window may already be closed by the user.
+      // On mobile, window.print() in a popup is blocked by the browser.
+      // Use a Blob URL instead — the page loads in its own origin context and
+      // the embedded window.onload script triggers print() without restrictions.
+      try {
+        const blob = new Blob([receiptHtml], { type: 'text/html;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Revoke after a delay to allow the tab to finish loading
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      } catch {
+        // Fallback: open a plain window (best-effort)
+        const pw = window.open('', '_blank');
+        if (pw) {
+          pw.document.open();
+          pw.document.write(receiptHtml);
+          pw.document.close();
         }
-      });
+      }
       return;
     }
 
