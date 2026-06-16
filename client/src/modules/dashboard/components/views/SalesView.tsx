@@ -222,7 +222,9 @@ export default function SalesView({
       targetWindow.focus();
       targetWindow.print();
       targetWindow.addEventListener('afterprint', runCleanup, { once: true });
-      setTimeout(runCleanup, 2000);
+      if (!isMobile) {
+        setTimeout(runCleanup, 2000);
+      }
     };
 
     if (isMobile) {
