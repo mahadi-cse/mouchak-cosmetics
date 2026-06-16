@@ -134,10 +134,10 @@ export function Header() {
 
       {/* Main Navigation */}
       <div className="border-b border-zinc-200">
-        <div className="mx-auto max-w-[1600px] px-6 sm:px-10 py-2.5 lg:py-3 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-[1600px] px-4 sm:px-10 py-2.5 lg:py-3 flex items-center justify-between gap-4">
           {/* Brand Logo - Serif font */}
-          <Link href="/" className="flex-shrink-0 no-underline text-inherit hover:opacity-90 transition-opacity">
-            <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
+          <Link href="/" className="min-w-0 no-underline text-inherit hover:opacity-90 transition-opacity">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight leading-tight">
               {storeNameFirst || "Mouchak"}{" "}
               <span className="text-primary italic">{storeNameRestText || "Cosmetics"}</span>
             </h1>
