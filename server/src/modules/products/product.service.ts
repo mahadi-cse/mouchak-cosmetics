@@ -123,13 +123,13 @@ export class ProductService {
     page?: number;
     limit?: number;
     branchId?: number;
-    includeInactive?: boolean;
+    sortBy?: 'newest' | 'top_selling' | 'top_rated';
   }) {
     const key = KEYS.list(filters);
     const cached = await cacheGet<any>(key);
     if (cached) return cached;
 
-    const { page = 1, limit = 10, category, search, featured, minPrice, maxPrice, branchId, includeInactive } = filters;
+    const { page = 1, limit = 10, category, search, featured, minPrice, maxPrice, branchId, includeInactive, sortBy = 'newest' } = filters;
     const { skip, take } = parsePagination({ page, limit });
 
     const where: any = {};
@@ -155,13 +155,20 @@ export class ProductService {
     }
     if (branchId !== undefined) where.inventories = { some: { warehouseId: branchId } };
 
+    let orderBy: any = { createdAt: 'desc' };
+    if (sortBy === 'top_selling') {
+      orderBy = { analytics: { totalSold: 'desc' } };
+    } else if (sortBy === 'top_rated') {
+      orderBy = { analytics: { avgRating: 'desc' } };
+    }
+
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
         include: { category: true, inventories: true, sizes: { orderBy: { sortOrder: 'asc' } } },
         skip,
         take,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
       prisma.product.count({ where }),
     ]);

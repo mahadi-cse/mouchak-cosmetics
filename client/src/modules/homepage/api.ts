@@ -90,30 +90,33 @@ export const homepageAPI = {
     const response = await apiClient.get<any>("/products", {
       params: {
         featured: "true",
-        limit,
+        limit: 24, // Fetch a larger pool to shuffle from
+        sortBy: "top_selling",
       },
     });
 
-    const featuredProducts = response.data.data as Product[];
-    if (featuredProducts.length >= limit) {
-      return featuredProducts;
+    let featuredProducts = response.data.data as Product[];
+
+    // If not enough featured products, fallback to fetch non-featured top sellers
+    if (featuredProducts.length < limit) {
+      const fallbackResponse = await apiClient.get<any>("/products", {
+        params: { limit: 24, sortBy: "top_selling" },
+      });
+      const allProducts = fallbackResponse.data.data as Product[];
+      const featuredIds = new Set(featuredProducts.map((p) => p.id));
+      featuredProducts = [
+        ...featuredProducts,
+        ...allProducts.filter((p) => !featuredIds.has(p.id)),
+      ];
     }
 
-    // Not enough featured products — fetch all active products to fill the grid
-    const fallbackResponse = await apiClient.get<any>("/products", {
-      params: {
-        limit,
-      },
-    });
+    // Shuffle the fetched pool to make the homepage dynamic
+    for (let i = featuredProducts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [featuredProducts[i], featuredProducts[j]] = [featuredProducts[j], featuredProducts[i]];
+    }
 
-    const allProducts = fallbackResponse.data.data as Product[];
-    // Merge: featured first, then fill with non-featured (no duplicates)
-    const featuredIds = new Set(featuredProducts.map((p) => p.id));
-    const merged = [
-      ...featuredProducts,
-      ...allProducts.filter((p) => !featuredIds.has(p.id)),
-    ];
-    return merged.slice(0, limit);
+    return featuredProducts.slice(0, limit);
   },
 
   searchProducts: async (query: string, limit: number = 5): Promise<Product[]> => {
