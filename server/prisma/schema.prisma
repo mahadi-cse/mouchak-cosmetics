@@ -264,7 +264,7 @@ model Product {
   sku             String    @unique
   barcode         String?
   categoryId      Int
-  category        Category  @relation(fields: [categoryId], references: [id])
+  category        Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   images          String[]
   isFeatured      Boolean   @default(false)
   isActive        Boolean   @default(true)
@@ -377,7 +377,7 @@ model ManualSaleItem {
   manualSaleId       Int
   manualSale         ManualSale @relation(fields: [manualSaleId], references: [id], onDelete: Cascade)
   productId          Int
-  product            Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product            Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   productNameSnapshot String
   productSkuSnapshot  String
   quantity           Int
@@ -422,7 +422,7 @@ model ManualReturnItem {
   manualReturnId      Int
   manualReturn        ManualReturn @relation(fields: [manualReturnId], references: [id], onDelete: Cascade)
   productId           Int
-  product             Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product             Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   productNameSnapshot String
   productSkuSnapshot  String
   quantity            Int
@@ -495,7 +495,7 @@ model SupplierTransactionItem {
   transactionId         Int
   transaction           SupplierTransaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   productId             Int
-  product               Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product               Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   productNameSnapshot   String
   productSkuSnapshot    String
   quantity              Int
@@ -544,7 +544,7 @@ model Inventory {
 model InventoryTransaction {
   id          Int                       @id @default(autoincrement())
   inventoryId Int
-  inventory   Inventory                 @relation(fields: [inventoryId], references: [id])
+  inventory   Inventory                 @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   type        InventoryTransactionType
   quantity    Int
   balanceBefore Int
@@ -639,7 +639,7 @@ model OrderItem {
   orderId     Int
   order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId   Int
-  product     Product   @relation(fields: [productId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   productName String
   productSku  String
   quantity    Int

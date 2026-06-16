@@ -124,6 +124,7 @@ export class ProductService {
     limit?: number;
     branchId?: number;
     sortBy?: 'newest' | 'top_selling' | 'top_rated';
+    includeInactive?: boolean;
   }) {
     const key = KEYS.list(filters);
     const cached = await cacheGet<any>(key);
@@ -283,32 +284,11 @@ export class ProductService {
     });
     if (!product) throw new NotFoundError('Product not found');
 
-    // Prevent deletion if the product has actual financial history
-    const hasHistory =
-      product.orderItems.length > 0 ||
-      product.supplierTransactionItems.length > 0 ||
-      product.manualSaleItems.length > 0 ||
-      product.manualReturnItems.length > 0;
 
-    if (hasHistory) {
-      throw new ConflictError(
-        'Cannot delete this product because it has been sold or has supplier transactions. Please deactivate the product instead.'
-      );
-    }
 
     try {
-      // Safe to delete. We must manually clean up relations that restrict deletion (like InventoryTransactions)
       const deleted = await prisma.$transaction(async (tx) => {
-        // 1. Find all inventories for this product
-        const inventories = await tx.inventory.findMany({ where: { productId: id } });
-        const invIds = inventories.map((inv) => inv.id);
-
-        // 2. Delete inventory transactions linked to these inventories
-        if (invIds.length > 0) {
-          await tx.inventoryTransaction.deleteMany({ where: { inventoryId: { in: invIds } } });
-        }
-
-        // 3. Delete the product (this will cascade delete Inventories, Sizes, Reviews, etc.)
+        // Safe to delete. Prisma Cascade handles Inventories, Sizes, Reviews, OrderItems, etc.
         return await tx.product.delete({ where: { id } });
       });
 
