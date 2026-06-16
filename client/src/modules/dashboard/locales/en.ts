@@ -262,6 +262,9 @@ export const en = {
     actions: "Actions",
     selectSizeTitle: "Select Size",
     selectSizeDesc: "This product has multiple sizes. Please select a size to add it to the cart:",
+    scan: "Scan",
+    scanBarcode: "Scan Barcode",
+    noProductFound: "No product found for this barcode.",
   },
 
   // ─── Products View ───
@@ -277,6 +280,7 @@ export const en = {
     newProduct: "New Product",
     productName: "Product Name *",
     sku: "SKU *",
+    barcode: "Barcode",
     branch: "Branch *",
     selectBranch: "Select Branch",
     selectBranchFirst: "Select Branch First",

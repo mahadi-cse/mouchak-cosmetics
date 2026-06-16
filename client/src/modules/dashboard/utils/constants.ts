@@ -9,7 +9,6 @@ export const NAV = [
   { id: 'branches', label: 'Branches', icon: '🏪' },
   { id: 'suppliers', label: 'Suppliers', icon: '🏭' },
   { id: 'returns', label: 'Returns', icon: '↩' },
-  { id: 'pos', label: 'POS', icon: '🖥️', badge: 'Soon' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 

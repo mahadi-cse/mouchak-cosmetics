@@ -264,7 +264,10 @@ export const bn: DashboardTranslations = {
     printReceipt: "রসিদ প্রিন্ট",
     actions: "অ্যাকশন",
     selectSizeTitle: "সাইজ নির্বাচন করুন",
-    selectSizeDesc: "এই পণ্যটির একাধিক সাইজ রয়েছে। কার্টে যোগ করতে একটি সাইজ নির্বাচন করুন:",
+    selectSizeDesc: "এই পণ্যটির একাধিক সাইজ রয়েছে। কার্টে যোগ করতে একটি সাইজ নির্বাচন করুন:",
+    scan: "স্ক্যান",
+    scanBarcode: "বারকোড স্ক্যান করুন",
+    noProductFound: "এই বারকোডে কোনো পণ্য পাওয়া যায়নি।",
   },
 
   // ─── Products View ───
@@ -280,6 +283,7 @@ export const bn: DashboardTranslations = {
     newProduct: "নতুন পণ্য",
     productName: "পণ্যের নাম *",
     sku: "SKU / কোড",
+    barcode: "বারকোড",
     branch: "শাখা *",
     selectBranch: "শাখা নির্বাচন করুন",
     selectBranchFirst: "প্রথমে শাখা নির্বাচন করুন",

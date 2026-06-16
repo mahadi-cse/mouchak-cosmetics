@@ -409,7 +409,6 @@ export default function DashboardLayout({
     ),
     analytics: <AnalyticsView />,
     branches: <BranchesView />,
-    pos: <POSView />,
     settings: (
       <SettingsView products={products} tab={settingsTab} setTab={setSettingsTab} />
     ),
@@ -861,26 +860,4 @@ export default function DashboardLayout({
   );
 }
 
-const POSView: React.FC = () => {
-  const { t } = useDashboardLocale();
-  return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center gap-[18px] px-5 py-8 text-center">
-      <div
-        className="flex h-20 w-20 items-center justify-center rounded-[22px] text-[40px]"
-        style={{ background: Theme.secondary }}
-      >
-        🖥️
-      </div>
-      <div style={{ fontSize: 26, fontWeight: 800, color: Theme.fg }}>
-        {t.pos.title}
-      </div>
-      <div
-        className="max-w-[380px] text-sm leading-[1.8]"
-        style={{ color: Theme.mutedFg }}
-      >
-        {t.pos.description}{' '}
-        <strong style={{ color: Theme.primary }}>{t.pos.manualSell}</strong> {t.pos.suffix}
-      </div>
-    </div>
-  );
-};
+

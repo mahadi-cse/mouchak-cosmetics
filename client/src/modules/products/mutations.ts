@@ -7,6 +7,7 @@ export interface CreateProductPayload {
   shortDescription?: string;
   price: number;
   sku: string;
+  barcode?: string;
   categoryId: number;
   images: string[];
   branchId?: number;

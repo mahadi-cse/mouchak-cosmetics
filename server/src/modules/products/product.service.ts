@@ -146,6 +146,7 @@ export class ProductService {
         { name: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { tags: { hasSome: [search] } },
+        { barcode: { equals: search } },
       ];
     }
     if (featured !== undefined) where.isFeatured = featured;
