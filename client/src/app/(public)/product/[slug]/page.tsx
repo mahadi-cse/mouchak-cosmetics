@@ -5,13 +5,54 @@ import {
   HOMEPAGE_QUERY_KEYS,
 } from '@/modules/homepage';
 import { ProductDetailView, productAPI, PRODUCTS_QUERY_KEYS } from '@/modules/products';
-import { reviewAPI, REVIEW_KEYS } from '@/modules/reviews';
 import { promotionsAPI, PROMOTION_KEYS } from '@/modules/promotions';
-import type { Product } from '@/shared/types';
+import type { Metadata } from 'next';
+import { cache } from 'react';
 
 type ProductDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
+
+// Cache the product API request so that generateMetadata and the page component share the same request promise.
+const getCachedProduct = cache(async (slug: string) => {
+  return productAPI.getProductBySlug(slug);
+});
+
+export async function generateMetadata({ params }: ProductDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const product = await getCachedProduct(slug);
+    if (!product) {
+      return {
+        title: 'Product Not Found | Mouchak Cosmetics',
+      };
+    }
+    
+    return {
+      title: `${product.name} | Mouchak Cosmetics`,
+      description: product.description 
+        ? product.description.slice(0, 160) 
+        : `Buy ${product.name} online at Mouchak Cosmetics. Premium quality skincare and beauty product.`,
+      openGraph: {
+        title: `${product.name} | Mouchak Cosmetics`,
+        description: product.description ? product.description.slice(0, 160) : `Buy ${product.name} online at Mouchak Cosmetics.`,
+        images: product.images?.[0] ? [{ url: product.images[0] }] : [],
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${product.name} | Mouchak Cosmetics`,
+        description: product.description ? product.description.slice(0, 160) : `Buy ${product.name} online at Mouchak Cosmetics.`,
+        images: product.images?.[0] ? [product.images[0]] : [],
+      },
+    };
+  } catch (error) {
+    return {
+      title: 'Product | Mouchak Cosmetics',
+      description: 'Premium cosmetics and beauty products.',
+    };
+  }
+}
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
@@ -25,15 +66,14 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     },
   });
 
-  await queryClient.prefetchQuery({
-    queryKey: PRODUCTS_QUERY_KEYS.detail(slug),
-    queryFn: () => productAPI.getProductBySlug(slug),
-  });
-
-  const product = queryClient.getQueryData<Product>(PRODUCTS_QUERY_KEYS.detail(slug));
-  const categorySlug = product?.category?.slug;
-
+  // Start all critical prefetches in parallel to eliminate the request waterfall.
+  // We do not prefetch similar products and reviews on the server side, as they are
+  // below-the-fold content and are fetched client-side. This keeps server-side load times minimal.
   await Promise.allSettled([
+    queryClient.prefetchQuery({
+      queryKey: PRODUCTS_QUERY_KEYS.detail(slug),
+      queryFn: () => getCachedProduct(slug),
+    }),
     queryClient.prefetchQuery({
       queryKey: HOMEPAGE_QUERY_KEYS.settings(),
       queryFn: () => homepageAPI.getSettings(),
@@ -50,22 +90,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       queryKey: PROMOTION_KEYS.active(),
       queryFn: () => promotionsAPI.getActive(),
     }),
-    ...(categorySlug
-      ? [
-          queryClient.prefetchQuery({
-            queryKey: PRODUCTS_QUERY_KEYS.list({ category: categorySlug, limit: 8 }),
-            queryFn: () => productAPI.listProducts({ category: categorySlug, limit: 8 }),
-          }),
-        ]
-      : []),
-    ...(product?.id
-      ? [
-          queryClient.prefetchQuery({
-            queryKey: REVIEW_KEYS.summary(product.id),
-            queryFn: () => reviewAPI.getProductReviews(product.id),
-          }),
-        ]
-      : []),
   ]);
 
   const dehydratedState = dehydrate(queryClient);
@@ -78,3 +102,4 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     </HomepageLocaleProvider>
   );
 }
+

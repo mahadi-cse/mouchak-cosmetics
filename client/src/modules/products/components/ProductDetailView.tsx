@@ -38,6 +38,7 @@ export default function ProductDetailView() {
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSizeIndex, setSelectedSizeIndex] = useState(0);
+  const [imageLoading, setImageLoading] = useState(true);
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [activeTab, setActiveTab] = useState<TabType>('description');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
@@ -103,6 +104,10 @@ export default function ProductDetailView() {
   useEffect(() => {
     setActiveImageIndex(0);
   }, [slug]);
+
+  useEffect(() => {
+    setImageLoading(true);
+  }, [activeImageIndex, slug]);
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -235,7 +240,28 @@ export default function ProductDetailView() {
           <div style={{ position: isTablet ? 'relative' : 'sticky', top: isTablet ? 0 : 90 }}>
             {/* Main Image */}
             <div style={{ borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 260 : 320, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.3s' }}>
-              <img src={displayImages[activeImageIndex]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {imageLoading && (
+                <div 
+                  className="absolute inset-0 bg-zinc-100 animate-pulse flex items-center justify-center"
+                  style={{ zIndex: 1 }}
+                >
+                  <svg className="w-10 h-10 text-zinc-300 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+              <img 
+                src={displayImages[activeImageIndex]} 
+                alt={product.name} 
+                onLoad={() => setImageLoading(false)}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'cover',
+                  opacity: imageLoading ? 0 : 1,
+                  transition: 'opacity 0.3s ease-in-out'
+                }} 
+              />
               {hasDiscount && (
                 <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <span style={{ display: 'inline-block', padding: '3px 12px', borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', background: PINK, color: '#fff', border: `1.5px solid ${PINK}` }}>
@@ -434,7 +460,7 @@ export default function ProductDetailView() {
                 <div style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: isMobile ? 16 : 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px color-mix(in srgb, var(--primary) 10%, transparent)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
                   <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 3%, white), var(--primary-pale))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {rp.images?.[0] ? (
-                      <img src={rp.images[0]} alt={rp.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={rp.images[0]} alt={rp.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <svg width="60" height="100" viewBox="0 0 50 90" fill="none">
                         <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6" />
