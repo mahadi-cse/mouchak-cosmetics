@@ -10,7 +10,6 @@ import { useMutation } from '@tanstack/react-query';
 import { SkeletonCard, ErrorMessage, LoadingSpinner } from '@/shared/components';
 import { Clock, ShieldCheck } from 'lucide-react';
 import { useCart } from '@/shared/contexts/CartContext';
-import { Header, Footer } from '@/modules/homepage';
 
 const BANGLADESH_PHONE_REGEX = /^(?:\+?88)?01[3-9]\d{8}$/;
 
@@ -134,25 +133,17 @@ export default function CheckoutView() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
-          <SkeletonCard />
-        </main>
-        <Footer />
-      </div>
+      <main className="container mx-auto px-4 py-12 max-w-4xl">
+        <SkeletonCard />
+      </main>
     );
   }
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
-          <ErrorMessage message="Your cart is empty. Please add items before checkout." />
-        </main>
-        <Footer />
-      </div>
+      <main className="container mx-auto px-4 py-12 max-w-4xl">
+        <ErrorMessage message="Your cart is empty. Please add items before checkout." />
+      </main>
     );
   }
 
@@ -162,9 +153,8 @@ export default function CheckoutView() {
   const DARK = '#1f2937';
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 lg:py-12 max-w-6xl">
+    <>
+      <main className="container mx-auto px-4 py-8 lg:py-12 max-w-6xl">
         <h1 className="text-2xl font-bold text-zinc-900 mb-6 px-2">Cart Checkout</h1>
         <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 lg:gap-10 items-start">
           {/* LEFT COLUMN: Shipping Details */}
@@ -469,7 +459,6 @@ export default function CheckoutView() {
           </div>
         </div>
       </main>
-      <Footer />
-    </div>
+    </>
   );
 }

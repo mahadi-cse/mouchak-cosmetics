@@ -2,7 +2,6 @@
 
 import { useListProducts } from '@/modules/products';
 import { SkeletonGrid, ErrorMessage, EmptyState } from '@/shared/components';
-import { Header, Footer } from '@/modules/homepage';
 import { useCart } from '@/shared/contexts/CartContext';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import Link from 'next/link';
@@ -41,7 +40,7 @@ export default function ShopView() {
 
   return (
     <>
-      <Header />
+
       <div className="w-full bg-zinc-50 py-12 md:py-16">
         <div className="mx-auto max-w-6xl px-4">
           {isLoading ? (
@@ -203,7 +202,6 @@ export default function ShopView() {
           )}
         </div>
       </div>
-      <Footer />
     </>
   );
 }

@@ -2,8 +2,7 @@ import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query
 import {
   Features,
   FeaturedProducts,
-  Footer,
-  Header,
+  FeaturedProducts,
   Hero,
   Newsletter,
   HomepageLocaleProvider,
@@ -61,20 +60,11 @@ export default async function HomePage() {
   return (
     <HomepageLocaleProvider defaultLocale="en">
       <HydrationBoundary state={dehydratedState}>
-        <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-          <Header />
-
-          <main>
-            <Hero />
-            <Features />
-            <FeaturedProducts />
-            <Newsletter />
-          </main>
-
-          <Footer />
-        </div>
+        <Hero />
+        <Features />
+        <FeaturedProducts />
+        <Newsletter />
       </HydrationBoundary>
     </HomepageLocaleProvider>
   );
-}
 

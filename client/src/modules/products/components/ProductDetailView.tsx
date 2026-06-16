@@ -8,8 +8,6 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Heart, Star, ShoppingCart } from 'lucide-react';
-import { Header } from '@/modules/homepage';
-import { Footer } from '@/modules/homepage';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { useProductReviews, useReviewEligibility, useCreateReview, useUpdateReview, useDeleteReview } from '@/modules/reviews';
 import { getProductMainImage, getProductThumbnail, getProductCardImage } from '@/shared/utils/imageOptimizer';
@@ -163,12 +161,8 @@ export default function ProductDetailView() {
 
   if (isLoading) {
     return (
-      <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <SkeletonProductDetail />
-        </div>
-        <Footer />
+      <div className="container mx-auto px-4 py-8">
+        <SkeletonProductDetail />
       </div>
     );
   }
@@ -180,35 +174,26 @@ export default function ProductDetailView() {
         : 'Failed to load product';
 
     return (
-      <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <ErrorMessage message={message} onRetry={() => refetch()} />
-        </div>
-        <Footer />
+      <div className="container mx-auto px-4 py-8">
+        <ErrorMessage message={message} onRetry={() => refetch()} />
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
-        <Header />
-        <EmptyState
-          title="Product Not Found"
-          description="The product you're looking for doesn't exist or has been removed"
-          action={{ label: 'Back to Shop', onClick: () => window.history.back() }}
-        />
-        <Footer />
-      </div>
+      <EmptyState
+        title="Product Not Found"
+        description="The product you're looking for doesn't exist or has been removed"
+        action={{ label: 'Back to Shop', onClick: () => window.history.back() }}
+      />
     );
   }
 
 
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
-      <Header />
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', color: DARK }}>
 
       {/* Breadcrumb */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT, flexWrap: 'wrap' }}>
@@ -469,8 +454,6 @@ export default function ProductDetailView() {
         </div>
         )}
       </div>
-
-      <Footer />
     </div>
   );
 }
