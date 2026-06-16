@@ -1,7 +1,7 @@
 'use client';
 
 import { useProductBySlug, useListProducts } from '@/modules/products';
-import { SkeletonCard, ErrorMessage, EmptyState } from '@/shared/components';
+import { SkeletonCard, SkeletonProductDetail, ErrorMessage, EmptyState } from '@/shared/components';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -179,7 +179,7 @@ export default function ProductDetailView() {
       <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <SkeletonCard />
+          <SkeletonProductDetail />
         </div>
         <Footer />
       </div>

@@ -116,3 +116,52 @@ export function SkeletonHeader() {
     </div>
   );
 }
+
+export function SkeletonProductDetail() {
+  return (
+    <div className="max-w-[1200px] mx-auto px-4 py-8 animate-pulse">
+      {/* Breadcrumb skeleton */}
+      <div className="flex items-center gap-2 mb-6">
+        <div className="h-4 bg-gray-200 rounded w-12"></div>
+        <span className="text-gray-300">/</span>
+        <div className="h-4 bg-gray-200 rounded w-16"></div>
+        <span className="text-gray-300">/</span>
+        <div className="h-4 bg-gray-200 rounded w-32"></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-[0.92fr_1.08fr] gap-8">
+        {/* Left Gallery Column */}
+        <div>
+          <div className="h-80 bg-gray-200 rounded-[24px] mb-4"></div>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="h-16 bg-gray-200 rounded-[14px]"></div>
+            <div className="h-16 bg-gray-200 rounded-[14px]"></div>
+            <div className="h-16 bg-gray-200 rounded-[14px]"></div>
+            <div className="h-16 bg-gray-200 rounded-[14px]"></div>
+          </div>
+        </div>
+
+        {/* Right Details Column */}
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+            <div className="h-6 bg-gray-200 rounded-full w-28"></div>
+            <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+          </div>
+          <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 rounded w-24"></div>
+          <div className="flex items-center gap-2">
+            <div className="h-4 bg-gray-200 rounded w-24"></div>
+            <div className="h-4 bg-gray-200 rounded w-12"></div>
+          </div>
+          <div className="h-16 bg-gray-100 rounded-[16px] w-full"></div>
+          <div className="h-5 bg-gray-200 rounded w-28"></div>
+          <div className="h-10 bg-gray-200 rounded-xl w-36"></div>
+          <div className="h-12 bg-gray-200 rounded-xl w-full"></div>
+          <div className="h-12 bg-gray-200 rounded-xl w-full"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
