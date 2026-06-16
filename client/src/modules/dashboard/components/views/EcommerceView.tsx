@@ -186,7 +186,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
       {tab === 'orders' && (
         <>
           {/* Stat cards row */}
-          <div className="grid grid-cols-3 gap-3 lg:grid-cols-6 2xl:gap-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 2xl:gap-4">
             {[
               { label: t.ecommerce.totalOrders, value: realOrders.length, icon: '📦', accent: '#f0f4ff', numColor: Theme.fg },
               { label: t.ecommerce.pending, value: realOrders.filter(o => String(o.status).toUpperCase() === 'PENDING').length, icon: '⏳', accent: '#fffbeb', numColor: '#b45309' },
@@ -210,7 +210,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
           </div>
 
           <Card pad={0}>
-            <div className="flex items-center justify-between border-b px-[18px] py-[14px]" style={{ borderBottomColor: Theme.border }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b px-[18px] py-[14px]" style={{ borderBottomColor: Theme.border }}>
               <div>
                 <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>{t.ecommerce.allOrders}</div>
                 <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
@@ -221,12 +221,12 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                   }).length.toString()).replace('{total}', realOrders.length.toString())}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <input
                   value={orderSearch}
                   onChange={(e) => setOrderSearch(e.target.value)}
                   placeholder={t.ecommerce.searchOrderOrCustomer}
-                  className="w-[200px] rounded-lg border px-3 py-1.5 text-xs outline-none"
+                  className="flex-1 sm:flex-initial sm:w-[200px] rounded-lg border px-3 py-1.5 text-xs outline-none"
                   style={{ borderColor: Theme.border, color: Theme.fg }}
                 />
                 <select
@@ -416,7 +416,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
       {tab === 'products' && (
         <Card pad={0}>
           <div
-            className="flex items-center justify-between border-b px-[18px] py-[14px]"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b px-[18px] py-[14px]"
             style={{ borderBottomColor: Theme.border }}
           >
             <div>
@@ -428,12 +428,12 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <input
                 value={productSearch}
                 onChange={(event) => setProductSearch(event.target.value)}
                 placeholder={t.ecommerce.searchNameOrSku}
-                className="w-[200px] rounded-lg border px-3 py-1.5 text-xs outline-none"
+                className="flex-1 sm:flex-initial sm:w-[200px] rounded-lg border px-3 py-1.5 text-xs outline-none"
                 style={{ borderColor: Theme.border, color: Theme.fg }}
               />
               <select
@@ -537,7 +537,7 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
           </div>
 
           <Card pad={0}>
-            <div className="flex items-center justify-between border-b px-[18px] py-[14px]" style={{ borderBottomColor: Theme.border }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b px-[18px] py-[14px]" style={{ borderBottomColor: Theme.border }}>
               <div>
                 <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>
                   {t.ecommerce.customerDirectory}
@@ -547,12 +547,12 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <input
                   value={customerSearch}
                   onChange={(event) => setCustomerSearch(event.target.value)}
                   placeholder={t.ecommerce.searchCustomer}
-                  className="w-[220px] rounded-lg border px-3 py-1.5 text-xs outline-none"
+                  className="flex-1 sm:flex-initial sm:w-[220px] rounded-lg border px-3 py-1.5 text-xs outline-none"
                   style={{ borderColor: Theme.border, color: Theme.fg }}
                 />
                 <Btn variant="ghost" size="sm" onClick={() => void refetchCustomers()}>

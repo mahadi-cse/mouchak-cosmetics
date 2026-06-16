@@ -570,7 +570,7 @@ export default function DashboardLayout({
 
       {/* Main content area */}
       <main
-        className={`flex flex-1 flex-col overflow-auto ${isMobile ? 'pb-[60px]' : 'pb-0'}`}
+        className={`flex flex-1 flex-col overflow-x-hidden overflow-y-auto ${isMobile ? 'pb-[60px]' : 'pb-0'}`}
       >
         {/* Topbar */}
         <header
@@ -735,7 +735,7 @@ export default function DashboardLayout({
 
         {/* Content with page transition */}
         <div
-          className={`flex-1 overflow-y-auto ${isMobile ? 'px-[14px] py-4' : 'px-8 py-6'}`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden ${isMobile ? 'px-[14px] py-4' : 'px-8 py-6'}`}
         >
           <AnimatePresence mode="wait">
             <motion.div
