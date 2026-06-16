@@ -3,6 +3,7 @@ import { generateSlug } from '../../shared/utils/slug';
 import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.schema';
 import { cacheGet, cacheSet, cacheInvalidatePattern, TTL } from '../../shared/utils/cache';
+import productService from '../products/product.service';
 
 const KEYS = {
   list: (branchId?: number, includeInactive?: boolean) =>
@@ -108,12 +109,35 @@ export class CategoryService {
   }
 
   async deleteCategory(id: string) {
-    const category = await prisma.category.findUnique({ where: { id: Number(id) } });
+    const categoryId = Number(id);
+    const category = await prisma.category.findUnique({ 
+      where: { id: categoryId },
+      include: { products: { select: { id: true } } }
+    });
     if (!category) throw new NotFoundError('Category not found');
 
-    const deleted = await prisma.category.delete({ where: { id: Number(id) } });
-    await cacheInvalidatePattern('categories:*');
-    return deleted;
+    try {
+      // 1. Manually delete all products in this category to trigger their dependency cleanup
+      for (const product of category.products) {
+        await productService.deleteProduct(product.id);
+      }
+
+      // 2. Delete the category and its SKUSetting safely
+      const deleted = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`DELETE FROM "sku_settings" WHERE "categoryId" = ${categoryId}`;
+        return await tx.category.delete({ where: { id: categoryId } });
+      });
+
+      await cacheInvalidatePattern('categories:*');
+      return deleted;
+    } catch (error: any) {
+      if (error.code === 'P2003') {
+        throw new ConflictError(
+          'Cannot delete this category because it contains products. Please move or delete the products first, or deactivate the category instead.'
+        );
+      }
+      throw error;
+    }
   }
 
   async updateCategoryStatus(id: number, data: { isActive?: boolean }) {

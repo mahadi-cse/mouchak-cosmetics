@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "regions": ["sin1"],
+  "builds": [
+    {
+      "src": "src/vercel.ts",
+      "use": "@vercel/node",
+      "config": {
+        "nodeVersion": "22.x"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/vercel.ts"
+    }
+  ]
+}

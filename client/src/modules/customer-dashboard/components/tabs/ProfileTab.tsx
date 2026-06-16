@@ -7,6 +7,8 @@ import {
   type CustomerDashboardProfile,
   type UpdateProfilePayload,
 } from '@/modules/customer-dashboard';
+import { useQueryClient } from '@tanstack/react-query';
+import { PROFILE_QUERY_KEY } from '@/modules/auth/queries/useProfileQuery';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,12 +25,14 @@ type ProfileDraft = {
   city: string;
   postalCode: string;
   country: string;
+  avatarUrl: string;
 };
 
 const EMPTY_DRAFT: ProfileDraft = {
   firstName: '', lastName: '', phone: '', address: '',
   dateOfBirth: '', gender: '', defaultAddress: '',
   city: '', postalCode: '', country: 'Bangladesh',
+  avatarUrl: '',
 };
 
 const toProfileDraft = (profile: CustomerDashboardProfile): ProfileDraft => ({
@@ -42,6 +46,7 @@ const toProfileDraft = (profile: CustomerDashboardProfile): ProfileDraft => ({
   city:           profile.city           || '',
   postalCode:     profile.postalCode     || '',
   country:        profile.country        || 'Bangladesh',
+  avatarUrl:      profile.avatarUrl      || '',
 });
 
 const hasChanges = (draft: ProfileDraft, profile?: CustomerDashboardProfile) => {
@@ -65,6 +70,8 @@ export default function ProfileTab() {
   const [draft, setDraft]   = useState<ProfileDraft>(EMPTY_DRAFT);
   const [dirty, setDirty]   = useState(false);
   const [notice, setNotice] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (profileQuery.data && !dirty) {
@@ -101,6 +108,7 @@ export default function ProfileTab() {
       city:           draft.city.trim(),
       postalCode:     draft.postalCode.trim(),
       country:        draft.country.trim() || 'Bangladesh',
+      avatarUrl:      draft.avatarUrl,
     };
     updateMutation.mutate(payload);
   };
@@ -108,12 +116,63 @@ export default function ProfileTab() {
   return (
     <SectionContainer>
       {/* Header row */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xl font-bold" style={{ color: DESIGN.fg }}>
-            {profile.firstName} {profile.lastName}
-          </p>
-          <p className="text-sm" style={{ color: DESIGN.mutedFg }}>{profile.email}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-4">
+          <div className="relative group">
+            <div
+              className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm border-2"
+              style={{ background: DESIGN.softPink, color: DESIGN.primary, borderColor: DESIGN.primary }}
+            >
+              {draft.avatarUrl ? (
+                <img src={draft.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                profile.firstName?.charAt(0).toUpperCase() || profile.email?.charAt(0).toUpperCase() || 'U'
+              )}
+            </div>
+            {/* Edit Badge */}
+            <div className="absolute bottom-0 right-0 bg-white border-2 border-white rounded-full p-1 shadow-md z-10 pointer-events-none" style={{ color: DESIGN.primary }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+            </div>
+            <label
+              className="absolute inset-0 z-20 flex cursor-pointer items-center justify-center rounded-full bg-black/40 text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100"
+              htmlFor="avatar-upload"
+            >
+              {uploading ? '...' : 'Upload'}
+            </label>
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setUploading(true);
+                try {
+                  const formData = new FormData();
+                  formData.append('image', file);
+                  const { apiClient } = await import('@/shared/lib/apiClient');
+                  const res = await apiClient.post('/uploads/image?folder=mouchak/users', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                  });
+                  change('avatarUrl', res.data.data.url);
+                  setNotice('Avatar uploaded. Remember to save.');
+                  queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
+                } catch (err) {
+                  setNotice('Failed to upload image.');
+                } finally {
+                  setUploading(false);
+                  e.target.value = '';
+                }
+              }}
+            />
+          </div>
+          <div>
+            <p className="text-xl font-bold" style={{ color: DESIGN.fg }}>
+              {profile.firstName} {profile.lastName}
+            </p>
+            <p className="text-sm" style={{ color: DESIGN.mutedFg }}>{profile.email}</p>
+          </div>
         </div>
         <span
           className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]"

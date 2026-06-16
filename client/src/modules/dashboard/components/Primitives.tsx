@@ -22,7 +22,23 @@ interface ButtonProps extends ComponentProps {
   size?: 'sm' | 'md';
   onClick?: () => void;
   disabled?: boolean;
+  loading?: boolean;
+  title?: string;
 }
+
+const Spinner = ({ size = 14 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    style={{ flexShrink: 0, animation: 'btn-spin 0.75s linear infinite' }}
+  >
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    <style>{`@keyframes btn-spin { to { transform: rotate(360deg); } }`}</style>
+  </svg>
+);
 
 export const Btn: React.FC<ButtonProps> = ({
   children,
@@ -30,12 +46,16 @@ export const Btn: React.FC<ButtonProps> = ({
   size = 'md',
   onClick,
   disabled = false,
+  loading = false,
   className = '',
+  title,
 }) => {
+  const isDisabled = disabled || loading;
   const baseClasses = `
+    inline-flex items-center justify-center gap-1.5
     border-none rounded-lg font-semibold cursor-pointer transition-all duration-150
     ${size === 'sm' ? 'text-xs px-3.5 py-1.5' : 'text-sm px-5 py-2.5'}
-    ${disabled ? 'opacity-45 cursor-not-allowed' : 'opacity-100'}
+    ${isDisabled ? 'opacity-55 cursor-not-allowed' : 'opacity-100'}
     ${className}
   `;
 
@@ -50,9 +70,11 @@ export const Btn: React.FC<ButtonProps> = ({
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
+      disabled={isDisabled}
+      title={title}
       className={`${baseClasses} ${variantClasses[variant]}`}
     >
+      {loading && <Spinner size={size === 'sm' ? 12 : 14} />}
       {children}
     </button>
   );

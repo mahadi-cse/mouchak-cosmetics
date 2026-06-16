@@ -12,6 +12,12 @@ router.put('/:id', authenticate, customerController.updateCustomer);
 router.get('/:id/orders', authenticate, customerController.getCustomerOrders);
 router.get('/:id/metrics', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN, USER_TYPE_CODES.MANAGER, USER_TYPE_CODES.SALES_STAFF, USER_TYPE_CODES.CASHIER), customerController.getCustomerMetrics);
 router.put('/:id/loyalty', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN, USER_TYPE_CODES.MANAGER, USER_TYPE_CODES.SALES_STAFF, USER_TYPE_CODES.CASHIER), customerController.updateLoyaltyPoints);
+
+// Security & Account Management
+router.put('/:id/status', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN, USER_TYPE_CODES.MANAGER), customerController.toggleCustomerStatus);
+router.put('/:id/password', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN, USER_TYPE_CODES.MANAGER), customerController.resetCustomerPassword);
+router.post('/:id/revoke-sessions', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN, USER_TYPE_CODES.MANAGER), customerController.revokeCustomerSessions);
+
 router.delete('/:id', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN), customerController.deleteCustomer);
 
 export default router;

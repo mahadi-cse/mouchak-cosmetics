@@ -35,3 +35,36 @@ export const stockStatusStyle = (status: 'active' | 'low' | 'out') => {
       return { bg: '#dcfce7', color: '#166534' };
   }
 };
+
+export function generateCodeFromName(name: string, maxLength?: number): string {
+  const banglaToEnglishMap: Record<string, string> = {
+    'ক': 'K', 'খ': 'KH', 'গ': 'G', 'ঘ': 'GH', 'ঙ': 'N',
+    'চ': 'CH', 'ছ': 'CH', 'জ': 'J', 'ঝ': 'JH', 'ঞ': 'N',
+    'ট': 'T', 'ঠ': 'TH', 'ড': 'D', 'ঢ': 'DH', 'ণ': 'N',
+    'ত': 'T', 'থ': 'TH', 'দ': 'D', 'ধ': 'DH', 'ন': 'N',
+    'প': 'P', 'ফ': 'F', 'ব': 'B', 'ভ': 'V', 'ম': 'M',
+    'য': 'Y', 'র': 'R', 'ল': 'L', 'শ': 'SH', 'ষ': 'SH', 'স': 'S', 'হ': 'H',
+    'ড়': 'R', 'ঢ়': 'RH', 'য়': 'Y',
+    'অ': 'A', 'আ': 'A', 'ই': 'I', 'ঈ': 'I', 'উ': 'U', 'ঊ': 'U', 'ঋ': 'R', 'এ': 'E', 'ঐ': 'OI', 'ও': 'O', 'ঔ': 'OU',
+    'া': 'A', 'ি': 'I', 'ী': 'I', 'ু': 'U', 'ূ': 'U', 'ৃ': 'R', 'ে': 'E', 'ৈ': 'OI', 'ো': 'O', 'ৌ': 'OU',
+    'ং': 'NG', 'ঃ': 'H', 'ঁ': 'N'
+  };
+
+  let result = '';
+  for (let i = 0; i < name.length; i++) {
+    const char = name[i];
+    if (banglaToEnglishMap[char] !== undefined) {
+      result += banglaToEnglishMap[char];
+    } else {
+      result += char;
+    }
+  }
+
+  const code = result
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .trim()
+    .replace(/[\s-]+/g, '-')
+    .toUpperCase();
+
+  return maxLength ? code.slice(0, maxLength) : code;
+}

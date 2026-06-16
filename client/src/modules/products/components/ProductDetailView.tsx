@@ -1,22 +1,30 @@
 'use client';
 
 import { useProductBySlug, useListProducts } from '@/modules/products';
-import { SkeletonCard, ErrorMessage, EmptyState } from '@/shared/components';
+import { SkeletonCard, SkeletonProductDetail, ErrorMessage, EmptyState } from '@/shared/components';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle2, ChevronRight, Clock, ShieldCheck, ShoppingBag, Truck, X, Heart, Share2, Star, Zap, TrendingUp, ShoppingCart } from 'lucide-react';
-import { Header } from '@/modules/homepage';
-import { Footer } from '@/modules/homepage';
+import { Heart, Star, ShoppingCart } from 'lucide-react';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
+import { useProductReviews, useReviewEligibility, useCreateReview, useUpdateReview, useDeleteReview } from '@/modules/reviews';
+import { getProductMainImage, getProductThumbnail, getProductCardImage } from '@/shared/utils/imageOptimizer';
 
 function formatMoney(value?: number | string | null) {
   return `৳${Number(value || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
 }
 
 type TabType = 'description' | 'specifications' | 'reviews' | 'faqs';
+
+const PINK = 'var(--primary)';
+const PINK_DARK = 'var(--primary-dark)';
+const PINK_LIGHT = 'var(--primary-light)';
+const PINK_PALE = 'var(--primary-pale)';
+const DARK = '#1f2937';
+const GRAY = '#4b5563';
+const GRAY_LIGHT = '#9ca3af';
 
 export default function ProductDetailView() {
   const params = useParams();
@@ -29,6 +37,7 @@ export default function ProductDetailView() {
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSizeIndex, setSelectedSizeIndex] = useState(0);
+  const [imageLoading, setImageLoading] = useState(true);
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [activeTab, setActiveTab] = useState<TabType>('description');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
@@ -42,6 +51,7 @@ export default function ProductDetailView() {
   const [viewportWidth, setViewportWidth] = useState(1200);
 
   const { data: product, isLoading, isError, error, refetch } = useProductBySlug(slug);
+  const { data: reviewSummary } = useProductReviews(product?.id || 0);
 
   // Fetch similar products from the same category
   const categorySlug = product?.category?.slug;
@@ -49,7 +59,6 @@ export default function ProductDetailView() {
     { category: categorySlug, limit: 8 },
     {
       enabled: !!categorySlug,
-      queryKey: ['products', 'list', 'related', categorySlug],
       staleTime: 10 * 60 * 1000,
     }
   );
@@ -72,35 +81,19 @@ export default function ProductDetailView() {
   const unitType = product?.unitType || 'PIECE';
   const unitLabel = product?.unitLabel || 'pc';
 
-  // If selected size has an image, show it as the main image
-  const displayImages = useMemo(() => {
-    if (selectedSize?.imageUrl) {
-      return [selectedSize.imageUrl, ...images.filter((img: string) => img !== selectedSize.imageUrl)];
-    }
-    return images;
-  }, [images, selectedSize]);
+  const displayImages = images;
 
-  // Mock data for reviews and FAQs
-  type MockReview = { name: string; rating: number; date: string; text: string; verified: boolean };
-  type MockFaq = { q: string; a: string };
-
-  const mockReviews: MockReview[] = [
-    { name: 'Tasnia R.', rating: 5, date: 'March 2025', text: 'I\'ve been using this for 6 weeks and my skin has visibly improved. Outstanding quality!', verified: true },
-    { name: 'Sumaiya K.', rating: 5, date: 'February 2025', text: 'The texture is so lightweight and non-greasy. Highly recommended!', verified: true },
-    { name: 'Nusrat J.', rating: 4, date: 'January 2025', text: 'Great product, noticeable improvement. Love it!', verified: true },
-    { name: 'Mim A.', rating: 5, date: 'January 2025', text: 'This genuinely works. Now it\'s a permanent part of my routine.', verified: true },
-  ];
-
-  const mockFaqs: MockFaq[] = [
-    { q: 'What are the key benefits of this product?', a: 'This product is formulated with premium ingredients to deliver visible results within 4-6 weeks of regular use.' },
-    { q: 'Is it suitable for all skin types?', a: 'Yes, this product is dermatologist-tested and suitable for all skin types including sensitive skin.' },
-    { q: 'How should I apply this product?', a: 'Apply a small amount to cleansed skin, gently massage, and follow with moisturizer. Use twice daily for best results.' },
-    { q: 'What is your return policy?', a: 'We offer 15-day returns on unopened products and full refunds within 30 days if you\'re not satisfied.' },
-  ];
+  // Unused mock arrays removed
 
   useEffect(() => {
     setActiveImageIndex(0);
+    // Ensure we start at the top when navigating to a new product page
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [slug]);
+
+  useEffect(() => {
+    setImageLoading(true);
+  }, [activeImageIndex, slug]);
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -166,7 +159,13 @@ export default function ProductDetailView() {
     router.push(`/checkout?slug=${product!.slug}&qty=${safeQuantity}${sizeParam}`);
   };
 
-  if (isLoading) return <div className="container mx-auto px-4 py-8"><SkeletonCard /></div>;
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <SkeletonProductDetail />
+      </div>
+    );
+  }
 
   if (isError) {
     const message =
@@ -191,16 +190,10 @@ export default function ProductDetailView() {
     );
   }
 
-  const PINK = '#e91e8c';
-  const PINK_LIGHT = '#f3e0ea';
-  const PINK_PALE = '#fce7f3';
-  const DARK = '#1f2937';
-  const GRAY = '#4b5563';
-  const GRAY_LIGHT = '#9ca3af';
+
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', minHeight: '100vh', color: DARK }}>
-      <Header />
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', color: DARK }}>
 
       {/* Breadcrumb */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT, flexWrap: 'wrap' }}>
@@ -220,7 +213,28 @@ export default function ProductDetailView() {
           <div style={{ position: isTablet ? 'relative' : 'sticky', top: isTablet ? 0 : 90 }}>
             {/* Main Image */}
             <div style={{ borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 260 : 320, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.3s' }}>
-              <img src={displayImages[activeImageIndex]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {imageLoading && (
+                <div 
+                  className="absolute inset-0 bg-zinc-100 animate-pulse flex items-center justify-center"
+                  style={{ zIndex: 1 }}
+                >
+                  <svg className="w-10 h-10 text-zinc-300 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+              <img 
+                src={getProductMainImage(displayImages[activeImageIndex])} 
+                alt={product.name} 
+                onLoad={() => setImageLoading(false)}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'cover',
+                  opacity: imageLoading ? 0 : 1,
+                  transition: 'opacity 0.3s ease-in-out'
+                }} 
+              />
               {hasDiscount && (
                 <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <span style={{ display: 'inline-block', padding: '3px 12px', borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', background: PINK, color: '#fff', border: `1.5px solid ${PINK}` }}>
@@ -253,7 +267,7 @@ export default function ProductDetailView() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginTop: 12 }}>
                 {displayImages.map((img: string, i: number) => (
                   <div key={i} onClick={() => setActiveImageIndex(i)} style={{ borderRadius: 14, border: `1.5px solid ${i === activeImageIndex ? PINK : PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 60 : 72, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: 10, color: GRAY, fontWeight: 600, overflow: 'hidden' }}>
-                    <img src={img} alt={`thumb ${i}`} style={{ width: '40%', height: '40%', objectFit: 'cover' }} />
+                    <img src={getProductThumbnail(img)} alt={`thumb ${i}`} loading="lazy" style={{ width: '40%', height: '40%', objectFit: 'cover' }} />
                   </div>
                 ))}
               </div>
@@ -295,13 +309,11 @@ export default function ProductDetailView() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ display: 'flex', gap: 2 }}>
                 {[1, 2, 3, 4, 5].map((s) => (
-                  <svg key={s} width={16} height={16} viewBox="0 0 20 20" fill="#f59e0b">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
+                  <Star key={s} size={16} fill={s <= Math.round(reviewSummary?.avgRating ?? 0) ? '#f59e0b' : 'none'} color={s <= Math.round(reviewSummary?.avgRating ?? 0) ? '#f59e0b' : GRAY_LIGHT} />
                 ))}
               </span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>4.8</span>
-              <span style={{ fontSize: 13, color: GRAY_LIGHT }}>(284 reviews)</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>{reviewSummary?.avgRating ?? '0.0'}</span>
+              <span style={{ fontSize: 13, color: GRAY_LIGHT }}>({reviewSummary?.total ?? 0} reviews)</span>
               <span style={{ width: 1, height: 14, background: PINK_LIGHT }} />
               <span style={{ fontSize: 13, color: '#059669', fontWeight: 600 }}>✓ Verified purchases</span>
             </div>
@@ -344,7 +356,6 @@ export default function ProductDetailView() {
                       key={size.name}
                       onClick={() => {
                         setSelectedSizeIndex(i);
-                        if (size.imageUrl) setActiveImageIndex(0);
                       }}
                       style={{
                         padding: '8px 16px',
@@ -361,13 +372,6 @@ export default function ProductDetailView() {
                         gap: 6,
                       }}
                     >
-                      {size.imageUrl && (
-                        <img
-                          src={size.imageUrl}
-                          alt={size.name}
-                          style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }}
-                        />
-                      )}
                       {size.name}
                       {size.priceOverride && (
                         <span style={{ fontSize: 11, color: GRAY_LIGHT }}>
@@ -389,7 +393,7 @@ export default function ProductDetailView() {
                   <button onClick={() => updateQuantity(safeQuantity + 1)} style={{ width: 36, height: 36, fontSize: 17, fontWeight: 700, color: GRAY, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>+</button>
                 </div>
               </div>
-              <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, width: isMobile ? '100%' : undefined, minWidth: isMobile ? '100%' : 180, padding: '14px 18px', borderRadius: 14, background: inStock ? PINK : '#d1d5db', color: '#fff', fontSize: 15, fontWeight: 800, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', boxShadow: inStock ? `0 10px 25px ${PINK}44` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, width: isMobile ? '100%' : undefined, minWidth: isMobile ? '100%' : 180, padding: '14px 18px', borderRadius: 14, background: inStock ? PINK : '#d1d5db', color: '#fff', fontSize: 15, fontWeight: 800, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', boxShadow: inStock ? '0 10px 25px color-mix(in srgb, var(--primary) 27%, transparent)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 <ShoppingCart size={18} />
                 {inStock ? 'Checkout Now' : 'Out of Stock'}
               </button>
@@ -402,25 +406,14 @@ export default function ProductDetailView() {
               </div>
               <div style={{ padding: '16px 20px 20px', borderTop: `1px solid ${PINK_LIGHT}`, background: '#fff' }}>
                 <p style={{ fontSize: 14, color: GRAY, lineHeight: 1.7 }}>{descriptionContent}</p>
-                <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Features & Benefits</p>
-                  {[
-                    { icon: '✦', title: 'Premium Quality', desc: 'Made with the finest ingredients.' },
-                    { icon: '✦', title: 'Dermatologist Tested', desc: 'Safe for all skin types.' },
-                  ].map((f, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 12, background: PINK_PALE, padding: 12, borderRadius: 12 }}>
-                      <span style={{ color: PINK, fontWeight: 700, fontSize: 16, marginTop: 2 }}>{f.icon}</span>
-                      <div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: DARK, display: 'block', marginBottom: 2 }}>{f.title}</span>
-                        <span style={{ fontSize: 13, color: GRAY, lineHeight: 1.5 }}>{f.desc}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
+
+            {/* Customer Reviews Section */}
+            <ReviewSection productId={product.id} status={status} />
           </div>
         </div>
+
 
         {/* Related Products from same category */}
         {relatedProducts.length > 0 && (
@@ -435,10 +428,10 @@ export default function ProductDetailView() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : (isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)'), gap: isMobile ? 12 : 24 }}>
             {relatedProducts.map((rp: any) => (
               <Link key={rp.id} href={`/product/${rp.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: isMobile ? 16 : 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(233,30,140,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
-                  <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg,#fdf2f8,#fce7f3)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <div style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: isMobile ? 16 : 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px color-mix(in srgb, var(--primary) 10%, transparent)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
+                  <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 3%, white), var(--primary-pale))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {rp.images?.[0] ? (
-                      <img src={rp.images[0]} alt={rp.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getProductCardImage(rp.images[0])} alt={rp.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <svg width="60" height="100" viewBox="0 0 50 90" fill="none">
                         <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6" />
@@ -451,7 +444,7 @@ export default function ProductDetailView() {
                     <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginTop: 6, marginBottom: 12, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rp.name}</p>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{formatMoney(rp.price)}</span>
-                      <span style={{ width: 32, height: 32, borderRadius: 10, background: PINK, color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 10px ${PINK}44` }}>+</span>
+                      <span style={{ width: 32, height: 32, borderRadius: 10, background: PINK, color: '#fff', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px color-mix(in srgb, var(--primary) 27%, transparent)' }}>+</span>
                     </div>
                   </div>
                 </div>
@@ -461,8 +454,195 @@ export default function ProductDetailView() {
         </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      <Footer />
+// ─────────────────────────────────────────────────────────────
+// STAR PICKER
+// ─────────────────────────────────────────────────────────────
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => onChange(s)}
+          onMouseEnter={() => setHover(s)}
+          onMouseLeave={() => setHover(0)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
+        >
+          <Star
+            size={22}
+            fill={(hover || value) >= s ? '#f59e0b' : 'none'}
+            color={(hover || value) >= s ? '#f59e0b' : GRAY_LIGHT}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// REVIEW SECTION
+// ─────────────────────────────────────────────────────────────
+
+function ReviewSection({ productId, status }: { productId: number; status: string }) {
+  const { data: summary, isLoading: loadingReviews } = useProductReviews(productId);
+  const { data: eligibility } = useReviewEligibility(productId);
+  const createReview = useCreateReview(productId);
+  const updateReview = useUpdateReview(productId);
+  const deleteReview = useDeleteReview(productId);
+
+  const [showForm, setShowForm] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const isEditing = !!eligibility?.hasReviewed;
+
+  useEffect(() => {
+    if (eligibility?.existingReview && showForm) {
+      setRating(eligibility.existingReview.rating);
+      setTitle(eligibility.existingReview.title ?? '');
+      setBody(eligibility.existingReview.body ?? '');
+    }
+  }, [eligibility, showForm]);
+
+  const handleOpenForm = () => {
+    if (status === 'unauthenticated') { toast.error('Please login to write a review'); return; }
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
+    if (rating === 0) { toast.error('Please select a star rating'); return; }
+    try {
+      if (isEditing) {
+        await updateReview.mutateAsync({ rating, title, body });
+        toast.success('Review updated!');
+      } else {
+        await createReview.mutateAsync({ rating, title, body });
+        toast.success('Review submitted!');
+      }
+      setShowForm(false);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || e.message || 'Failed to submit review');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete your review?')) return;
+    try { await deleteReview.mutateAsync(); toast.success('Review deleted'); }
+    catch { toast.error('Failed to delete review'); }
+  };
+
+  const reviews = summary?.reviews ?? [];
+  const avg = summary?.avgRating ?? 0;
+  const total = summary?.total ?? 0;
+
+  return (
+    <div style={{ border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, overflow: 'hidden', background: '#fff', marginTop: 24 }}>
+      {/* Header */}
+      <div style={{ padding: '16px 20px', background: PINK_PALE, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Customer Reviews</span>
+          {total > 0 && (
+            <span style={{ fontSize: 13, color: GRAY, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Star size={13} fill="#f59e0b" color="#f59e0b" /> {avg} ({total})
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {eligibility?.hasReviewed && (
+            <button onClick={handleDelete} disabled={deleteReview.isPending}
+              style={{ background: '#fff1f2', color: '#e11d48', padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, border: '1px solid #ffe4e6', cursor: 'pointer' }}>
+              Delete My Review
+            </button>
+          )}
+          {(eligibility?.canReview || eligibility?.hasReviewed) && (
+            <button onClick={() => { if (!showForm) { if (isEditing && eligibility?.existingReview) { setRating(eligibility.existingReview.rating); setTitle(eligibility.existingReview.title ?? ''); setBody(eligibility.existingReview.body ?? ''); } } setShowForm((v) => !v); }}
+              style={{ background: PINK, color: '#fff', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+              {showForm ? 'Cancel' : isEditing ? 'Edit My Review' : 'Write a Review'}
+            </button>
+          )}
+          {status === 'authenticated' && eligibility && !eligibility.canReview && (
+            <span style={{ fontSize: 12, color: GRAY_LIGHT }}>Purchase to leave a review</span>
+          )}
+          {status === 'unauthenticated' && (
+            <button onClick={handleOpenForm} style={{ background: PINK, color: '#fff', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+              Write a Review
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Review Form */}
+      {showForm && (
+        <div style={{ padding: '20px', borderBottom: `1px solid ${PINK_LIGHT}`, background: PINK_PALE }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 12 }}>{isEditing ? 'Update Your Review' : 'Your Review'}</p>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: GRAY, display: 'block', marginBottom: 6 }}>Rating *</label>
+            <StarPicker value={rating} onChange={setRating} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: GRAY, display: 'block', marginBottom: 6 }}>Title (optional)</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Summarise your experience..." maxLength={200}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${PINK_LIGHT}`, fontSize: 14, color: DARK, outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: GRAY, display: 'block', marginBottom: 6 }}>Review (optional)</label>
+            <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Tell others what you think..." rows={4}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${PINK_LIGHT}`, fontSize: 14, color: DARK, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+          </div>
+          <button onClick={handleSubmit} disabled={createReview.isPending || updateReview.isPending}
+            style={{ background: PINK, color: '#fff', padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', opacity: (createReview.isPending || updateReview.isPending) ? 0.7 : 1 }}>
+            {(createReview.isPending || updateReview.isPending) ? 'Submitting...' : isEditing ? 'Update Review' : 'Submit Review'}
+          </button>
+        </div>
+      )}
+
+      {/* Review List */}
+      <div style={{ padding: '24px 20px', background: '#fff' }}>
+        {loadingReviews ? (
+          <p style={{ fontSize: 14, color: GRAY_LIGHT, textAlign: 'center' }}>Loading reviews...</p>
+        ) : reviews.length === 0 ? (
+          <p style={{ fontSize: 14, color: GRAY_LIGHT, textAlign: 'center' }}>No reviews yet. Be the first to share your experience!</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {reviews.map((review, i) => {
+              const name = [review.customer.firstName, review.customer.lastName].filter(Boolean).join(' ') || 'Customer';
+              const date = new Date(review.createdAt).toLocaleDateString('en-BD', { year: 'numeric', month: 'long' });
+              return (
+                <div key={review.id} style={{ borderBottom: i === reviews.length - 1 ? 'none' : `1px solid ${PINK_LIGHT}`, paddingBottom: i === reviews.length - 1 ? 0 : 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: `linear-gradient(135deg, ${PINK}, ${PINK_DARK})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16 }}>
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{name}</span>
+                          {review.isVerified && <span style={{ fontSize: 10, color: '#059669', background: '#ecfdf5', padding: '2px 7px', borderRadius: 6, fontWeight: 700, textTransform: 'uppercase' }}>✓ Verified</span>}
+                        </div>
+                        <span style={{ fontSize: 12, color: GRAY_LIGHT }}>{date}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} size={14} fill={s <= review.rating ? '#f59e0b' : 'none'} color={s <= review.rating ? '#f59e0b' : GRAY_LIGHT} />
+                      ))}
+                    </div>
+                  </div>
+                  {review.title && <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 4 }}>{review.title}</p>}
+                  {review.body && <p style={{ fontSize: 14, color: GRAY, lineHeight: 1.7, margin: 0 }}>{review.body}</p>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

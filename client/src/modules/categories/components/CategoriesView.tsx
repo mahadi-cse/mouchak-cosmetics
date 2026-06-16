@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useListCategories } from '@/modules/categories';
 import { EmptyState, ErrorMessage, SkeletonGrid } from '@/shared/components';
-import { Header, Footer } from '@/modules/homepage';
 import { CategoryCard } from '@/shared/components';
 
 const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
@@ -46,51 +45,38 @@ export default function CategoriesView() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-12 md:py-16 max-w-6xl">
-          <SkeletonGrid columns={3} count={6} />
-        </main>
-        <Footer />
-      </div>
+      <main className="container mx-auto px-4 py-12 md:py-16 max-w-6xl">
+        <SkeletonGrid columns={3} count={6} />
+      </main>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-12 md:py-16 max-w-6xl">
-          <ErrorMessage
-            message={(error as { message?: string })?.message || 'Failed to load categories'}
-            onRetry={() => refetch()}
-          />
-        </main>
-        <Footer />
-      </div>
+      <main className="container mx-auto px-4 py-12 md:py-16 max-w-6xl">
+        <ErrorMessage
+          message={(error as { message?: string })?.message || 'Failed to load categories'}
+          onRetry={() => refetch()}
+        />
+      </main>
     );
   }
 
   if (categories.length === 0) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-12 md:py-16 max-w-6xl">
-          <EmptyState
-            title="No Categories Found"
-            description="Categories are not available right now."
-            action={{ label: 'Browse All Products', onClick: () => router.push('/products') }}
-          />
-        </main>
-        <Footer />
-      </div>
+      <main className="container mx-auto px-4 py-12 md:py-16 max-w-6xl">
+        <EmptyState
+          title="No Categories Found"
+          description="Categories are not available right now."
+          action={{ label: 'Browse All Products', onClick: () => router.push('/products') }}
+        />
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-12 md:py-16 max-w-6xl">
+    <>
+      <main className="container mx-auto px-4 py-12 md:py-16 max-w-6xl">
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <p className="mb-1.5 text-xs font-bold uppercase text-pink-600 tracking-[2.5px]">
@@ -126,7 +112,6 @@ export default function CategoriesView() {
           ))}
         </div>
       </main>
-      <Footer />
-    </div>
+    </>
   );
 }

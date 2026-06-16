@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { User, LogOut } from 'lucide-react';
@@ -10,6 +11,7 @@ import { useProfileQuery } from '@/modules/auth';
 import { NAV, SETTINGS_ITEMS } from '@/modules/dashboard/utils/constants';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useSiteSettings } from '@/modules/homepage/queries';
 import OverviewView from './views/OverviewView';
 import EcommerceView from './views/EcommerceView';
 import InventoryView from './views/InventoryView';
@@ -25,6 +27,9 @@ import ProfileView from './views/ProfileView';
 import ManualSaleModal from './ManualSaleModal';
 import { Product, SellLog, Order } from '@/modules/dashboard/data/mockData';
 import { useDashboardLocale } from '../locales/DashboardLocaleContext';
+import { useCreateManualSaleMutation } from '@/modules/manual-sales';
+import { ANALYTICS_QUERY_KEYS } from '@/modules/analytics';
+import { INVENTORY_QUERY_KEYS } from '@/modules/inventory';
 
 interface DashboardLayoutProps {
   products: Product[];
@@ -62,209 +67,212 @@ const SidebarContent: React.FC<{
   navItems,
   userModuleCodes,
 }) => {
-  const settingsRef = useRef<HTMLDivElement>(null);
-  const { t } = useDashboardLocale();
+    const settingsRef = useRef<HTMLDivElement>(null);
+    const { t } = useDashboardLocale();
+    const { data: settings } = useSiteSettings();
+    const storeName = settings?.storeName || 'Mouchak';
 
-  useEffect(() => {
-    if (settingsOpen && settingsRef.current) {
-      setTimeout(() => {
-        settingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 100);
-    }
-  }, [settingsOpen]);
+    useEffect(() => {
+      if (settingsOpen && settingsRef.current) {
+        setTimeout(() => {
+          settingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    }, [settingsOpen]);
 
-  return (
-  <>
-    {/* Logo */}
-    <div
-      className="shrink-0 px-5 pb-3 pt-4"
-      style={{ borderBottom: `1px solid ${Theme.border}` }}
-    >
-      <div className="flex items-center justify-between">
-        <Link href="/" className="no-underline cursor-pointer hover:opacity-80 transition-opacity">
-          <div
-            style={{
-              fontSize: 22,
-              fontWeight: 900,
-              color: Theme.primary,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Mouchak
-          </div>
-          <div
-            style={{
-              fontSize: 10,
-              color: Theme.mutedFg,
-              fontWeight: 600,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-            }}
-            className="mt-0.5"
-          >
-            {t.sidebar.brandSub}
-          </div>
-        </Link>
-        {isMobile && (
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="cursor-pointer border-0 bg-transparent p-0 text-[20px] leading-none"
-            style={{ color: Theme.mutedFg }}
-          >
-            ✕
-          </button>
-        )}
-      </div>
-    </div>
-
-    {/* Nav */}
-    <nav className="flex flex-1 flex-col gap-0.5 px-3 py-2 overflow-y-auto">
-      {navItems.map((n) => {
-        const isSettings = n.id === 'settings';
-        const active = activeNav === n.id;
-
-        if (isSettings) {
-          return (
-            <div key="settings" ref={settingsRef}>
-              <button
-                onClick={() => {
-                  navigate('settings');
-                  setSettingsOpen(!settingsOpen);
+    return (
+      <>
+        {/* Logo */}
+        <div
+          className="shrink-0 px-5 pb-3 pt-4"
+          style={{ borderBottom: `1px solid ${Theme.border}` }}
+        >
+          <div className="flex items-center justify-between">
+            <Link href="/" className="no-underline cursor-pointer hover:opacity-80 transition-opacity">
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 900,
+                  color: Theme.primary,
+                  letterSpacing: '-0.02em',
                 }}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-xl border-0 px-3.5 py-2.5 text-left text-[13.5px] transition-all duration-200"
+              >
+                {storeName}
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: Theme.mutedFg,
+                  fontWeight: 600,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}
+                className="mt-0.5"
+              >
+                {t.sidebar.brandSub}
+              </div>
+            </Link>
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="cursor-pointer border-0 bg-transparent p-0 text-[20px] leading-none"
+                style={{ color: Theme.mutedFg }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex flex-1 flex-col gap-0.5 px-3 py-2 overflow-y-auto">
+          {navItems.map((n) => {
+            const isSettings = n.id === 'settings';
+            const active = activeNav === n.id;
+
+            if (isSettings) {
+              return (
+                <div key="settings" ref={settingsRef}>
+                  <button
+                    onClick={() => {
+                      navigate('settings');
+                      setSettingsOpen(!settingsOpen);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-3 rounded-xl border-0 px-3.5 py-2.5 text-left text-[13.5px] transition-all duration-200"
+                    style={{
+                      background: active ? Theme.secondary : 'transparent',
+                      color: active ? Theme.primary : Theme.mutedFg,
+                      fontWeight: active ? 700 : 500,
+                    }}
+                  >
+                    <span style={{ fontSize: 16 }}>⚙️</span>
+                    <span className="flex-1">{t.sidebar.settings}</span>
+                    <motion.span
+                      animate={{ rotate: settingsOpen ? 90 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: active ? Theme.primary : Theme.mutedFg,
+                      }}
+                      className="inline-block"
+                    >
+                      ›
+                    </motion.span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {settingsOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div
+                          className="mb-1 ml-3 border-l-2 pl-2 pt-1"
+                          style={{ borderLeftColor: Theme.border }}
+                        >
+                          {SETTINGS_ITEMS.filter((item) => {
+                            if (item.id === 'security') return true;
+                            if (!userModuleCodes) return true;
+                            return userModuleCodes.has(`settings:${item.id}`);
+                          }).map((item) => {
+                            const localizedLabel = (t.settingsItems as any)[item.id] || item.label;
+                            const subActive = active && settingsTab === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => {
+                                  setSettingsTab(item.id);
+                                  navigate('settings', item.id);
+                                  if (isMobile) setSidebarOpen(false);
+                                }}
+                                className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 px-3 py-2 text-left text-[13px] transition-colors duration-150"
+                                style={{
+                                  background: subActive ? `${Theme.primary}12` : 'transparent',
+                                  color: subActive ? Theme.primary : Theme.fg,
+                                  fontWeight: subActive ? 700 : 400,
+                                }}
+                              >
+                                <span className="shrink-0 text-sm">{item.icon}</span>
+                                <span>{localizedLabel}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={n.id}
+                onClick={() => {
+                  navigate(n.id);
+                  if (isMobile) setSidebarOpen(false);
+                }}
+                className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl border-0 px-3.5 py-2.5 text-left text-[13.5px] transition-all duration-200"
                 style={{
                   background: active ? Theme.secondary : 'transparent',
                   color: active ? Theme.primary : Theme.mutedFg,
                   fontWeight: active ? 700 : 500,
                 }}
               >
-                <span style={{ fontSize: 16 }}>⚙️</span>
-                <span className="flex-1">{t.sidebar.settings}</span>
-                <motion.span
-                  animate={{ rotate: settingsOpen ? 90 : 0 }}
-                  transition={{ duration: 0.2 }}
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color: active ? Theme.primary : Theme.mutedFg,
-                  }}
-                  className="inline-block"
-                >
-                  ›
-                </motion.span>
-              </button>
-              <AnimatePresence initial={false}>
-                {settingsOpen && (
+                {active && (
                   <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                    className="overflow-hidden"
-                  >
-                    <div
-                      className="mb-1 ml-3 border-l-2 pl-2 pt-1"
-                      style={{ borderLeftColor: Theme.border }}
-                    >
-                      {SETTINGS_ITEMS.filter((item) => {
-                        if (!userModuleCodes) return true;
-                        return userModuleCodes.has(`settings:${item.id}`);
-                      }).map((item) => {
-                        const localizedLabel = (t.settingsItems as any)[item.id] || item.label;
-                        const subActive = active && settingsTab === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => {
-                              setSettingsTab(item.id);
-                              navigate('settings', item.id);
-                              if (isMobile) setSidebarOpen(false);
-                            }}
-                            className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 px-3 py-2 text-left text-[13px] transition-colors duration-150"
-                            style={{
-                              background: subActive ? `${Theme.primary}12` : 'transparent',
-                              color: subActive ? Theme.primary : Theme.fg,
-                              fontWeight: subActive ? 700 : 400,
-                            }}
-                          >
-                            <span className="shrink-0 text-sm">{item.icon}</span>
-                            <span>{localizedLabel}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
+                    layoutId="nav-active-pill"
+                    className="absolute inset-0 rounded-xl"
+                    style={{ background: Theme.secondary }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                  />
                 )}
-              </AnimatePresence>
-            </div>
-          );
-        }
+                <span className="relative" style={{ fontSize: 16 }}>{n.icon}</span>
+                <span className="relative flex-1">{n.label}</span>
+                {n.id === 'inventory' && lowCount > 0 && (
+                  <span
+                    className="relative rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
+                    style={{ background: Theme.warning }}
+                  >
+                    {lowCount}
+                  </span>
+                )}
+                {n.badge && (
+                  <span
+                    className="relative rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    style={{ background: Theme.muted, color: Theme.mutedFg }}
+                  >
+                    {n.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-        return (
-          <button
-            key={n.id}
-            onClick={() => {
-              navigate(n.id);
-              if (isMobile) setSidebarOpen(false);
-            }}
-            className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl border-0 px-3.5 py-2.5 text-left text-[13.5px] transition-all duration-200"
-            style={{
-              background: active ? Theme.secondary : 'transparent',
-              color: active ? Theme.primary : Theme.mutedFg,
-              fontWeight: active ? 700 : 500,
-            }}
-          >
-            {active && (
-              <motion.div
-                layoutId="nav-active-pill"
-                className="absolute inset-0 rounded-xl"
-                style={{ background: Theme.secondary }}
-                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-              />
-            )}
-            <span className="relative" style={{ fontSize: 16 }}>{n.icon}</span>
-            <span className="relative flex-1">{n.label}</span>
-            {n.id === 'inventory' && lowCount > 0 && (
-              <span
-                className="relative rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-                style={{ background: Theme.warning }}
-              >
-                {lowCount}
-              </span>
-            )}
-            {n.badge && (
-              <span
-                className="relative rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                style={{ background: Theme.muted, color: Theme.mutedFg }}
-              >
-                {n.badge}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </nav>
-
-    {/* Clock */}
-    <div className="shrink-0 px-5 py-4" style={{ borderTop: `1px solid ${Theme.border}` }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: Theme.fg }}>
-        {time.toLocaleTimeString('en-BD', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        })}
-      </div>
-      <div className="mt-0.5" style={{ fontSize: 11, color: Theme.mutedFg }}>
-        {time.toLocaleDateString('en-BD', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-        })}
-      </div>
-    </div>
-  </>
-  );
-};
+        {/* Clock */}
+        <div className="shrink-0 px-5 py-4" style={{ borderTop: `1px solid ${Theme.border}` }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: Theme.fg }}>
+            {time.toLocaleTimeString('en-BD', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            })}
+          </div>
+          <div className="mt-0.5" style={{ fontSize: 11, color: Theme.mutedFg }}>
+            {time.toLocaleDateString('en-BD', {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+            })}
+          </div>
+        </div>
+      </>
+    );
+  };
 
 
 // Page transition variants
@@ -298,6 +306,8 @@ export default function DashboardLayout({
   const [toast, setToast] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const createSaleMutation = useCreateManualSaleMutation();
 
   const NAV_CACHE_KEY = 'mouchak.nav.modules.v1';
 
@@ -309,7 +319,7 @@ export default function DashboardLayout({
         const parsed = JSON.parse(cached);
         if (parsed.navItems?.length > 0) return parsed.navItems;
       }
-    } catch {}
+    } catch { }
     return NAV;
   });
   const [userModuleCodes, setUserModuleCodes] = useState<Set<string> | null>(() => {
@@ -321,10 +331,10 @@ export default function DashboardLayout({
         if (parsed.isAdmin) return null;
         if (parsed.codes?.length > 0) return new Set<string>(parsed.codes);
       }
-    } catch {}
+    } catch { }
     return null;
   });
-  
+
   useEffect(() => {
     if (!session?.accessToken) return;
     import('@/shared/lib/apiClient').then(({ apiClient }) => {
@@ -336,7 +346,7 @@ export default function DashboardLayout({
         if (userTypeCode === '1x101') {
           setNavItems(NAV);
           setUserModuleCodes(null);
-          try { localStorage.setItem(NAV_CACHE_KEY, JSON.stringify({ isAdmin: true, navItems: NAV })); } catch {}
+          try { localStorage.setItem(NAV_CACHE_KEY, JSON.stringify({ isAdmin: true, navItems: NAV })); } catch { }
           return;
         }
 
@@ -347,7 +357,7 @@ export default function DashboardLayout({
           const filtered = NAV.filter(n => codeSet.has(n.id));
           const finalNav = filtered.length > 0 ? filtered : NAV;
           setNavItems(finalNav);
-          try { localStorage.setItem(NAV_CACHE_KEY, JSON.stringify({ codes, navItems: finalNav })); } catch {}
+          try { localStorage.setItem(NAV_CACHE_KEY, JSON.stringify({ codes, navItems: finalNav })); } catch { }
         }
       }).catch(err => {
         console.error("Failed to load nav modules", err);
@@ -399,7 +409,6 @@ export default function DashboardLayout({
     ),
     analytics: <AnalyticsView />,
     branches: <BranchesView />,
-    pos: <POSView />,
     settings: (
       <SettingsView products={products} tab={settingsTab} setTab={setSettingsTab} />
     ),
@@ -561,7 +570,7 @@ export default function DashboardLayout({
 
       {/* Main content area */}
       <main
-        className={`flex flex-1 flex-col overflow-auto ${isMobile ? 'pb-[60px]' : 'pb-0'}`}
+        className={`flex flex-1 flex-col overflow-x-hidden overflow-y-auto ${isMobile ? 'pb-[60px]' : 'pb-0'}`}
       >
         {/* Topbar */}
         <header
@@ -633,7 +642,7 @@ export default function DashboardLayout({
                 }}
                 title="User Profile"
               >
-                <div 
+                <div
                   className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-extrabold overflow-hidden"
                   style={{ background: Theme.primary, color: 'white' }}
                 >
@@ -670,7 +679,7 @@ export default function DashboardLayout({
                       <div className="flex flex-col items-center gap-3">
                         <div
                           className="flex h-20 w-20 items-center justify-center rounded-full text-[28px] font-black text-white shadow-lg overflow-hidden"
-                          style={{ 
+                          style={{
                             background: `linear-gradient(135deg, ${Theme.primary} 0%, ${Theme.primary}dd 100%)`,
                             border: `4px solid ${Theme.card}`,
                           }}
@@ -726,7 +735,7 @@ export default function DashboardLayout({
 
         {/* Content with page transition */}
         <div
-          className={`flex-1 overflow-y-auto ${isMobile ? 'px-[14px] py-4' : 'px-8 py-6'}`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden ${isMobile ? 'px-[14px] py-4' : 'px-8 py-6'}`}
         >
           <AnimatePresence mode="wait">
             <motion.div
@@ -756,7 +765,7 @@ export default function DashboardLayout({
             { id: 'overview', label: t.mobileNav.home, icon: '◈' },
             { id: 'inventory', label: t.mobileNav.inventory, icon: '📦' },
             { id: 'sales', label: t.mobileNav.sales, icon: '💰' },
-            { id: 'ecommerce', label: t.mobileNav.orders, icon: '🌐' },
+            { id: 'analytics', label: t.nav.analytics, icon: '📈' },
             { id: 'settings', label: t.mobileNav.settings, icon: '⚙️' },
           ].map((n) => {
             const active = activeNav === n.id;
@@ -797,7 +806,9 @@ export default function DashboardLayout({
           <ManualSaleModal
             products={products}
             onClose={() => setModal(false)}
-            onConfirm={(product: Product, qty: number, note: string, total: number) => {
+            onConfirm={async (product: Product, qty: number, note: string, total: number) => {
+              // 1. Optimistically update local UI state so inventory badge, sell log, etc
+              //    feel instant without waiting for the API round trip.
               setProducts(
                 products.map((p: Product) => {
                   if (p.id !== product.id) return p;
@@ -824,6 +835,23 @@ export default function DashboardLayout({
                 ...sellLog,
               ]);
               setToast(`✓ ${t.sold} ${qty} × ${product.name}`);
+
+              // 2. Persist to the real API and bust caches so overview, inventory,
+              //    and sales list all update without requiring a page refresh.
+              try {
+                await createSaleMutation.mutateAsync({
+                  items: [{ productId: product.id, quantity: qty, unitPrice: total / qty }],
+                  branchId: (product as any).branchId ?? (product as any).inventories?.[0]?.warehouseId,
+                  branchName: (product as any).branch ?? '',
+                  note: note || undefined,
+                  soldBy: 'Staff',
+                });
+                // Explicit invalidation so the overview widget re-fetches right away
+                queryClient.invalidateQueries({ queryKey: ANALYTICS_QUERY_KEYS.overview() });
+                queryClient.invalidateQueries({ queryKey: INVENTORY_QUERY_KEYS.all });
+              } catch (err) {
+                console.error('[ManualSale] API call failed — local state updated but server not synced:', err);
+              }
             }}
           />
         )}
@@ -832,26 +860,4 @@ export default function DashboardLayout({
   );
 }
 
-const POSView: React.FC = () => {
-  const { t } = useDashboardLocale();
-  return (
-  <div className="flex min-h-[400px] flex-col items-center justify-center gap-[18px] px-5 py-8 text-center">
-    <div
-      className="flex h-20 w-20 items-center justify-center rounded-[22px] text-[40px]"
-      style={{ background: Theme.secondary }}
-    >
-      🖥️
-    </div>
-    <div style={{ fontSize: 26, fontWeight: 800, color: Theme.fg }}>
-      {t.pos.title}
-    </div>
-    <div
-      className="max-w-[380px] text-sm leading-[1.8]"
-      style={{ color: Theme.mutedFg }}
-    >
-      {t.pos.description}{' '}
-      <strong style={{ color: Theme.primary }}>{t.pos.manualSell}</strong> {t.pos.suffix}
-    </div>
-  </div>
-  );
-};
+

@@ -32,6 +32,8 @@ export default function CategoriesView() {
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
   const updateCategoryStatus = useUpdateCategoryStatus();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSavingCategory = createCategory.isPending || updateCategory.isPending || isSubmitting;
 
   const [editCat, setEditCat] = useState<number | null>(null);
   const [showAddCat, setShowAddCat] = useState(false);
@@ -39,14 +41,24 @@ export default function CategoriesView() {
 
   const handleAddCategory = async () => {
     if (!catForm.name || !catForm.branchId) return toast.error(t.categories.nameAndBranchRequired);
-    try {
+    setIsSubmitting(true);
+    
+    const savePromise = (async () => {
       let imageUrl = catForm.imageUrl;
       if (categoryImageRef.current?.hasPending()) { const uploaded = await categoryImageRef.current.upload(); if (uploaded) imageUrl = uploaded; }
       const payload = { name: catForm.name, description: catForm.desc, isActive: catForm.active, imageUrl, branchId: Number(catForm.branchId) } as any;
-      if (editCat) { await updateCategory.mutateAsync({ id: editCat, data: payload }); toast.success(t.categories.categoryUpdated); }
-      else { await createCategory.mutateAsync(payload); toast.success(t.categories.categoryCreated); }
+      if (editCat) { await updateCategory.mutateAsync({ id: editCat, data: payload }); }
+      else { await createCategory.mutateAsync(payload); }
       setShowAddCat(false); setEditCat(null); setCatForm({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: '' });
-    } catch { toast.error(t.categories.failedSaveCategory); }
+    })();
+
+    toast.promise(savePromise, {
+      loading: editCat ? 'Updating category...' : 'Creating category...',
+      success: editCat ? t.categories.categoryUpdated : t.categories.categoryCreated,
+      error: t.categories.failedSaveCategory,
+    }).finally(() => {
+      setIsSubmitting(false);
+    });
   };
 
   const handleDeleteCategory = async (id: number) => {
@@ -86,7 +98,7 @@ export default function CategoriesView() {
               <div className={isMobile ? '' : 'col-span-2'}><label className={labelClass}>{t.categories.categoryImage}</label><ImageUploader ref={categoryImageRef} value={catForm.imageUrl} onChange={(url) => setCatForm(f => ({ ...f, imageUrl: url }))} folder="mouchak/categories" aspect={16 / 9} placeholder={t.categories.uploadImage} /></div>
             </div>
             <div className="mb-3"><label className="flex cursor-pointer items-center gap-2 text-[13px]"><input type="checkbox" checked={catForm.active} onChange={(e) => setCatForm(f => ({ ...f, active: e.target.checked }))} style={{ accentColor: Theme.primary }} />{t.categories.activeOnStorefront}</label></div>
-            <div className="flex gap-2"><Btn variant="ghost" size="sm" onClick={() => { setShowAddCat(false); setEditCat(null); }}>{t.products.cancel}</Btn><Btn variant="primary" size="sm" onClick={handleAddCategory}>{editCat !== null ? t.products.saveChanges : t.categories.createCategory}</Btn></div>
+            <div className="flex gap-2"><Btn variant="ghost" size="sm" onClick={() => { setShowAddCat(false); setEditCat(null); }} disabled={isSavingCategory}>{t.products.cancel}</Btn><Btn variant="primary" size="sm" onClick={handleAddCategory} loading={isSavingCategory}>{editCat !== null ? t.products.saveChanges : t.categories.createCategory}</Btn></div>
           </div>
         )}
 

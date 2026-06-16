@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../config/database";
 import { cacheGet, cacheSet, cacheDel, TTL } from "../../shared/utils/cache";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Cache key constants
 const HP_KEYS = {
+
   stats: 'homepage:stats',
   settings: 'homepage:settings',
   slider: 'homepage:slider',
@@ -297,6 +297,8 @@ router.get("/slider", async (req, res) => {
       updatedAt: p.updatedAt,
     }));
 
+    // Featured-product fallback: use SHORT TTL (5 min) so image/featured
+    // changes propagate much faster than the manual-slider path (10 min).
     await cacheSet(HP_KEYS.slider, productSliders, TTL.SHORT);
     return res.json(productSliders);
   } catch (error) {

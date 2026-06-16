@@ -14,4 +14,14 @@ export const authAPI = {
       userType: data.userType,
     };
   },
+  getSecurityDevices: async (): Promise<any[]> => {
+    const res = await apiClient.get('/auth/security-devices');
+    return res.data.data;
+  },
+  revokeDevice: async (id: number): Promise<void> => {
+    await apiClient.post(`/auth/security-devices/${id}/revoke`);
+  },
+  revokeAllOtherDevices: async (): Promise<void> => {
+    await apiClient.post('/auth/security-devices/revoke-all-others');
+  },
 };

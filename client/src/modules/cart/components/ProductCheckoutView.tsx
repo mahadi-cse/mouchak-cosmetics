@@ -10,9 +10,6 @@ import { useMutation } from '@tanstack/react-query';
 import { SkeletonCard, ErrorMessage, LoadingSpinner } from '@/shared/components';
 import { Clock, ShieldCheck } from 'lucide-react';
 
-import { Header } from '@/modules/homepage/components/Header';
-import { Footer } from '@/modules/homepage/components/Footer';
-
 const BANGLADESH_PHONE_REGEX = /^(?:\+?88)?01[3-9]\d{8}$/;
 
 function formatMoney(value?: number | string | null) {
@@ -154,25 +151,17 @@ function ProductCheckoutContent() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
-          <SkeletonCard />
-        </main>
-        <Footer />
-      </div>
+      <main className="container mx-auto px-4 py-12 max-w-4xl">
+        <SkeletonCard />
+      </main>
     );
   }
 
   if (!product || isError) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
-          <ErrorMessage message={getErrorMessage(error) || "Product not found"} />
-        </main>
-        <Footer />
-      </div>
+      <main className="container mx-auto px-4 py-12 max-w-4xl">
+        <ErrorMessage message={getErrorMessage(error) || "Product not found"} />
+      </main>
     );
   }
 
@@ -184,9 +173,8 @@ function ProductCheckoutContent() {
 
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 lg:py-12 max-w-6xl">
+    <>
+      <main className="container mx-auto px-4 py-8 lg:py-12 max-w-6xl">
         <h1 className="text-2xl font-bold text-zinc-900 mb-6 px-2">Checkout</h1>
         <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 lg:gap-10 items-start">
           {/* LEFT COLUMN: Shipping Details */}
@@ -293,8 +281,7 @@ function ProductCheckoutContent() {
           </div>
         </div>
       </main>
-      <Footer />
-    </div>
+    </>
   );
 }
 

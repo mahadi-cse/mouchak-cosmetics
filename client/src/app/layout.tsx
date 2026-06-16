@@ -10,10 +10,22 @@ import { homepageAPI } from "@/modules/homepage";
 import { getThemeColors } from "@/shared/utils/theme";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Mouchak Cosmetics",
-  description: "Premium cosmetics for everyone",
-};
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const settings = await homepageAPI.getSettings();
+    return {
+      title: settings?.storeName || "Mouchak Cosmetics",
+      description: settings?.tagline || "Premium cosmetics for everyone",
+    };
+  } catch (error) {
+    return {
+      title: "Mouchak Cosmetics",
+      description: "Premium cosmetics for everyone",
+    };
+  }
+}
 
 export default async function RootLayout({
   children,
@@ -44,6 +56,8 @@ export default async function RootLayout({
           :root {
             --primary: ${colors.primary};
             --primary-dark: ${colors.primaryDark};
+            --primary-light: ${colors.primaryLight};
+            --primary-pale: ${colors.primaryPale};
             --ring: ${colors.primary};
           }
         `}} />

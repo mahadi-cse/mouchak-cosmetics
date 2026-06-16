@@ -32,8 +32,11 @@ export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
 export function LoadingOverlay() {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <LoadingSpinner size="lg" />
+    <div className="fixed inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-[3px] flex items-center justify-center z-50 transition-all duration-300">
+      <div className="bg-white/80 dark:bg-zinc-900/80 p-6 rounded-2xl shadow-xl border border-zinc-200/50 dark:border-zinc-800/50 flex flex-col items-center gap-3">
+        <LoadingSpinner size="lg" />
+        <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Processing...</span>
+      </div>
     </div>
   );
 }

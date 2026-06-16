@@ -1,8 +1,25 @@
-import NextAuth from 'next-auth';
+import NextAuth, { CredentialsSignin } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import type { Provider } from 'next-auth/providers';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
+import { headers } from 'next/headers';
+
+class AccountDeactivatedError extends CredentialsSignin {
+  code = "ACCOUNT_DEACTIVATED";
+}
+
+const getClientHeaders = async () => {
+  try {
+    const reqHeaders = await headers();
+    const ua = reqHeaders.get('user-agent') || undefined;
+    const ip = reqHeaders.get('x-forwarded-for') || reqHeaders.get('x-real-ip') || undefined;
+    return { ua, ip };
+  } catch {
+    return { ua: undefined, ip: undefined };
+  }
+};
+
 
 type AccessTokenClaims = {
   sub: string;
@@ -140,25 +157,35 @@ const getGoogleProviderConfig = (): { clientId: string; clientSecret: string } |
   return { clientId, clientSecret };
 };
 
-const authenticateWithGoogle = async ({ idToken, accessToken }: { idToken?: string; accessToken?: string }): Promise<{ accessToken: string; refreshToken: string; claims: AccessTokenClaims } | null> => {
+const authenticateWithGoogle = async ({ idToken, accessToken }: { idToken?: string; accessToken?: string }): Promise<{ accessToken?: string; refreshToken?: string; claims?: AccessTokenClaims; error?: string } | null> => {
   if (!idToken && !accessToken) {
     return null;
   }
 
+  const clientHdrs = await getClientHeaders();
   const response = await fetch(`${getBackendApiBaseUrl()}/auth/google`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(clientHdrs.ua ? { 'User-Agent': clientHdrs.ua } : {}),
+      ...(clientHdrs.ip ? { 'X-Forwarded-For': clientHdrs.ip } : {}),
     },
     body: JSON.stringify({ idToken, accessToken }),
     cache: 'no-store',
   });
 
   if (!response.ok) {
+    try {
+      const errBody = await response.json();
+      if (errBody?.code === 'USER_INACTIVE' || errBody?.message?.includes('inactive') || errBody?.message?.includes('deactivated')) {
+        return { error: 'ACCOUNT_DEACTIVATED' };
+      }
+    } catch {}
     return null;
   }
 
-  return parseBackendToken(response);
+  const parsed = await parseBackendToken(response);
+  return { ...parsed };
 };
 
 const refreshAccessToken = async (token: JWT): Promise<JWT> => {
@@ -168,10 +195,13 @@ const refreshAccessToken = async (token: JWT): Promise<JWT> => {
     }
 
     const refreshCookieName = getRefreshCookieName();
+    const clientHdrs = await getClientHeaders();
     const response = await fetch(`${getBackendApiBaseUrl()}/auth/refresh`, {
       method: 'POST',
       headers: {
         Cookie: `${refreshCookieName}=${encodeURIComponent(token.refreshToken)}`,
+        ...(clientHdrs.ua ? { 'User-Agent': clientHdrs.ua } : {}),
+        ...(clientHdrs.ip ? { 'X-Forwarded-For': clientHdrs.ip } : {}),
       },
       cache: 'no-store',
     });
@@ -180,6 +210,7 @@ const refreshAccessToken = async (token: JWT): Promise<JWT> => {
       return {
         ...token,
         error: 'RefreshAccessTokenError',
+        accessTokenExpiresAt: Infinity, // Prevent immediate retry loop
       };
     }
 
@@ -199,6 +230,7 @@ const refreshAccessToken = async (token: JWT): Promise<JWT> => {
     return {
       ...token,
       error: 'RefreshAccessTokenError',
+      accessTokenExpiresAt: Infinity, // Prevent immediate retry loop
     };
   }
 };
@@ -218,10 +250,13 @@ const providers: Provider[] = [
         return null;
       }
 
+      const clientHdrs = await getClientHeaders();
       const response = await fetch(`${getBackendApiBaseUrl()}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(clientHdrs.ua ? { 'User-Agent': clientHdrs.ua } : {}),
+          ...(clientHdrs.ip ? { 'X-Forwarded-For': clientHdrs.ip } : {}),
         },
         body: JSON.stringify({ email, password }),
         cache: 'no-store',
@@ -232,10 +267,10 @@ const providers: Provider[] = [
           const errBody = await response.json();
           const msg = errBody?.message || '';
           if (msg.includes('deactivated') || errBody?.code === 'USER_INACTIVE') {
-            throw new Error('ACCOUNT_DEACTIVATED');
+            throw new AccountDeactivatedError();
           }
         } catch (e) {
-          if (e instanceof Error && e.message === 'ACCOUNT_DEACTIVATED') throw e;
+          if (e instanceof AccountDeactivatedError) throw e;
         }
         return null;
       }
@@ -274,10 +309,13 @@ const providers: Provider[] = [
         return null;
       }
 
+      const clientHdrs = await getClientHeaders();
       const response = await fetch(`${getBackendApiBaseUrl()}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(clientHdrs.ua ? { 'User-Agent': clientHdrs.ua } : {}),
+          ...(clientHdrs.ip ? { 'X-Forwarded-For': clientHdrs.ip } : {}),
         },
         body: JSON.stringify({
           firstName,
@@ -351,13 +389,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
+        if (parsed.error) {
+          return {
+            ...token,
+            error: parsed.error,
+          };
+        }
+
         return {
           ...token,
-          userId: parsed.claims.sub,
-          role: parsed.claims.role,
-          typeId: parsed.claims.typeId,
+          userId: parsed.claims?.sub,
+          role: parsed.claims?.role,
+          typeId: parsed.claims?.typeId,
           accessToken: parsed.accessToken,
-          accessTokenExpiresAt: parsed.claims.exp * 1000,
+          accessTokenExpiresAt: parsed.claims?.exp ? parsed.claims.exp * 1000 : 0,
           refreshToken: parsed.refreshToken,
           error: undefined,
         };
@@ -397,6 +442,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return refreshAccessToken(token);
     },
     async session({ session, token }) {
+      if (token.error === 'RefreshAccessTokenError' || token.error === 'MissingRefreshToken') {
+        // Return an empty session to force "unauthenticated" status, breaking the redirect loop
+        return {} as any;
+      }
+
       session.user = {
         ...session.user,
         id: String(token.userId || token.sub || ''),

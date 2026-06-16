@@ -7,6 +7,7 @@ export interface SignAccessTokenInput {
   sub: number;
   role: RoleCode;
   typeId: number;
+  jti?: string;
 }
 
 const getAccessTokenSecret = () => {
@@ -21,12 +22,17 @@ const getAccessTokenSecret = () => {
 export const signAccessToken = async (payload: SignAccessTokenInput): Promise<string> => {
   const env = getEnv();
 
-  return new SignJWT({ role: payload.role, typeId: payload.typeId })
+  const builder = new SignJWT({ role: payload.role, typeId: payload.typeId })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(String(payload.sub))
     .setIssuedAt()
-    .setExpirationTime(`${env.ACCESS_TOKEN_EXPIRES_HOURS}h`)
-    .sign(getAccessTokenSecret());
+    .setExpirationTime(`${env.ACCESS_TOKEN_EXPIRES_HOURS}h`);
+
+  if (payload.jti) {
+    builder.setJti(payload.jti);
+  }
+
+  return builder.sign(getAccessTokenSecret());
 };
 
 export const verifyAccessToken = async (token: string): Promise<AccessTokenPayload> => {
@@ -60,6 +66,7 @@ export const verifyAccessToken = async (token: string): Promise<AccessTokenPaylo
       typeId,
       iat: payload.iat,
       exp: payload.exp,
+      jti: payload.jti,
     };
   } catch (error) {
     if (error instanceof UnauthorizedError) {

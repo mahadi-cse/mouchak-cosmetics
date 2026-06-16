@@ -65,19 +65,28 @@ export class BranchService {
   }
 
   async createBranch(data: CreateBranchInput) {
-    const existing = await prisma.branch.findFirst({
-      where: {
-        OR: [{ name: data.name }, { branchCode: data.branchCode }],
-      },
-    });
-    if (existing) {
-      throw new ConflictError('Branch name or code already exists');
+    let name = data.name;
+    let existingName = await prisma.branch.findUnique({ where: { name } });
+    let counterName = 1;
+    while (existingName) {
+      name = `${data.name}-${counterName}`;
+      existingName = await prisma.branch.findUnique({ where: { name } });
+      counterName++;
+    }
+
+    let branchCode = data.branchCode;
+    let existingCode = await prisma.branch.findUnique({ where: { branchCode } });
+    let counterCode = 1;
+    while (existingCode) {
+      branchCode = `${data.branchCode}-${counterCode}`;
+      existingCode = await prisma.branch.findUnique({ where: { branchCode } });
+      counterCode++;
     }
 
     const branch = await prisma.branch.create({
       data: {
-        name: data.name,
-        branchCode: data.branchCode,
+        name,
+        branchCode,
         branchType: data.branchType,
         address: data.address,
         city: data.city,
@@ -98,18 +107,33 @@ export class BranchService {
     const branch = await prisma.branch.findUnique({ where: { id } });
     if (!branch) throw new NotFoundError('Branch not found');
 
-    if (data.name || data.branchCode) {
-      const duplicate = await prisma.branch.findFirst({
-        where: {
-          id: { not: id },
-          OR: [
-            ...(data.name ? [{ name: data.name }] : []),
-            ...(data.branchCode ? [{ branchCode: data.branchCode }] : []),
-          ],
-        },
+    let name = data.name;
+    if (name && name !== branch.name) {
+      let existingName = await prisma.branch.findFirst({
+        where: { id: { not: id }, name },
       });
-      if (duplicate) {
-        throw new ConflictError('Branch name or code already exists');
+      let counterName = 1;
+      while (existingName) {
+        name = `${data.name}-${counterName}`;
+        existingName = await prisma.branch.findFirst({
+          where: { id: { not: id }, name },
+        });
+        counterName++;
+      }
+    }
+
+    let branchCode = data.branchCode;
+    if (branchCode && branchCode !== branch.branchCode) {
+      let existingCode = await prisma.branch.findFirst({
+        where: { id: { not: id }, branchCode },
+      });
+      let counterCode = 1;
+      while (existingCode) {
+        branchCode = `${data.branchCode}-${counterCode}`;
+        existingCode = await prisma.branch.findFirst({
+          where: { id: { not: id }, branchCode },
+        });
+        counterCode++;
       }
     }
 
@@ -117,6 +141,8 @@ export class BranchService {
       where: { id },
       data: {
         ...data,
+        ...(name ? { name } : {}),
+        ...(branchCode ? { branchCode } : {}),
         email: data.email === '' ? null : data.email,
       },
     });

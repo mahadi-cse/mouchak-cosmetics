@@ -3,6 +3,7 @@ import { prisma } from '../../config/database';
 import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
 import { parsePagination } from '../../shared/utils/pagination';
 import { CreateManualSaleInput } from './manualSale.schema';
+import { cacheInvalidatePattern } from '../../shared/utils/cache';
 
 const toNumber = (value: Prisma.Decimal | number | string) => Number(value);
 
@@ -20,6 +21,9 @@ export class ManualSaleService {
         include: {
           inventories: {
             where: { warehouseId: data.branchId },
+          },
+          sizes: {
+            where: { isActive: true },
           },
         },
       });
@@ -48,7 +52,22 @@ export class ManualSaleService {
 
       const lineItems = data.items.map((item) => {
         const product = productMap.get(item.productId)!;
-        const unitPrice = item.unitPrice && item.unitPrice > 0 ? item.unitPrice : toNumber(product.price);
+        const matchedSize = item.sizeName
+          ? product.sizes.find((s) => s.name === item.sizeName)
+          : null;
+
+        const unitPrice = item.unitPrice && item.unitPrice > 0
+          ? item.unitPrice
+          : matchedSize && matchedSize.priceOverride !== null
+            ? toNumber(matchedSize.priceOverride)
+            : toNumber(product.price);
+
+        const costPrice = matchedSize && matchedSize.costPriceOverride !== null
+          ? toNumber(matchedSize.costPriceOverride)
+          : product.costPrice !== null
+            ? toNumber(product.costPrice)
+            : null;
+
         const lineTotal = unitPrice * item.quantity;
         return {
           productId: product.id,
@@ -57,6 +76,7 @@ export class ManualSaleService {
           quantity: item.quantity,
           unitPrice,
           lineTotal,
+          costPrice,
           sizeName: item.sizeName || null,
         };
       });
@@ -64,8 +84,35 @@ export class ManualSaleService {
       const totalQty = lineItems.reduce((sum, item) => sum + item.quantity, 0);
       const totalAmount = lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
 
-      const count = await tx.manualSale.count();
-      const saleNumber = `MS-${String(count + 1).padStart(6, '0')}`;
+      // Get branch details to find the branchCode
+      const branch = await tx.branch.findUnique({
+        where: { id: data.branchId },
+      });
+      const branchCode = branch?.branchCode ? branch.branchCode.toUpperCase() : 'HQ';
+
+      const today = new Date();
+      const yy = String(today.getFullYear()).slice(-2);
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${yy}${mm}${dd}`;
+
+      // Start & end of today in local system time (for daily count reset)
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+      // Count sales for this branch today
+      const dailyCount = await tx.manualSale.count({
+        where: {
+          branchId: data.branchId,
+          createdAt: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+        },
+      });
+
+      const sequence = String(dailyCount + 1).padStart(4, '0');
+      const saleNumber = `${branchCode}-${dateStr}-${sequence}`;
 
       const sale = await tx.manualSale.create({
         data: {
@@ -84,6 +131,7 @@ export class ManualSaleService {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               lineTotal: item.lineTotal,
+              costPrice: item.costPrice,
               sizeName: item.sizeName,
             })),
           },
@@ -149,6 +197,11 @@ export class ManualSaleService {
           lineTotal: toNumber(item.lineTotal),
         })),
       };
+    }).then(async (result) => {
+      // Bust overview & inventory analytics caches so the dashboard
+      // overview reflects this sale immediately after it is recorded.
+      await cacheInvalidatePattern('analytics:overview:*');
+      return result;
     });
   }
 

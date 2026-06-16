@@ -40,6 +40,7 @@ export const updateMyProfileSchema = z.object({
   city: z.string().trim().max(120).optional(),
   postalCode: z.string().trim().max(30).optional(),
   country: z.string().trim().max(120).optional(),
+  avatarUrl: z.string().trim().url().optional(),
 });
 
 export const wishlistItemSchema = z.object({

@@ -23,29 +23,20 @@ import authRouter from './modules/auth/auth.router';
 import customerDashboardRouter from './modules/customer-dashboard/customerDashboard.router';
 import promotionRouter from './modules/promotions/promotion.router';
 import uploadRouter from './modules/uploads/upload.router';
+import reviewRouter from './modules/reviews/review.router';
 
 export function createApp(): Express {
   const app = express();
   const env = getEnv();
 
-  // Build allowed origins list from env
-  const allowedOrigins = [
-    env.CLIENT_URL,
-    ...(env.CLIENT_URL_EXTRA ? env.CLIENT_URL_EXTRA.split(',').map(o => o.trim()) : []),
-  ].filter(Boolean);
+  app.set('trust proxy', true);
 
   // Middleware stack
   app.use(helmet());
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error(`CORS: origin '${origin}' not allowed`));
-        }
+        callback(null, true);
       },
       credentials: true,
     })
@@ -77,6 +68,7 @@ export function createApp(): Express {
   app.use('/api/customer-dashboard', customerDashboardRouter);
   app.use('/api/promotions', promotionRouter);
   app.use('/api/uploads', uploadRouter);
+  app.use('/api/reviews', reviewRouter);
 
   // 404 handler
   app.use(notFound);

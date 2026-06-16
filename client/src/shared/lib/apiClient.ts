@@ -27,6 +27,7 @@ const FALLBACK_CACHE_MS = 5 * 60 * 1000;
 let sessionPromise: Promise<Session | null> | null = null;
 let cachedSession: Session | null = null;
 let sessionCacheExpiresAt = 0;
+let isSigningOut = false;
 
 const parseJwtPayload = (token: string): JwtPayload | null => {
   try {
@@ -148,10 +149,13 @@ apiClient.interceptors.response.use(
       cachedSession = null;
       sessionCacheExpiresAt = 0;
 
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !isSigningOut) {
         if (!window.location.pathname.includes('/login')) {
+          isSigningOut = true;
           // Sign out clears the session cookie and returns to login.
-          void signOut({ callbackUrl: '/login' });
+          signOut({ callbackUrl: '/login' }).finally(() => {
+            isSigningOut = false;
+          });
         }
       }
     }

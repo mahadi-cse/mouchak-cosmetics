@@ -85,7 +85,9 @@ export const useOverviewMetrics = (
   return useQuery<OverviewMetrics, Error>({
     queryKey: ANALYTICS_QUERY_KEYS.overviewWithParams(params || {}),
     queryFn: () => analyticsAPI.getOverviewMetrics(params),
-    staleTime: 60 * 1000,
+    // 10 s: overview is explicitly invalidated on every sale so it refetches
+    // promptly. This keeps the widget from showing stale data for up to 60 s.
+    staleTime: 10 * 1000,
     ...options,
   });
 };

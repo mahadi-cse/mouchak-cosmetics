@@ -9,6 +9,7 @@ import { useListBranches } from '@/modules/branches';
 import { useListProducts } from '@/modules/products';
 import toast from 'react-hot-toast';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
+import { LoadingSpinner } from '@/shared/components/LoadingStates';
 
 interface InventoryViewProps {
   products: any[];
@@ -345,7 +346,27 @@ export default function InventoryView({
         </div>
 
         {/* Table */}
-        {filteredProducts.length === 0 ? (
+        {branchInventoryQuery.isLoading ? (
+          <div className="py-12 flex items-center justify-center">
+            <svg className="w-9 h-9 animate-spin text-pink-500" viewBox="0 0 24 24" fill="none">
+              <circle
+                className="opacity-20"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                className="opacity-80"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                d="M12 2a10 10 0 0 1 10 10"
+              />
+            </svg>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
             {t.inventory.noProducts}
           </div>
@@ -370,7 +391,6 @@ export default function InventoryView({
                     {t.inventory.product}
                   </th>
                   <th
-                    className='hidden md:table-cell'
                     style={{
                       fontSize: '11px',
                       fontWeight: 500,
@@ -386,7 +406,6 @@ export default function InventoryView({
                     {t.inventory.stock}
                   </th>
                   <th
-                    className='hidden md:table-cell'
                     style={{
                       fontSize: '11px',
                       fontWeight: 500,
@@ -461,7 +480,6 @@ export default function InventoryView({
                         </div>
                       </td>
                       <td
-                        className='hidden md:table-cell'
                         style={{
                           padding: '10px 12px',
                           borderBottom: `1px solid ${Theme.border}`,
@@ -474,7 +492,6 @@ export default function InventoryView({
                         {p.stock}
                       </td>
                       <td
-                        className='hidden md:table-cell'
                         style={{
                           padding: '10px 12px',
                           borderBottom: `1px solid ${Theme.border}`,

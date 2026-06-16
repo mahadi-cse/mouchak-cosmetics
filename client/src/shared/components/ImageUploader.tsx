@@ -52,7 +52,7 @@ const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(function 
     onChange,
     folder = 'mouchak/products',
     aspect = 1,
-    maxSizeMB = 1,
+    maxSizeMB = 0.2,
     placeholder = 'Click or drag to upload image',
   },
   ref,
@@ -79,7 +79,7 @@ const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(function 
         const croppedBlob = await getCroppedBlob(pending.rawImage, pending.croppedArea);
         const compressedFile = await imageCompression(
           new File([croppedBlob], 'image.jpg', { type: 'image/jpeg' }),
-          { maxSizeMB, maxWidthOrHeight: 1200, useWebWorker: true },
+          { maxSizeMB: maxSizeMB || 0.2, maxWidthOrHeight: 800, useWebWorker: true },
         );
 
         const formData = new FormData();

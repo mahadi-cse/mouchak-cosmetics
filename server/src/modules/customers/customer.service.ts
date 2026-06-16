@@ -1,7 +1,9 @@
+import bcrypt from 'bcryptjs';
 import { prisma } from '../../config/database';
 import { NotFoundError } from '../../shared/utils/AppError';
 import { parsePagination } from '../../shared/utils/pagination';
 import { UpdateCustomerInput, UpdateLoyaltyPointsInput } from './customer.schema';
+import authService from '../auth/auth.service';
 
 export class CustomerService {
   async listCustomers(filters: {
@@ -45,6 +47,8 @@ export class CustomerService {
     return {
       data: customers.map(c => ({
         id: c.id,
+        firstName: c.firstName || c.user?.firstName,
+        lastName: c.lastName || c.user?.lastName,
         user: c.user,
         dateOfBirth: c.dateOfBirth,
         gender: c.gender,
@@ -203,6 +207,64 @@ export class CustomerService {
       segment: customer.segment,
       totalItemsPurchased: totalItems,
     };
+  }
+
+  async toggleCustomerStatus(customerId: number) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      include: { user: true },
+    });
+
+    if (!customer || !customer.user) throw new NotFoundError('Customer not found');
+
+    const newStatus = !customer.user.isActive;
+
+    await prisma.user.update({
+      where: { id: customer.user.id },
+      data: { isActive: newStatus },
+    });
+
+    // If deactivated, revoke all their sessions automatically
+    if (!newStatus) {
+      await authService.revokeAllUserRefreshTokens(customer.user.id);
+    }
+
+    return { isActive: newStatus };
+  }
+
+  async resetCustomerPassword(customerId: number) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      include: { user: true },
+    });
+
+    if (!customer || !customer.user) throw new NotFoundError('Customer not found');
+
+    // Generate a secure random 8-character password
+    const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-2).toUpperCase();
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { id: customer.user.id },
+      data: { password: hashedPassword },
+    });
+
+    // Revoke all sessions since password was reset
+    await authService.revokeAllUserRefreshTokens(customer.user.id);
+
+    return { newPassword };
+  }
+
+  async revokeCustomerSessions(customerId: number) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+    });
+
+    if (!customer) throw new NotFoundError('Customer not found');
+
+    await authService.revokeAllUserRefreshTokens(customer.userId);
+
+    return { success: true };
   }
 }
 

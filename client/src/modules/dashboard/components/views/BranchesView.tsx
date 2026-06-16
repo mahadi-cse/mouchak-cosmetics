@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Theme, formatCurrency } from '@/modules/dashboard/utils/theme';
+import { Theme, formatCurrency, generateCodeFromName } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, KpiCard, Btn } from '../Primitives';
 import {
@@ -48,6 +48,7 @@ export default function BranchesView() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<BranchDTO | null>(null);
   const [form, setForm] = useState<BranchFormState>(EMPTY_FORM);
+  const [isCodeManual, setIsCodeManual] = useState(false);
 
   const branches = dbBranches.map((b) => ({
     ...b,
@@ -62,6 +63,7 @@ export default function BranchesView() {
 
   const openCreateModal = () => {
     resetForm();
+    setIsCodeManual(false);
     setModalOpen(true);
   };
 
@@ -78,6 +80,7 @@ export default function BranchesView() {
       managerName: branch.managerName || '',
       managerPhone: branch.managerPhone || '',
     });
+    setIsCodeManual(true);
     setModalOpen(true);
   };
 
@@ -271,20 +274,85 @@ export default function BranchesView() {
               </div>
 
               <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder={t.branches.branchNamePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.branchCode} onChange={(e) => setForm((p) => ({ ...p, branchCode: e.target.value }))} placeholder={t.branches.branchCodePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <select value={form.branchType} onChange={(e) => setForm((p) => ({ ...p, branchType: e.target.value as BranchFormState['branchType'] }))} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }}>
-                  <option value="WAREHOUSE">{t.branches.warehouse}</option>
-                  <option value="RETAIL">{t.branches.retail}</option>
-                  <option value="OFFICE">{t.branches.office}</option>
-                  <option value="DISTRIBUTION">{t.branches.distribution}</option>
-                </select>
-                <input value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} placeholder={t.branches.city} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.managerName} onChange={(e) => setForm((p) => ({ ...p, managerName: e.target.value }))} placeholder={t.branches.managerName} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.managerPhone} onChange={(e) => setForm((p) => ({ ...p, managerPhone: e.target.value }))} placeholder={t.branches.managerPhone} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder={t.branches.branchPhone} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder={t.branches.branchEmail} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
-                <input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder={t.branches.address} className="col-span-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                 <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.branchNamePlaceholder} *
+                  </label>
+                  <input value={form.name} onChange={(e) => {
+                    const val = e.target.value;
+                    setForm((p) => {
+                      const next = { ...p, name: val };
+                      if (!isCodeManual) {
+                        next.branchCode = generateCodeFromName(val, 4);
+                      }
+                      return next;
+                    });
+                  }} placeholder={t.branches.branchNamePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.branchCodePlaceholder} *
+                  </label>
+                  <input value={form.branchCode} onChange={(e) => {
+                    setIsCodeManual(true);
+                    setForm((p) => ({ ...p, branchCode: e.target.value }));
+                  }} placeholder={t.branches.branchCodePlaceholder} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.branchType}
+                  </label>
+                  <select value={form.branchType} onChange={(e) => setForm((p) => ({ ...p, branchType: e.target.value as BranchFormState['branchType'] }))} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }}>
+                    <option value="WAREHOUSE">{t.branches.warehouse}</option>
+                    <option value="RETAIL">{t.branches.retail}</option>
+                    <option value="OFFICE">{t.branches.office}</option>
+                    <option value="DISTRIBUTION">{t.branches.distribution}</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.city}
+                  </label>
+                  <input value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} placeholder={t.branches.city} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.managerName}
+                  </label>
+                  <input value={form.managerName} onChange={(e) => setForm((p) => ({ ...p, managerName: e.target.value }))} placeholder={t.branches.managerName} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.managerPhone}
+                  </label>
+                  <input value={form.managerPhone} onChange={(e) => setForm((p) => ({ ...p, managerPhone: e.target.value }))} placeholder={t.branches.managerPhone} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.branchPhone}
+                  </label>
+                  <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder={t.branches.branchPhone} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.branchEmail}
+                  </label>
+                  <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder={t.branches.branchEmail} className="rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                </div>
+
+                <div className="flex flex-col gap-1 col-span-full">
+                  <label className="text-xs font-semibold" style={{ color: Theme.fg }}>
+                    {t.branches.address}
+                  </label>
+                  <input value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder={t.branches.address} className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={{ borderColor: Theme.border }} />
+                </div>
               </div>
 
               <div className="mt-4 flex justify-end gap-2">

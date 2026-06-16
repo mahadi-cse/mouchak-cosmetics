@@ -9,7 +9,6 @@ export const NAV = [
   { id: 'branches', label: 'Branches', icon: '🏪' },
   { id: 'suppliers', label: 'Suppliers', icon: '🏭' },
   { id: 'returns', label: 'Returns', icon: '↩' },
-  { id: 'pos', label: 'POS', icon: '🖥️', badge: 'Soon' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
@@ -20,8 +19,10 @@ export const SETTINGS_ITEMS = [
   { id: 'inventory', label: 'Inventory', icon: '📦' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
   { id: 'staff', label: 'Staff & Roles', icon: '👤' },
+  { id: 'customers', label: 'Customers', icon: '👥' },
   { id: 'trending', label: 'Trending Products', icon: '🔥' },
   { id: 'discounts', label: 'Discount & Sales', icon: '🏷️' },
+  { id: 'security', label: 'Security Devices', icon: '🔒' },
 ];
 
 export const BRANCH_STOCK = {
