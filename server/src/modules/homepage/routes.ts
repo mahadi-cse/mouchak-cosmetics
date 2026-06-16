@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../config/database";
 import { cacheGet, cacheSet, cacheDel, TTL } from "../../shared/utils/cache";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Cache key constants
 const HP_KEYS = {
+
   stats: 'homepage:stats',
   settings: 'homepage:settings',
   slider: 'homepage:slider',

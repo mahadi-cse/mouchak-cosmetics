@@ -12,6 +12,7 @@ import { Header } from '@/modules/homepage';
 import { Footer } from '@/modules/homepage';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { useProductReviews, useReviewEligibility, useCreateReview, useUpdateReview, useDeleteReview } from '@/modules/reviews';
+import { getProductMainImage, getProductThumbnail, getProductCardImage } from '@/shared/utils/imageOptimizer';
 
 function formatMoney(value?: number | string | null) {
   return `৳${Number(value || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
@@ -251,7 +252,7 @@ export default function ProductDetailView() {
                 </div>
               )}
               <img 
-                src={displayImages[activeImageIndex]} 
+                src={getProductMainImage(displayImages[activeImageIndex])} 
                 alt={product.name} 
                 onLoad={() => setImageLoading(false)}
                 style={{ 
@@ -294,7 +295,7 @@ export default function ProductDetailView() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginTop: 12 }}>
                 {displayImages.map((img: string, i: number) => (
                   <div key={i} onClick={() => setActiveImageIndex(i)} style={{ borderRadius: 14, border: `1.5px solid ${i === activeImageIndex ? PINK : PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 60 : 72, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: 10, color: GRAY, fontWeight: 600, overflow: 'hidden' }}>
-                    <img src={img} alt={`thumb ${i}`} style={{ width: '40%', height: '40%', objectFit: 'cover' }} />
+                    <img src={getProductThumbnail(img)} alt={`thumb ${i}`} loading="lazy" style={{ width: '40%', height: '40%', objectFit: 'cover' }} />
                   </div>
                 ))}
               </div>
@@ -460,7 +461,7 @@ export default function ProductDetailView() {
                 <div style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: isMobile ? 16 : 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px color-mix(in srgb, var(--primary) 10%, transparent)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
                   <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 3%, white), var(--primary-pale))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {rp.images?.[0] ? (
-                      <img src={rp.images[0]} alt={rp.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getProductCardImage(rp.images[0])} alt={rp.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <svg width="60" height="100" viewBox="0 0 50 90" fill="none">
                         <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6" />
