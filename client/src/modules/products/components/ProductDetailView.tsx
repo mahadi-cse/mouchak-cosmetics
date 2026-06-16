@@ -104,6 +104,8 @@ export default function ProductDetailView() {
 
   useEffect(() => {
     setActiveImageIndex(0);
+    // Ensure we start at the top when navigating to a new product page
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [slug]);
 
   useEffect(() => {

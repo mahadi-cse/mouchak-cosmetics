@@ -132,12 +132,12 @@ export function SkeletonProductDetail() {
       <div className="grid grid-cols-1 md:grid-cols-[0.92fr_1.08fr] gap-8">
         {/* Left Gallery Column */}
         <div>
-          <div className="h-80 bg-gray-200 rounded-[24px] mb-4"></div>
+          <div className="h-[260px] md:h-[320px] bg-gray-200 rounded-[24px] mb-4"></div>
           <div className="grid grid-cols-4 gap-3">
-            <div className="h-16 bg-gray-200 rounded-[14px]"></div>
-            <div className="h-16 bg-gray-200 rounded-[14px]"></div>
-            <div className="h-16 bg-gray-200 rounded-[14px]"></div>
-            <div className="h-16 bg-gray-200 rounded-[14px]"></div>
+            <div className="h-[60px] md:h-[72px] bg-gray-200 rounded-[14px]"></div>
+            <div className="h-[60px] md:h-[72px] bg-gray-200 rounded-[14px]"></div>
+            <div className="h-[60px] md:h-[72px] bg-gray-200 rounded-[14px]"></div>
+            <div className="h-[60px] md:h-[72px] bg-gray-200 rounded-[14px]"></div>
           </div>
         </div>
 
