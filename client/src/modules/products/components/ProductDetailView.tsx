@@ -53,6 +53,7 @@ export default function ProductDetailView() {
   const [viewportWidth, setViewportWidth] = useState(1200);
 
   const { data: product, isLoading, isError, error, refetch } = useProductBySlug(slug);
+  const { data: reviewSummary } = useProductReviews(product?.id || 0);
 
   // Fetch similar products from the same category
   const categorySlug = product?.category?.slug;
@@ -84,23 +85,7 @@ export default function ProductDetailView() {
 
   const displayImages = images;
 
-  // Mock data for reviews and FAQs
-  type MockReview = { name: string; rating: number; date: string; text: string; verified: boolean };
-  type MockFaq = { q: string; a: string };
-
-  const mockReviews: MockReview[] = [
-    { name: 'Tasnia R.', rating: 5, date: 'March 2025', text: 'I\'ve been using this for 6 weeks and my skin has visibly improved. Outstanding quality!', verified: true },
-    { name: 'Sumaiya K.', rating: 5, date: 'February 2025', text: 'The texture is so lightweight and non-greasy. Highly recommended!', verified: true },
-    { name: 'Nusrat J.', rating: 4, date: 'January 2025', text: 'Great product, noticeable improvement. Love it!', verified: true },
-    { name: 'Mim A.', rating: 5, date: 'January 2025', text: 'This genuinely works. Now it\'s a permanent part of my routine.', verified: true },
-  ];
-
-  const mockFaqs: MockFaq[] = [
-    { q: 'What are the key benefits of this product?', a: 'This product is formulated with premium ingredients to deliver visible results within 4-6 weeks of regular use.' },
-    { q: 'Is it suitable for all skin types?', a: 'Yes, this product is dermatologist-tested and suitable for all skin types including sensitive skin.' },
-    { q: 'How should I apply this product?', a: 'Apply a small amount to cleansed skin, gently massage, and follow with moisturizer. Use twice daily for best results.' },
-    { q: 'What is your return policy?', a: 'We offer 15-day returns on unopened products and full refunds within 30 days if you\'re not satisfied.' },
-  ];
+  // Unused mock arrays removed
 
   useEffect(() => {
     setActiveImageIndex(0);
@@ -339,13 +324,11 @@ export default function ProductDetailView() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ display: 'flex', gap: 2 }}>
                 {[1, 2, 3, 4, 5].map((s) => (
-                  <svg key={s} width={16} height={16} viewBox="0 0 20 20" fill="#f59e0b">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
+                  <Star key={s} size={16} fill={s <= Math.round(reviewSummary?.avgRating ?? 0) ? '#f59e0b' : 'none'} color={s <= Math.round(reviewSummary?.avgRating ?? 0) ? '#f59e0b' : GRAY_LIGHT} />
                 ))}
               </span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>4.8</span>
-              <span style={{ fontSize: 13, color: GRAY_LIGHT }}>(284 reviews)</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>{reviewSummary?.avgRating ?? '0.0'}</span>
+              <span style={{ fontSize: 13, color: GRAY_LIGHT }}>({reviewSummary?.total ?? 0} reviews)</span>
               <span style={{ width: 1, height: 14, background: PINK_LIGHT }} />
               <span style={{ fontSize: 13, color: '#059669', fontWeight: 600 }}>✓ Verified purchases</span>
             </div>
