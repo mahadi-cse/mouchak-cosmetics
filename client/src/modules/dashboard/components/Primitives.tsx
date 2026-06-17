@@ -8,11 +8,11 @@ interface ComponentProps {
 }
 
 interface CardProps extends ComponentProps {
-  pad?: number;
+  pad?: number | string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, pad = 6, className = '' }) => (
-  <div className={`bg-card border border-border rounded-[14px] p-${pad} ${className}`}>
+export const Card: React.FC<CardProps> = ({ children, pad, className = '' }) => (
+  <div className={`bg-card border border-border rounded-[14px] ${pad !== undefined ? (typeof pad === 'number' ? `p-${pad}` : pad) : 'p-4 sm:p-6'} ${className}`}>
     {children}
   </div>
 );
@@ -130,27 +130,27 @@ export const KpiCard: React.FC<KpiCardProps> = ({
 }) => {
   const { t } = useDashboardLocale();
   return (
-  <Card className="relative overflow-hidden">
+  <Card pad="p-3 sm:p-5" className="relative overflow-hidden">
     <div
-      className="absolute -top-3 -right-3 w-[70px] h-[70px] rounded-full opacity-70"
+      className="absolute -top-3 -right-3 w-[50px] h-[50px] sm:w-[70px] sm:h-[70px] rounded-full opacity-70"
       style={{ backgroundColor: accent || Theme.secondary }}
     />
-    <div className="text-2xl mb-1.5">{icon}</div>
-    <div className="text-2xl font-black text-foreground tracking-tighter leading-none">
+    <div className="text-xl sm:text-2xl mb-1 sm:mb-1.5">{icon}</div>
+    <div className="text-xl sm:text-2xl font-black text-foreground tracking-tighter leading-none truncate" title={String(value)}>
       {value}
     </div>
-    <div className="text-xs text-muted-foreground font-semibold tracking-widest uppercase mt-1">
+    <div className="text-[9px] sm:text-xs text-muted-foreground font-semibold tracking-widest uppercase mt-1">
       {label}
     </div>
     {delta !== undefined && (
       <div
-        className={`text-sm font-semibold mt-1 ${delta >= 0 ? 'text-green-600' : 'text-red-600'}`}
+        className={`text-xs sm:text-sm font-semibold mt-1 ${delta >= 0 ? 'text-green-600' : 'text-red-600'}`}
       >
         {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% {t.kpi.vsLastMonth}
       </div>
     )}
     {sub && (
-      <div className="text-xs text-muted-foreground mt-1">
+      <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">
         {sub}
       </div>
     )}

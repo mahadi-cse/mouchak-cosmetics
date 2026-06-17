@@ -3,7 +3,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Theme, formatCurrency } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
-import { Card, SecHead } from '../Primitives';
+import { Card, SecHead, KpiCard } from '../Primitives';
 import { useOverviewMetrics, useStaffAnalytics, useCustomersDetailed, useCustomerAnalytics } from '@/modules/analytics';
 import { useListBranches } from '@/modules/branches';
 import {
@@ -327,71 +327,25 @@ export default function AnalyticsView() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className={`flex items-center justify-between gap-3 ${isMobile ? 'flex-wrap' : ''}`}>
-        <div className="text-[20px] font-extrabold shrink-0" style={{ color: Theme.fg }}>{t.analytics.analyticsTitle}</div>
-        <div className={`flex flex-wrap items-center gap-2 ${isMobile ? 'w-full' : ''}`}>
-          <select
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            className="cursor-pointer rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold outline-none w-full sm:w-auto"
-            style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
-          >
-            <option value="">{t.analytics.allBranches}</option>
-            {activeBranches.map((b: any) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-          <div className="flex gap-0.5 rounded-lg p-0.5 w-full sm:w-auto" style={{ background: Theme.muted }}>
-            {['daily', 'weekly', 'monthly', 'custom'].map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className="flex-1 sm:flex-initial cursor-pointer rounded-md border-none px-2 py-1 text-[11px] font-semibold uppercase text-center"
-                style={{
-                  background: period === p ? '#fff' : 'transparent',
-                  color: period === p ? Theme.primary : Theme.mutedFg,
-                  boxShadow: period === p ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                }}
-              >
-                {p === 'daily' ? t.analytics.daily : p === 'weekly' ? t.analytics.weekly : p === 'monthly' ? t.analytics.monthly : t.analytics.custom}
-              </button>
-            ))}
-          </div>
-          {isCustom && (
-            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start">
-              <input
-                type="date"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                className="flex-1 sm:flex-initial rounded-lg border px-2 py-1 text-[11px] outline-none max-w-[130px] sm:max-w-none"
-                style={{ borderColor: Theme.border, color: Theme.fg }}
-              />
-              <span className="text-[11px]" style={{ color: Theme.mutedFg }}>→</span>
-              <input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="flex-1 sm:flex-initial rounded-lg border px-2 py-1 text-[11px] outline-none max-w-[130px] sm:max-w-none"
-                style={{ borderColor: Theme.border, color: Theme.fg }}
-              />
-            </div>
-          )}
-
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="text-[20px] font-extrabold" style={{ color: Theme.fg }}>{t.analytics.analyticsTitle}</div>
+          
           {/* Export Report Dropdown */}
-          <div className="relative w-full sm:w-auto" ref={exportMenuRef}>
+          <div className="relative" ref={exportMenuRef}>
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex w-full sm:w-auto items-center justify-center gap-1.5 cursor-pointer rounded-lg border-none px-3 py-1.5 text-[11px] font-bold text-white"
-              style={{ background: Theme.primary }}
+              className="flex items-center justify-center gap-1.5 cursor-pointer rounded-lg px-3 py-1.5 text-[11px] font-bold transition-colors hover:bg-gray-50"
+              style={{ background: Theme.card, color: Theme.fg, border: `1px solid ${Theme.border}` }}
             >
               <Download size={13} />
-              Export Report
+              <span className="hidden sm:inline">Export</span>
             </button>
             {showExportMenu && (
               <>
                 <div className="fixed inset-0 z-[9998]" onClick={() => setShowExportMenu(false)} />
                 <div
-                  className="absolute left-0 right-0 sm:left-auto sm:right-0 top-full z-[9999] mt-1 w-full sm:w-48 rounded-xl border bg-white py-1 shadow-xl"
+                  className="absolute right-0 top-full z-[9999] mt-1 w-48 rounded-xl border bg-white py-1 shadow-xl"
                   style={{ borderColor: Theme.border }}
                 >
                   <button
@@ -423,27 +377,81 @@ export default function AnalyticsView() {
             )}
           </div>
         </div>
+
+        <div className={`flex flex-wrap items-center gap-2 ${isMobile ? 'w-full' : ''}`}>
+          <select
+            value={branch}
+            onChange={(e) => setBranch(e.target.value)}
+            className="cursor-pointer rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold outline-none w-full sm:w-auto"
+            style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+          >
+            <option value="">{t.analytics.allBranches}</option>
+            {activeBranches.map((b: any) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+          <div className="flex gap-0.5 rounded-lg p-0.5 w-full sm:w-auto" style={{ background: Theme.muted }}>
+            {['daily', 'weekly', 'monthly', 'custom'].map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className="flex-1 sm:flex-initial cursor-pointer rounded-md border-none px-2 py-1 text-[11px] font-semibold uppercase text-center transition-all"
+                style={{
+                  background: period === p ? '#fff' : 'transparent',
+                  color: period === p ? Theme.primary : Theme.mutedFg,
+                  boxShadow: period === p ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                }}
+              >
+                {p === 'daily' ? t.analytics.daily : p === 'weekly' ? t.analytics.weekly : p === 'monthly' ? t.analytics.monthly : t.analytics.custom}
+              </button>
+            ))}
+          </div>
+          {isCustom && (
+            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start">
+              <input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="flex-1 sm:flex-initial rounded-lg border px-2 py-1 text-[11px] outline-none max-w-[130px] sm:max-w-none"
+                style={{ borderColor: Theme.border, color: Theme.fg }}
+              />
+              <span className="text-[11px]" style={{ color: Theme.mutedFg }}>→</span>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="flex-1 sm:flex-initial rounded-lg border px-2 py-1 text-[11px] outline-none max-w-[130px] sm:max-w-none"
+                style={{ borderColor: Theme.border, color: Theme.fg }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Tab Selector */}
-      <div className="flex border-b border-border mb-3 gap-1">
+      {/* Tab Selector — full-width, equal columns */}
+      <div
+        className="flex w-full rounded-xl overflow-hidden mb-4"
+        style={{ border: `1px solid ${Theme.border}`, background: Theme.muted }}
+      >
         {[
-          { id: 'overview', label: t.analytics.overviewTab },
-          { id: 'staff', label: t.analytics.staffPerformance },
-          { id: 'customer', label: t.analytics.customerActivity },
+          { id: 'overview', label: t.analytics.overviewTab, icon: '📊' },
+          { id: 'staff', label: t.analytics.staffPerformance, icon: '👥' },
+          { id: 'customer', label: t.analytics.customerActivity, icon: '💳' },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className="px-4 py-2 text-xs font-bold cursor-pointer border-b-2 transition-all duration-150 bg-transparent border-none"
+            className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold cursor-pointer border-none transition-all duration-150"
             style={{
-              borderColor: activeTab === tab.id ? Theme.primary : 'transparent',
+              background: activeTab === tab.id ? '#fff' : 'transparent',
               color: activeTab === tab.id ? Theme.primary : Theme.mutedFg,
-              borderBottom: activeTab === tab.id ? `2px.5 solid ${Theme.primary}` : '2.5px solid transparent',
-              marginBottom: '-1px',
+              boxShadow: activeTab === tab.id ? '0 1px 6px rgba(0,0,0,0.08)' : 'none',
+              borderRadius: activeTab === tab.id ? '10px' : '0',
+              margin: activeTab === tab.id ? '3px' : '0',
             }}
           >
-            {tab.label}
+            <span className="text-sm sm:text-base">{tab.icon}</span>
+            <span className="text-center">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -602,34 +610,25 @@ export default function AnalyticsView() {
 
       {activeTab === 'staff' && (
         <>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
-            <Card className="p-4">
-              <div className="text-xl mb-1">👥</div>
-              <div className="text-xl font-black text-foreground tracking-tighter leading-none font-extrabold">
-                {staffData.filter((s: any) => s.name && s.name.toLowerCase() !== 'system').length}
-              </div>
-              <div className="text-[10px] text-muted-foreground font-bold tracking-wider uppercase mt-1">
-                Active Staff
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="text-xl mb-1">💰</div>
-              <div className="text-xl font-black text-foreground tracking-tighter leading-none font-extrabold">
-                {formatCurrency(staffKpis.totalSales)}
-              </div>
-              <div className="text-[10px] text-muted-foreground font-bold tracking-wider uppercase mt-1">
-                Total Staff Sales
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="text-xl mb-1">🏆</div>
-              <div className="text-xl font-black text-foreground tracking-tighter leading-none max-w-full truncate font-extrabold" title={staffKpis.topPerformer}>
-                {staffKpis.topPerformer}
-              </div>
-              <div className="text-[10px] text-muted-foreground font-bold tracking-wider uppercase mt-1">
-                Top Performer ({formatCurrency(staffKpis.topPerformerSales)})
-              </div>
-            </Card>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
+            <KpiCard
+              icon="👥"
+              label="Active Staff"
+              value={staffData.filter((s: any) => s.name && s.name.toLowerCase() !== 'system').length}
+              accent={Theme.secondary}
+            />
+            <KpiCard
+              icon="💰"
+              label="Total Staff Sales"
+              value={formatCurrency(staffKpis.totalSales)}
+              accent="#fff7ed"
+            />
+            <KpiCard
+              icon="🏆"
+              label={`Top Performer · ${formatCurrency(staffKpis.topPerformerSales)}`}
+              value={staffKpis.topPerformer}
+              accent="#f0fdf4"
+            />
           </div>
 
           <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
@@ -724,68 +723,115 @@ export default function AnalyticsView() {
       {activeTab === 'customer' && (
         <>
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-            <Card className="p-3">
-              <div className="text-lg mb-1">👥</div>
-              <div className="text-lg font-black text-foreground tracking-tighter leading-none font-extrabold">
-                {customerKpis.total}
-              </div>
-              <div className="text-[9px] text-muted-foreground font-bold tracking-wider uppercase mt-1">
-                Total Customers
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-lg mb-1">⚡</div>
-              <div className="text-lg font-black text-foreground tracking-tighter leading-none font-extrabold">
-                {customerKpis.active}
-              </div>
-              <div className="text-[9px] text-muted-foreground font-bold tracking-wider uppercase mt-1">
-                Active (With Purchase)
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-lg mb-1">📦</div>
-              <div className="text-lg font-black text-foreground tracking-tighter leading-none font-extrabold">
-                {customerKpis.avgOrders.toFixed(1)}
-              </div>
-              <div className="text-[9px] text-muted-foreground font-bold tracking-wider uppercase mt-1">
-                Avg Orders/Cust
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-lg mb-1">💳</div>
-              <div className="text-lg font-black text-foreground tracking-tighter leading-none truncate font-extrabold" title={formatCurrency(customerKpis.avgSpent)}>
-                {formatCurrency(customerKpis.avgSpent)}
-              </div>
-              <div className="text-[9px] text-muted-foreground font-bold tracking-wider uppercase mt-1">
-                Avg Customer LTV
-              </div>
-            </Card>
+            <KpiCard icon="👥" label="Total Customers" value={customerKpis.total} accent={Theme.secondary} />
+            <KpiCard icon="⚡" label="Active Customers" value={customerKpis.active} accent="#fff7ed" />
+            <KpiCard icon="📦" label="Avg Orders / Cust" value={customerKpis.avgOrders.toFixed(1)} accent="#f0fdf4" />
+            <KpiCard icon="💳" label="Avg Customer LTV" value={formatCurrency(customerKpis.avgSpent)} accent="#f0f9ff" />
           </div>
 
-          {/* Segment Summary breakdown widgets */}
-          {customerOverview?.segments && (
-            <Card className="px-3 py-2">
-              <div className="flex items-center gap-4 flex-wrap text-xs">
-                <span className="font-bold text-muted-foreground uppercase text-[10px]">Segment Breakdown:</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">★ VIP</span>
-                  <span className="font-bold text-foreground">{customerOverview.segments.vip || 0}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">REGULAR</span>
-                  <span className="font-bold text-foreground">{customerOverview.segments.regular || 0}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-green-50 text-green-700 border border-green-200">NEW</span>
-                  <span className="font-bold text-foreground">{customerOverview.segments.new || 0}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-gray-50 text-gray-700 border border-gray-200">INACTIVE</span>
-                  <span className="font-bold text-foreground">{customerOverview.segments.inactive || 0}</span>
-                </div>
-              </div>
+          {/* Customer Charts row */}
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {/* Segment breakdown bar chart */}
+            <Card>
+              <SecHead title="Customer Segments" sub="Distribution across segments" />
+              {isLoadingCustOverview ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">Loading chart...</div>
+              ) : !customerOverview?.segments ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">No segment data available</div>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart
+                      data={[
+                        { name: '★ VIP', value: customerOverview.segments.vip || 0, fill: '#f59e0b' },
+                        { name: 'Regular', value: customerOverview.segments.regular || 0, fill: Theme.primary },
+                        { name: 'New', value: customerOverview.segments.new || 0, fill: Theme.success },
+                        { name: 'Inactive', value: customerOverview.segments.inactive || 0, fill: Theme.mutedFg },
+                      ]}
+                      barSize={36}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={Theme.border} vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: Theme.mutedFg }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 9, fill: Theme.mutedFg }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
+                      <Tooltip formatter={(v) => [v, 'Customers']} />
+                      <Bar dataKey="value" radius={[5, 5, 0, 0]}>
+                        {[
+                          { fill: '#f59e0b' },
+                          { fill: Theme.primary },
+                          { fill: Theme.success },
+                          { fill: Theme.mutedFg },
+                        ].map((entry, index) => (
+                          <Cell key={`seg-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="mt-2 flex flex-wrap gap-3 justify-center">
+                    {[
+                      { label: '★ VIP', color: '#f59e0b', count: customerOverview.segments.vip || 0 },
+                      { label: 'Regular', color: Theme.primary, count: customerOverview.segments.regular || 0 },
+                      { label: 'New', color: Theme.success, count: customerOverview.segments.new || 0 },
+                      { label: 'Inactive', color: Theme.mutedFg, count: customerOverview.segments.inactive || 0 },
+                    ].map((s) => (
+                      <div key={s.label} className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
+                        <div className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
+                        {s.label} ({s.count})
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </Card>
-          )}
+
+            {/* Top customers by spending bar chart */}
+            <Card>
+              <SecHead title="Top Customers by Spending" sub="Highest lifetime value customers" />
+              {isLoadingCustDetailed ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">Loading chart...</div>
+              ) : !customerDetailedData || customerDetailedData.data.length === 0 ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">No customer purchase data yet</div>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart
+                      data={[...customerDetailedData.data]
+                        .sort((a, b) => b.totalPurchaseAmount - a.totalPurchaseAmount)
+                        .slice(0, 6)
+                        .map((c) => ({
+                          name: c.name?.split(' ')[0] || 'Guest',
+                          spent: c.totalPurchaseAmount,
+                          profit: c.profit,
+                        }))}
+                      barSize={20}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={Theme.border} vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 9, fill: Theme.mutedFg }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        tick={{ fontSize: 9, fill: Theme.mutedFg }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => `৳${(v / 1000).toFixed(0)}k`}
+                        width={36}
+                      />
+                      <Tooltip formatter={(v) => [`৳${Number(v).toLocaleString()}`, '']} />
+                      <Bar dataKey="spent" name="Spent" fill={Theme.primary} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="profit" name="Profit" fill={Theme.success} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="mt-2 flex flex-wrap gap-3 justify-center">
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
+                      <div className="h-2.5 w-2.5 rounded-sm" style={{ background: Theme.primary }} />
+                      Total Spent
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: Theme.mutedFg }}>
+                      <div className="h-2.5 w-2.5 rounded-sm" style={{ background: Theme.success }} />
+                      Net Profit
+                    </div>
+                  </div>
+                </>
+              )}
+            </Card>
+          </div>
 
           <Card>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
