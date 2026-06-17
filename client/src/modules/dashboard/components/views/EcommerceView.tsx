@@ -6,10 +6,8 @@ import { Theme, formatCurrency, statusStyles, stockStatusStyle } from '@/modules
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, KpiCard, Btn, Badge } from '../Primitives';
 import { Product, Order } from '@/modules/dashboard/data/mockData';
-import { useListCustomers } from '@/modules/customers';
 import { useListOrders, useUpdateOrderStatusMutation } from '@/modules/orders';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
-import type { Customer } from '@/shared/types';
 import type { Order as RealOrder } from '@/shared/types';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
@@ -34,9 +32,8 @@ interface EcommerceViewProps {
   orders: Order[];
 }
 
-type TabType = 'orders' | 'products' | 'customers';
+type TabType = 'orders' | 'chat';
 type OrderFilter = 'all' | 'pending' | 'processing' | 'shipped' | 'delivered';
-type ProductFilter = 'all' | 'active' | 'low' | 'out';
 
 const getTrackingSteps = (t: any) => [
   { status: 'PENDING',    label: t.ecommerce.placed,     icon: '🛒' },
@@ -70,21 +67,6 @@ function formatDateLabel(value?: string) {
   });
 }
 
-function getSegmentColor(segment?: string) {
-  const normalized = String(segment || 'NEW').toUpperCase();
-
-  if (normalized === 'VIP') {
-    return { bg: '#fef3c7', color: '#92400e' };
-  }
-  if (normalized === 'REGULAR') {
-    return { bg: '#dbeafe', color: '#1e40af' };
-  }
-  if (normalized === 'INACTIVE') {
-    return { bg: '#fee2e2', color: '#991b1b' };
-  }
-
-  return { bg: '#f3f4f6', color: '#374151' };
-}
 
 export default function EcommerceView({ products, orders }: EcommerceViewProps) {
   const router = useRouter();
@@ -98,11 +80,6 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [pendingStatus, setPendingStatus] = useState<Record<number, RealOrderStatus>>({});
 
-  const [productSearch, setProductSearch] = useState('');
-  const [productFilter, setProductFilter] = useState<ProductFilter>('all');
-
-  const [customerSearch, setCustomerSearch] = useState('');
-
   // Real orders from API
   const { data: realOrdersData, isLoading: realOrdersLoading, refetch: refetchOrders } = useListOrders(
     { page: 1, limit: 50, ...(orderFilter !== 'all' ? { status: orderFilter.toUpperCase() } : {}) },
@@ -113,72 +90,25 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
   const updateStatusMutation = useUpdateOrderStatusMutation({
     onSuccess: () => { void refetchOrders(); },
   });
-  const {
-    data: customers = [],
-    isLoading: customersLoading,
-    isError: customersError,
-    error: customersErrorData,
-    refetch: refetchCustomers,
-  } = useListCustomers(
-    { page: 1, limit: 100 },
-    { enabled: tab === 'customers', staleTime: 5 * 60 * 1000 }
-  );
-
-  const filteredProducts = useMemo(() => {
-    const term = productSearch.trim().toLowerCase();
-
-    return products.filter((product) => {
-      const matchesFilter = productFilter === 'all' ? true : product.status === productFilter;
-      const matchesSearch = !term
-        ? true
-        : product.name.toLowerCase().includes(term) || product.sku.toLowerCase().includes(term);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [products, productSearch, productFilter]);
-
-  const totalCustomers = customers.length;
-  const returningCustomers = customers.filter((customer) => Number(customer.totalOrders || 0) > 1).length;
-  const activeCustomers = customers.filter((customer) => customer.isActive).length;
-  const averageLtv =
-    totalCustomers > 0
-      ? customers.reduce((sum, customer) => sum + Number(customer.totalSpent || 0), 0) / totalCustomers
-      : 0;
-
-  const filteredCustomers = useMemo(() => {
-    const term = customerSearch.trim().toLowerCase();
-
-    return customers.filter((customer: Customer) => {
-      if (!term) return true;
-
-      const firstName = customer.user?.firstName || '';
-      const lastName = customer.user?.lastName || '';
-      const email = customer.user?.email || '';
-      const segment = String(customer.segment || 'NEW');
-      const fullName = `${firstName} ${lastName}`.trim();
-
-      return [fullName, email, segment].some((value) => value.toLowerCase().includes(term));
-    });
-  }, [customers, customerSearch]);
 
   return (
     <div className="flex flex-col gap-4">
       <div
-        className={`flex gap-1 overflow-x-auto rounded-[10px] p-1 ${isMobile ? 'w-full' : 'w-fit'}`}
-        style={{ background: Theme.muted }}
+        className="flex gap-1 w-full overflow-hidden rounded-xl p-1 mb-2"
+        style={{ background: Theme.muted, border: `1px solid ${Theme.border}` }}
       >
-        {(['orders', 'products', 'customers'] as const).map((tTab) => (
+        {(['orders', 'chat'] as const).map((tTab) => (
           <button
             key={tTab}
             onClick={() => setTab(tTab)}
-            className={`cursor-pointer whitespace-nowrap rounded-lg border-none px-4 py-2 text-[13px] font-semibold capitalize ${isMobile ? 'flex-1' : ''}`}
+            className="flex-1 cursor-pointer whitespace-nowrap rounded-lg border-none px-4 py-2.5 text-[13px] font-bold capitalize transition-all duration-150"
             style={{
               background: tab === tTab ? '#fff' : 'transparent',
               color: tab === tTab ? Theme.primary : Theme.mutedFg,
-              boxShadow: tab === tTab ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+              boxShadow: tab === tTab ? '0 1px 6px rgba(0,0,0,0.08)' : 'none',
             }}
           >
-            {t.ecommerce[tTab]}
+            {tTab === 'chat' ? 'Chat' : t.ecommerce[tTab as keyof typeof t.ecommerce] || tTab}
           </button>
         ))}
       </div>
@@ -413,239 +343,12 @@ export default function EcommerceView({ products, orders }: EcommerceViewProps) 
         </>
       )}
 
-      {tab === 'products' && (
-        <Card pad={0}>
-          <div
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b px-[18px] py-[14px]"
-            style={{ borderBottomColor: Theme.border }}
-          >
-            <div>
-              <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>
-                {t.ecommerce.productCatalogue}
-              </div>
-              <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
-                {t.ecommerce.productsShown.replace('{count}', filteredProducts.length.toString()).replace('{total}', products.length.toString())}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <input
-                value={productSearch}
-                onChange={(event) => setProductSearch(event.target.value)}
-                placeholder={t.ecommerce.searchNameOrSku}
-                className="flex-1 sm:flex-initial sm:w-[200px] rounded-lg border px-3 py-1.5 text-xs outline-none"
-                style={{ borderColor: Theme.border, color: Theme.fg }}
-              />
-              <select
-                value={productFilter}
-                onChange={(event) => setProductFilter(event.target.value as ProductFilter)}
-                className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
-                style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
-              >
-                <option value="all">{t.ecommerce.allStock}</option>
-                <option value="active">{t.ecommerce.inStock}</option>
-                <option value="low">{t.ecommerce.lowStock}</option>
-                <option value="out">{t.ecommerce.outOfStock}</option>
-              </select>
-              <Btn variant="primary" size="sm" onClick={() => router.push('/dashboard/settings?tab=products')}>
-                {t.products.addProduct}
-              </Btn>
-            </div>
+      {tab === 'chat' && (
+        <Card>
+          <div className="py-20 text-center text-sm font-semibold" style={{ color: Theme.mutedFg }}>
+            Chat feature is under construction. It will be available soon.
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] border-collapse">
-              <thead>
-                <tr>
-                  {[t.returns.product, t.modal.sku, t.ecommerce.price, t.returns.stock, t.inventory.status, ''].map((h) => (
-                    <th
-                      key={h}
-                      className="whitespace-nowrap px-4 py-[11px] text-left text-[11px] font-bold uppercase tracking-[0.06em]"
-                      style={{ color: Theme.mutedFg, background: Theme.muted }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                        {t.products.noProducts}
-                      </td>
-                    </tr>
-                  )}
-
-                  {filteredProducts.map((p, i) => {
-                    const stockStyle = stockStatusStyle(p.status);
-                    const stockLabel = p.status === 'out' ? t.ecommerce.outOfStock : p.status === 'low' ? t.ecommerce.lowStock : t.ecommerce.inStock;
-
-                    return (
-                      <tr key={p.sku} style={{ background: i % 2 === 0 ? '#fff' : Theme.muted }}>
-                        <td className="px-4 py-3 text-[13px] font-semibold" style={{ color: Theme.fg }}>
-                          {p.name}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs" style={{ color: Theme.mutedFg }}>
-                          {p.sku}
-                        </td>
-                        <td className="px-4 py-3 text-[13px] font-semibold" style={{ color: Theme.fg }}>
-                          {formatCurrency(p.price)}
-                        </td>
-                        <td className="px-4 py-3 text-[13px] font-bold" style={{ color: Theme.fg }}>
-                          {p.stock}
-                        </td>
-                        <td className="px-4 py-3 text-[13px]">
-                          <Badge label={stockLabel} bg={stockStyle.bg} color={stockStyle.color} />
-                        </td>
-                        <td className="px-4 py-3 text-[13px]">
-                          <Btn variant="ghost" size="sm" onClick={() => router.push('/dashboard/settings?tab=products')}>
-                            {t.inventory.edit}
-                          </Btn>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-      )}
-
-      {tab === 'customers' && (
-        <div className="flex flex-col gap-[14px]">
-          {/* Stat cards row */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:gap-4">
-            {[
-              { label: t.ecommerce.totalCustomers, value: totalCustomers, icon: '👥', accent: '#fdf2f8', numColor: Theme.primary },
-              { label: t.ecommerce.active, value: activeCustomers, icon: '🟢', accent: '#f0fdf4', numColor: '#15803d' },
-              { label: t.ecommerce.returning, value: `${totalCustomers > 0 ? ((returningCustomers / totalCustomers) * 100).toFixed(1) : '0.0'}%`, icon: '↩️', accent: '#eff6ff', numColor: '#1d4ed8' },
-              { label: t.ecommerce.avgLtv, value: formatCurrency(averageLtv), icon: '💎', accent: '#f0f4ff', numColor: Theme.fg },
-            ].map(stat => (
-              <div
-                key={stat.label}
-                className="flex items-center gap-3 rounded-xl border px-4 py-3"
-                style={{ borderColor: Theme.border, background: stat.accent }}
-              >
-                <span className="text-2xl leading-none">{stat.icon}</span>
-                <div className="min-w-0">
-                  <div className="text-[22px] font-black leading-tight tracking-tight" style={{ color: stat.numColor }}>{stat.value}</div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.07em] leading-tight" style={{ color: Theme.mutedFg }}>{stat.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <Card pad={0}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b px-[18px] py-[14px]" style={{ borderBottomColor: Theme.border }}>
-              <div>
-                <div className="text-[15px] font-bold" style={{ color: Theme.fg }}>
-                  {t.ecommerce.customerDirectory}
-                </div>
-                <div className="mt-0.5 text-[11px]" style={{ color: Theme.mutedFg }}>
-                  {t.ecommerce.customersShown.replace('{count}', filteredCustomers.length.toString()).replace('{total}', customers.length.toString())}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                <input
-                  value={customerSearch}
-                  onChange={(event) => setCustomerSearch(event.target.value)}
-                  placeholder={t.ecommerce.searchCustomer}
-                  className="flex-1 sm:flex-initial sm:w-[220px] rounded-lg border px-3 py-1.5 text-xs outline-none"
-                  style={{ borderColor: Theme.border, color: Theme.fg }}
-                />
-                <Btn variant="ghost" size="sm" onClick={() => void refetchCustomers()}>
-                  {t.ecommerce.refresh}
-                </Btn>
-              </div>
-            </div>
-
-            {customersLoading ? (
-              <div className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                {t.ecommerce.loadingCustomers}
-              </div>
-            ) : customersError ? (
-              <div className="px-4 py-8 text-center">
-                <p className="text-sm" style={{ color: Theme.danger }}>
-                  {(customersErrorData as { message?: string })?.message || t.ecommerce.failedLoadCustomers}
-                </p>
-                <div className="mt-3">
-                  <Btn variant="primary" size="sm" onClick={() => void refetchCustomers()}>
-                    {t.ecommerce.retry}
-                  </Btn>
-                </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[700px] border-collapse">
-                  <thead>
-                    <tr>
-                      {[t.ecommerce.customer, t.ecommerce.segment, t.ecommerce.orders, t.ecommerce.totalSpent, t.ecommerce.loyalty, t.ecommerce.lastOrder].map((h) => (
-                        <th
-                          key={h}
-                          className="whitespace-nowrap px-4 py-[11px] text-left text-[11px] font-bold uppercase tracking-[0.06em]"
-                          style={{ color: Theme.mutedFg, background: Theme.muted }}
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCustomers.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-                          {t.ecommerce.noCustomersMatched}
-                        </td>
-                      </tr>
-                    )}
-
-                    {filteredCustomers.map((customer: Customer, index: number) => {
-                      const firstName = customer.user?.firstName || '';
-                      const lastName = customer.user?.lastName || '';
-                      const fullName = `${firstName} ${lastName}`.trim() || `Customer #${customer.id}`;
-                      const email = customer.user?.email || 'N/A';
-                      const segment = String(customer.segment || 'NEW').toUpperCase();
-                      const segmentStyle = getSegmentColor(segment);
-                      const lastOrderValue =
-                        (customer as { lastOrderAt?: string; lastOrderDate?: string }).lastOrderAt ||
-                        customer.lastOrderDate;
-
-                      return (
-                        <tr key={customer.id} style={{ background: index % 2 === 0 ? '#fff' : Theme.muted }}>
-                          <td className="px-4 py-3">
-                            <p className="text-[13px] font-semibold" style={{ color: Theme.fg }}>
-                              {fullName}
-                            </p>
-                            <p className="text-xs" style={{ color: Theme.mutedFg }}>
-                              {email}
-                            </p>
-                          </td>
-                          <td className="px-4 py-3 text-[13px]">
-                            <Badge label={segment} bg={segmentStyle.bg} color={segmentStyle.color} />
-                          </td>
-                          <td className="px-4 py-3 text-[13px] font-semibold" style={{ color: Theme.fg }}>
-                            {customer.totalOrders}
-                          </td>
-                          <td className="px-4 py-3 text-[13px] font-semibold" style={{ color: Theme.fg }}>
-                            {formatCurrency(Number(customer.totalSpent || 0))}
-                          </td>
-                          <td className="px-4 py-3 text-[13px]" style={{ color: Theme.mutedFg }}>
-                            {customer.loyaltyPoints}
-                          </td>
-                          <td className="px-4 py-3 text-[13px]" style={{ color: Theme.mutedFg }}>
-                            {formatDateLabel(lastOrderValue)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        </div>
+        </Card>
       )}
     </div>
   );
