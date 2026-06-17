@@ -4,6 +4,9 @@ import {
   type AnalyticsParams,
   type OverviewMetrics,
   type OverviewPeriod,
+  type StaffAnalytics,
+  type DetailedCustomerResponse,
+  type CustomerAnalytics,
 } from './api';
 
 export const ANALYTICS_QUERY_KEYS = {
@@ -28,6 +31,12 @@ export const ANALYTICS_QUERY_KEYS = {
     [...ANALYTICS_QUERY_KEYS.overview(), params] as const,
   custom: () => [...ANALYTICS_QUERY_KEYS.all, 'custom'] as const,
   customWithParams: (query: any) => [...ANALYTICS_QUERY_KEYS.custom(), query] as const,
+  staff: () => [...ANALYTICS_QUERY_KEYS.all, 'staff'] as const,
+  staffWithParams: (params: AnalyticsParams) =>
+    [...ANALYTICS_QUERY_KEYS.staff(), params] as const,
+  customersDetailed: () => [...ANALYTICS_QUERY_KEYS.all, 'customersDetailed'] as const,
+  customersDetailedWithParams: (params: AnalyticsParams & { search?: string; segment?: string; page?: number; limit?: number }) =>
+    [...ANALYTICS_QUERY_KEYS.customersDetailed(), params] as const,
 };
 
 export const useRevenueAnalytics = (params?: AnalyticsParams, options?: any) => {
@@ -61,7 +70,7 @@ export const useTopProducts = (
 };
 
 export const useCustomerAnalytics = (params?: AnalyticsParams, options?: any) => {
-  return useQuery({
+  return useQuery<CustomerAnalytics, Error>({
     queryKey: ANALYTICS_QUERY_KEYS.customersWithParams(params || {}),
     queryFn: () => analyticsAPI.getCustomerAnalytics(params),
     staleTime: 15 * 60 * 1000, // 15 minutes
@@ -124,4 +133,25 @@ export const useDashboardMetrics = (params?: AnalyticsParams) => {
       topProducts.isError ||
       salesByCategory.isError,
   };
+};
+
+export const useStaffAnalytics = (params?: AnalyticsParams, options?: any) => {
+  return useQuery<StaffAnalytics[], Error>({
+    queryKey: ANALYTICS_QUERY_KEYS.staffWithParams(params || {}),
+    queryFn: () => analyticsAPI.getStaffAnalytics(params),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    ...options,
+  });
+};
+
+export const useCustomersDetailed = (
+  params?: AnalyticsParams & { search?: string; segment?: string; page?: number; limit?: number },
+  options?: any
+) => {
+  return useQuery<DetailedCustomerResponse, Error>({
+    queryKey: ANALYTICS_QUERY_KEYS.customersDetailedWithParams(params || {}),
+    queryFn: () => analyticsAPI.getCustomersDetailed(params),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    ...options,
+  });
 };

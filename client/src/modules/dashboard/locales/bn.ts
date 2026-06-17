@@ -527,6 +527,9 @@ export const bn: DashboardTranslations = {
     qtySold: "বিক্রিত পরিমাণ",
     transactions: "লেনদেন",
     avgTicket: "গড় টিকিট",
+    overviewTab: "ওভারভিউ",
+    staffPerformance: "কর্মীদের পারফরম্যান্স",
+    customerActivity: "গ্রাহকদের কার্যকলাপ",
   },
 
   // ─── Ecommerce View ───

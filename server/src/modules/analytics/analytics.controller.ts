@@ -83,6 +83,33 @@ export const getCustomReport: RequestHandler = asyncHandler(async (req, res) => 
   res.json(ok(result));
 });
 
+export const getStaffAnalytics: RequestHandler = asyncHandler(async (req, res) => {
+  const { startDate, endDate, warehouseId } = req.query;
+
+  const result = await analyticsService.getStaffAnalytics({
+    startDate: startDate as string,
+    endDate: endDate as string,
+    warehouseId: warehouseId ? Number(warehouseId) : undefined,
+  });
+
+  res.json(ok(result));
+});
+
+export const getCustomersDetailed: RequestHandler = asyncHandler(async (req, res) => {
+  const { startDate, endDate, search, segment, page, limit } = req.query;
+
+  const result = await analyticsService.getCustomersDetailed({
+    startDate: startDate as string,
+    endDate: endDate as string,
+    search: search as string,
+    segment: segment as string,
+    page: page ? Number(page) : undefined,
+    limit: limit ? Number(limit) : undefined,
+  });
+
+  res.json(ok(result));
+});
+
 export default {
   getRevenueAnalytics,
   getSalesByCategory,
@@ -91,4 +118,6 @@ export default {
   getCustomerAnalytics,
   getInvoiceData,
   getCustomReport,
+  getStaffAnalytics,
+  getCustomersDetailed,
 };

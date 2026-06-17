@@ -524,6 +524,9 @@ export const en = {
     qtySold: "Qty Sold",
     transactions: "Transactions",
     avgTicket: "Avg Ticket",
+    overviewTab: "Overview",
+    staffPerformance: "Staff Performance",
+    customerActivity: "Customer Activity",
   },
 
   // ─── Ecommerce View ───

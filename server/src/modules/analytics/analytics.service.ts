@@ -591,6 +591,314 @@ export class AnalyticsService {
 
     return { error: 'Invalid report query' };
   }
+
+  async getStaffAnalytics(filters: AnalyticsFilterInput) {
+    const staffUsers = await prisma.user.findMany({
+      where: {
+        userType: {
+          code: { in: ['1x101', '4x404', '5x505', '6x606', '7x707'] },
+        },
+        ...(filters.warehouseId
+          ? {
+              userBranches: {
+                some: { branchId: filters.warehouseId },
+              },
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        userType: {
+          select: {
+            name: true,
+            code: true,
+          },
+        },
+      },
+    });
+
+    const userIdsInBranch = filters.warehouseId
+      ? (
+          await prisma.userBranch.findMany({
+            where: { branchId: filters.warehouseId },
+            select: { userId: true },
+          })
+        ).map((ub) => ub.userId)
+      : [];
+
+    const orderWhere: Prisma.OrderWhereInput = {
+      status: { in: ['DELIVERED', 'SHIPPED', 'CONFIRMED', 'PROCESSING'] },
+      ...(filters.startDate || filters.endDate
+        ? {
+            createdAt: {
+              ...(filters.startDate ? { gte: new Date(filters.startDate) } : {}),
+              ...(filters.endDate ? { lte: new Date(filters.endDate) } : {}),
+            },
+          }
+        : {}),
+      ...(filters.warehouseId
+        ? {
+            processedBy: { in: userIdsInBranch },
+          }
+        : {}),
+    };
+
+    const orders = await prisma.order.findMany({
+      where: orderWhere,
+      select: {
+        id: true,
+        processedBy: true,
+        total: true,
+      },
+    });
+
+    const manualSaleWhere: Prisma.ManualSaleWhereInput = {
+      ...(filters.warehouseId ? { branchId: filters.warehouseId } : {}),
+      ...(filters.startDate || filters.endDate
+        ? {
+            createdAt: {
+              ...(filters.startDate ? { gte: new Date(filters.startDate) } : {}),
+              ...(filters.endDate ? { lte: new Date(filters.endDate) } : {}),
+            },
+          }
+        : {}),
+    };
+
+    const manualSales = await prisma.manualSale.findMany({
+      where: manualSaleWhere,
+      select: {
+        id: true,
+        soldBy: true,
+        totalAmount: true,
+      },
+    });
+
+    const staffMetrics = new Map<number | string, {
+      staffId: number | null;
+      name: string;
+      email: string;
+      role: string;
+      ordersHandled: number;
+      manualSalesHandled: number;
+      totalTransactions: number;
+      orderSalesAmount: number;
+      manualSalesAmount: number;
+      totalSalesAmount: number;
+      revenueContribution: number;
+    }>();
+
+    for (const staff of staffUsers) {
+      const name = `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || staff.email || `Staff #${staff.id}`;
+      staffMetrics.set(staff.id, {
+        staffId: staff.id,
+        name,
+        email: staff.email,
+        role: staff.userType?.name || 'Staff',
+        ordersHandled: 0,
+        manualSalesHandled: 0,
+        totalTransactions: 0,
+        orderSalesAmount: 0,
+        manualSalesAmount: 0,
+        totalSalesAmount: 0,
+        revenueContribution: 0,
+      });
+    }
+
+    const otherKey = 'other';
+    staffMetrics.set(otherKey, {
+      staffId: null,
+      name: 'System / Online / Other',
+      email: 'system@mouchak.com',
+      role: 'System',
+      ordersHandled: 0,
+      manualSalesHandled: 0,
+      totalTransactions: 0,
+      orderSalesAmount: 0,
+      manualSalesAmount: 0,
+      totalSalesAmount: 0,
+      revenueContribution: 0,
+    });
+
+    let grandTotalSales = 0;
+
+    for (const order of orders) {
+      const total = Number(order.total || 0);
+      grandTotalSales += total;
+
+      if (order.processedBy && staffMetrics.has(order.processedBy)) {
+        const metric = staffMetrics.get(order.processedBy)!;
+        metric.ordersHandled += 1;
+        metric.orderSalesAmount += total;
+        metric.totalSalesAmount += total;
+        metric.totalTransactions += 1;
+      } else {
+        const metric = staffMetrics.get(otherKey)!;
+        metric.ordersHandled += 1;
+        metric.orderSalesAmount += total;
+        metric.totalSalesAmount += total;
+        metric.totalTransactions += 1;
+      }
+    }
+
+    for (const sale of manualSales) {
+      const total = Number(sale.totalAmount || 0);
+      grandTotalSales += total;
+
+      const soldByStr = (sale.soldBy || '').trim().toLowerCase();
+      let matchedStaffId: number | null = null;
+
+      for (const staff of staffUsers) {
+        const staffName = `${staff.firstName || ''} ${staff.lastName || ''}`.trim().toLowerCase();
+        const staffEmail = staff.email.toLowerCase();
+        const staffFirstName = (staff.firstName || '').trim().toLowerCase();
+        const staffLastName = (staff.lastName || '').trim().toLowerCase();
+
+        if (
+          soldByStr === staffEmail ||
+          soldByStr === staffName ||
+          (staffFirstName && soldByStr === staffFirstName) ||
+          (staffLastName && soldByStr === staffLastName)
+        ) {
+          matchedStaffId = staff.id;
+          break;
+        }
+      }
+
+      if (matchedStaffId !== null) {
+        const metric = staffMetrics.get(matchedStaffId)!;
+        metric.manualSalesHandled += 1;
+        metric.manualSalesAmount += total;
+        metric.totalSalesAmount += total;
+        metric.totalTransactions += 1;
+      } else {
+        const metric = staffMetrics.get(otherKey)!;
+        metric.manualSalesHandled += 1;
+        metric.manualSalesAmount += total;
+        metric.totalSalesAmount += total;
+        metric.totalTransactions += 1;
+      }
+    }
+
+    const resultList = Array.from(staffMetrics.values());
+    for (const item of resultList) {
+      item.revenueContribution = grandTotalSales > 0 ? (item.totalSalesAmount / grandTotalSales) * 100 : 0;
+    }
+
+    return resultList
+      .filter((item) => item.totalTransactions > 0 || item.staffId !== null)
+      .sort((a, b) => b.totalSalesAmount - a.totalSalesAmount);
+  }
+
+  async getCustomersDetailed(filters: AnalyticsFilterInput & { page?: number; limit?: number; search?: string; segment?: string }) {
+    const page = filters.page ? Number(filters.page) : 1;
+    const limit = filters.limit ? Number(filters.limit) : 20;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (filters.search) {
+      where.OR = [
+        { firstName: { contains: filters.search, mode: 'insensitive' } },
+        { lastName: { contains: filters.search, mode: 'insensitive' } },
+        { phone: { contains: filters.search, mode: 'insensitive' } },
+        { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (filters.segment) {
+      where.segment = filters.segment;
+    }
+
+    const total = await prisma.customer.count({ where });
+
+    const customers = await prisma.customer.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            email: true,
+            phone: true,
+          },
+        },
+        orders: {
+          where: {
+            status: { in: ['DELIVERED', 'SHIPPED', 'CONFIRMED', 'PROCESSING'] },
+            ...(filters.startDate || filters.endDate
+              ? {
+                  createdAt: {
+                    ...(filters.startDate ? { gte: new Date(filters.startDate) } : {}),
+                    ...(filters.endDate ? { lte: new Date(filters.endDate) } : {}),
+                  },
+                }
+              : {}),
+          },
+          include: {
+            items: {
+              include: {
+                product: {
+                  select: {
+                    costPrice: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      skip,
+      take: limit,
+      orderBy: { totalSpent: 'desc' },
+    });
+
+    const data = customers.map((customer) => {
+      const orderFrequency = customer.orders.length;
+      let totalItemsPurchased = 0;
+      let totalPurchaseAmount = 0;
+      let totalCost = 0;
+
+      for (const order of customer.orders) {
+        totalPurchaseAmount += Number(order.total || 0);
+        for (const item of order.items) {
+          totalItemsPurchased += item.quantity;
+          const itemCost = item.product?.costPrice ? Number(item.product.costPrice) : 0;
+          totalCost += itemCost * item.quantity;
+        }
+      }
+
+      const profit = totalPurchaseAmount - totalCost;
+
+      // Loyalty points estimation
+      const loyaltyPointsAccumulated = Math.floor(Number(customer.totalSpent || 0) / 100);
+      const loyaltyPointsUsed = Math.max(0, loyaltyPointsAccumulated - customer.loyaltyPoints);
+
+      return {
+        customerId: customer.id,
+        name: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.user?.email || `Customer #${customer.id}`,
+        email: customer.user?.email || 'N/A',
+        phone: customer.phone || customer.user?.phone || 'N/A',
+        segment: customer.segment,
+        orderFrequency,
+        totalItemsPurchased,
+        totalPurchaseAmount,
+        totalCost,
+        profit,
+        loyaltyPoints: customer.loyaltyPoints,
+        loyaltyPointsAccumulated,
+        loyaltyPointsUsed,
+      };
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
 }
 
 export default new AnalyticsService();

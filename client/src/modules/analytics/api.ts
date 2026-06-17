@@ -152,4 +152,56 @@ export const analyticsAPI = {
     });
     return response.data.data;
   },
+
+  getStaffAnalytics: async (params?: AnalyticsParams) => {
+    const response = await apiClient.get<ApiResponse<StaffAnalytics[]>>('/analytics/staff', {
+      params,
+    });
+    return response.data.data;
+  },
+
+  getCustomersDetailed: async (params?: AnalyticsParams & { search?: string; segment?: string; page?: number; limit?: number }) => {
+    const response = await apiClient.get<ApiResponse<DetailedCustomerResponse>>(
+      '/analytics/customers-detailed',
+      { params }
+    );
+    return response.data.data;
+  },
 };
+
+export interface StaffAnalytics {
+  staffId: number | null;
+  name: string;
+  email: string;
+  role: string;
+  ordersHandled: number;
+  manualSalesHandled: number;
+  totalTransactions: number;
+  orderSalesAmount: number;
+  manualSalesAmount: number;
+  totalSalesAmount: number;
+  revenueContribution: number;
+}
+
+export interface DetailedCustomerAnalytics {
+  customerId: number;
+  name: string;
+  email: string;
+  phone: string;
+  segment: string;
+  orderFrequency: number;
+  totalItemsPurchased: number;
+  totalPurchaseAmount: number;
+  totalCost: number;
+  profit: number;
+  loyaltyPoints: number;
+  loyaltyPointsAccumulated: number;
+  loyaltyPointsUsed: number;
+}
+
+export interface DetailedCustomerResponse {
+  data: DetailedCustomerAnalytics[];
+  total: number;
+  page: number;
+  limit: number;
+}
