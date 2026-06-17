@@ -72,6 +72,13 @@ export default function SecuritySettingsTab({
                       </span>
                       {device.isCurrent && (
                         <span
+                          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/5 border border-primary/20"
+                        >
+                          {t.securityDevices.currentDevice || 'This Device'}
+                        </span>
+                      )}
+                      {device.isActive && (
+                        <span
                           className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-50 border border-green-200"
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />

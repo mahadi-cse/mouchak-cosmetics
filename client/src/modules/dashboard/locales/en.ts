@@ -80,6 +80,7 @@ export const en = {
     title: "Logged-in Devices",
     sub: "These are the active sessions logged into your account. You can revoke any session to log it out.",
     activeNow: "Active Now",
+    currentDevice: "This Device",
     ipAddress: "IP Address",
     loginTime: "Login Time",
     revokeSession: "Log Out Device",
