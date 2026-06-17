@@ -77,3 +77,19 @@ export const useDeleteProduct = () => {
     },
   });
 };
+
+/**
+ * Bulk import products mutation (admin only)
+ */
+export const useBulkImportProducts = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (products: Partial<CreateProductPayload>[]) => {
+      const response = await apiClient.post('/products/bulk', { products });
+      return response.data.data as { imported: number; failed: number; errors: any[] };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};

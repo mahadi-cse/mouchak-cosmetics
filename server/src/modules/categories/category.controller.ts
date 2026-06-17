@@ -42,6 +42,15 @@ export const updateCategoryStatus: RequestHandler = asyncHandler(async (req, res
   res.json(ok(category, 'Category status updated successfully'));
 });
 
+export const bulkImportCategories: RequestHandler = asyncHandler(async (req, res) => {
+  const { categories } = req.body;
+  if (!Array.isArray(categories) || categories.length === 0) {
+    return res.status(400).json({ success: false, error: 'Categories array is required' });
+  }
+  const result = await categoryService.bulkImportCategories(categories);
+  res.json(ok(result, 'Bulk import completed'));
+});
+
 export default {
   listCategories,
   getCategoryBySlug,
@@ -49,4 +58,5 @@ export default {
   updateCategory,
   deleteCategory,
   updateCategoryStatus,
+  bulkImportCategories,
 };

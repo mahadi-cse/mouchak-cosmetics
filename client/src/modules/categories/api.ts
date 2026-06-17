@@ -22,6 +22,11 @@ export const categoryAPI = {
     return response.data.data as Category;
   },
 
+  bulkImportCategories: async (categories: Partial<Category>[]) => {
+    const response = await apiClient.post<any>('/categories/bulk', { categories });
+    return response.data.data as { imported: number; skipped: number; failed: number; errors: any[] };
+  },
+
   updateCategory: async (id: number, data: Partial<Category>) => {
     const response = await apiClient.put<any>(`/categories/${id}`, data);
     return response.data.data as Category;

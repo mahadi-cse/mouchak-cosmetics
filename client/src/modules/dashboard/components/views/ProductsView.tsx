@@ -11,7 +11,8 @@ import {
   useListProducts,
   useCreateProduct,
   useUpdateProduct,
-  useDeleteProduct
+  useDeleteProduct,
+  useBulkImportProducts
 } from '@/modules/products';
 import { useListBranches } from '@/modules/branches';
 import { toast } from 'react-hot-toast';
@@ -20,6 +21,9 @@ import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 import BarcodeScannerModal from '../BarcodeScannerModal';
+import BulkUploadModal from '../BulkUploadModal';
+import { downloadProductSample } from '@/shared/utils/sampleFiles';
+import type { BulkUploadColumn } from '../BulkUploadModal';
 
 const inputClass = 'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
 const selectClass = `${inputClass} cursor-pointer`;
@@ -44,11 +48,13 @@ export default function ProductsView() {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const bulkImportProducts = useBulkImportProducts();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSavingProduct = createProduct.isPending || updateProduct.isPending || isSubmitting;
 
 
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [editProduct, setEditProduct] = useState<number | null>(null);
   const [isSkuManual, setIsSkuManual] = useState(false);
   const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
@@ -165,6 +171,20 @@ export default function ProductsView() {
 
   const productsList = apiProducts;
 
+  const productBulkColumns: BulkUploadColumn[] = [
+    { header: 'name', key: 'name', required: true, type: 'string', example: 'Rose Glow Serum' },
+    { header: 'sku', key: 'sku', required: true, type: 'string', example: 'SKU-001' },
+    { header: 'barcode', key: 'barcode', required: false, type: 'string', example: '8901234567890' },
+    { header: 'price', key: 'price', required: true, type: 'number', example: '1250' },
+    { header: 'costPrice', key: 'costPrice', required: false, type: 'number', example: '800' },
+    { header: 'categoryId', key: 'categoryId', required: true, type: 'number', example: '1' },
+    { header: 'description', key: 'description', required: false, type: 'string', example: 'A luxurious rose serum' },
+    { header: 'branchId', key: 'branchId', required: false, type: 'number', example: '1' },
+    { header: 'openingStock', key: 'openingStock', required: false, type: 'number', example: '50' },
+    { header: 'unitType', key: 'unitType', required: false, type: 'string', example: 'PIECE' },
+    { header: 'unitLabel', key: 'unitLabel', required: false, type: 'string', example: 'pc' },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
       <BarcodeScannerModal
@@ -185,6 +205,7 @@ export default function ProductsView() {
               <option value="">{t.products.allBranches}</option>
               {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
+            <Btn variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>Upload Excel</Btn>
             <Btn variant="primary" size="sm" onClick={() => { setProductCategoryBranchId(filterBranchId); setProductForm({ ...productForm, branchId: filterBranchId, categoryId: '', name: '', sku: '', price: '', costPrice: '', stock: '', description: '', image: '', unitType: 'PIECE', unitLabel: 'pc', sizes: [] }); setShowAddProduct(true); }}>{t.products.addProduct}</Btn>
           </div>
         </div>
@@ -363,6 +384,18 @@ export default function ProductsView() {
           ))}
         </div>
       </Card>
+
+      <BulkUploadModal
+        open={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        title="Bulk Upload Products"
+        columns={productBulkColumns}
+        onUpload={async (data) => {
+          const res = await bulkImportProducts.mutateAsync(data);
+          return res;
+        }}
+        onDownloadSample={downloadProductSample}
+      />
     </div>
   );
 }

@@ -152,6 +152,54 @@ export class CategoryService {
     await cacheInvalidatePattern('categories:*');
     return updated;
   }
+
+  async bulkImportCategories(categories: CreateCategoryInput[]) {
+    const results = { imported: 0, skipped: 0, failed: 0, errors: [] as any[] };
+
+    for (const catData of categories) {
+      try {
+        const slug = generateSlug(catData.name);
+        const existing = await prisma.category.findFirst({ where: { slug } });
+
+        if (existing) {
+          if (!existing.isActive) {
+            await prisma.category.update({
+              where: { id: existing.id },
+              data: {
+                name: catData.name,
+                description: catData.description,
+                imageUrl: catData.imageUrl,
+                isActive: true,
+                sortOrder: catData.sortOrder || 0,
+                branchId: catData.branchId,
+              },
+            });
+            results.imported++;
+          } else {
+            results.skipped++;
+          }
+        } else {
+          await prisma.category.create({
+            data: {
+              name: catData.name,
+              slug,
+              description: catData.description,
+              imageUrl: catData.imageUrl,
+              sortOrder: catData.sortOrder || 0,
+              branchId: catData.branchId,
+            },
+          });
+          results.imported++;
+        }
+      } catch (err: any) {
+        results.errors.push({ name: catData.name, error: err.message });
+        results.failed++;
+      }
+    }
+
+    await cacheInvalidatePattern('categories:*');
+    return results;
+  }
 }
 
 export default new CategoryService();

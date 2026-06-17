@@ -4,13 +4,16 @@ import React, { useRef, useState } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, Btn } from '../Primitives';
-import { useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useUpdateCategoryStatus } from '@/modules/categories';
+import { useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useUpdateCategoryStatus, useBulkImportCategories } from '@/modules/categories';
 import { useListBranches } from '@/modules/branches';
 import { toast } from 'react-hot-toast';
 import ImageUploader from '@/shared/components/ImageUploader';
 import type { ImageUploaderRef } from '@/shared/components/ImageUploader';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
+import BulkUploadModal from '../BulkUploadModal';
+import { downloadCategorySample } from '@/shared/utils/sampleFiles';
+import type { BulkUploadColumn } from '../BulkUploadModal';
 
 const inputClass = 'w-full box-border rounded-lg border border-border bg-white px-[14px] py-2.5 text-[13px] text-foreground outline-none';
 const selectClass = `${inputClass} cursor-pointer`;
@@ -37,7 +40,16 @@ export default function CategoriesView() {
 
   const [editCat, setEditCat] = useState<number | null>(null);
   const [showAddCat, setShowAddCat] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [catForm, setCatForm] = useState({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: '' });
+
+  const bulkImportCategories = useBulkImportCategories();
+
+  const categoryBulkColumns: BulkUploadColumn[] = [
+    { header: 'name', key: 'name', required: true, type: 'string', example: 'Skincare' },
+    { header: 'description', key: 'description', required: false, type: 'string', example: 'All skincare products' },
+    { header: 'branchId', key: 'branchId', required: false, type: 'number', example: '1' },
+  ];
 
   const handleAddCategory = async () => {
     if (!catForm.name || !catForm.branchId) return toast.error(t.categories.nameAndBranchRequired);
@@ -83,6 +95,7 @@ export default function CategoriesView() {
               <option value="">{t.products.allBranches}</option>
               {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
+            <Btn variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>Upload Excel</Btn>
             <Btn variant="primary" size="sm" onClick={() => { setCatForm({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: filterBranchId }); setShowAddCat(true); }}>＋ {t.categories.newCategory}</Btn>
           </div>
         </div>
@@ -124,6 +137,18 @@ export default function CategoriesView() {
           ))}
         </div>
       </Card>
+
+      <BulkUploadModal
+        open={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        title="Bulk Upload Categories"
+        columns={categoryBulkColumns}
+        onUpload={async (data) => {
+          const res = await bulkImportCategories.mutateAsync(data);
+          return res;
+        }}
+        onDownloadSample={downloadCategorySample}
+      />
     </div>
   );
 }

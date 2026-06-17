@@ -5,7 +5,7 @@ export {
   useFeaturedProducts,
   PRODUCTS_QUERY_KEYS,
 } from './queries';
-export { useCreateProduct, useUpdateProduct, useDeleteProduct } from './mutations';
+export { useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkImportProducts } from './mutations';
 
 // Views
 export { default as ShopView } from './components/ShopView';

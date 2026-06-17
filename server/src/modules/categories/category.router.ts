@@ -11,6 +11,7 @@ router.get('/:slug', categoryController.getCategoryBySlug);
 
 // Protected routes - ADMIN only
 router.post('/', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN), categoryController.createCategory);
+router.post('/bulk', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN), categoryController.bulkImportCategories);
 router.put('/:id', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN), categoryController.updateCategory);
 router.patch('/:id/status', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN), categoryController.updateCategoryStatus);
 router.delete('/:id', authenticate, authorize(USER_TYPE_CODES.SYSTEM_ADMIN), categoryController.deleteCategory);

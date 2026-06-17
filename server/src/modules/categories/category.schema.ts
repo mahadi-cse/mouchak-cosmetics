@@ -10,5 +10,10 @@ export const createCategorySchema = z.object({
 
 export const updateCategorySchema = createCategorySchema.partial();
 
+export const bulkCategorySchema = z.object({
+  categories: z.array(createCategorySchema).min(1, 'At least one category is required'),
+});
+
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
+export type BulkCategoryInput = z.infer<typeof bulkCategorySchema>;

@@ -76,3 +76,13 @@ export const useUpdateCategoryStatus = () => {
     },
   });
 };
+
+export const useBulkImportCategories = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (categories: Partial<Category>[]) => categoryAPI.bulkImportCategories(categories),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEYS.all });
+    },
+  });
+};

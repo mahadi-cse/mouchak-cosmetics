@@ -1,4 +1,4 @@
-export { useListCategories, useCategoryBySlug, CATEGORIES_QUERY_KEYS, useCreateCategory, useUpdateCategory, useDeleteCategory, useUpdateCategoryStatus } from './queries';
+export { useListCategories, useCategoryBySlug, CATEGORIES_QUERY_KEYS, useCreateCategory, useUpdateCategory, useDeleteCategory, useUpdateCategoryStatus, useBulkImportCategories } from './queries';
 export { categoryAPI } from './api';
 
 // Views
