@@ -36,7 +36,7 @@ export default async function AuthRedirectPage({ searchParams }: RedirectPagePro
   const role = getRoleFromAccessToken(session.accessToken);
 
   if (isCustomerRole(role)) {
-    redirect('/dashboard');
+    redirect(safeCallbackUrl || '/dashboard');
   }
 
   if (isStaffRole(role)) {

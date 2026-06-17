@@ -67,7 +67,7 @@ function ProductCheckoutContent() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       toast.error('Please login to continue');
-      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.href)}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
     } else if (status === 'authenticated' && session?.user) {
       setForm(prev => ({
         ...prev,

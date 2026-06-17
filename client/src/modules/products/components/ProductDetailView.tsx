@@ -164,13 +164,15 @@ export default function ProductDetailView() {
       toast.error('This product is currently out of stock.');
       return;
     }
+    const sizeParam = selectedSize ? `&size=${encodeURIComponent(selectedSize.name)}` : '';
+    const targetCheckoutUrl = `/checkout?slug=${product!.slug}&qty=${safeQuantity}${sizeParam}`;
+
     if (status === 'unauthenticated') {
       toast.error('Please login to place an order');
-      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.href)}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(targetCheckoutUrl)}`);
       return;
     }
-    const sizeParam = selectedSize ? `&size=${encodeURIComponent(selectedSize.name)}` : '';
-    router.push(`/checkout?slug=${product!.slug}&qty=${safeQuantity}${sizeParam}`);
+    router.push(targetCheckoutUrl);
   };
 
   if (isLoading) {
