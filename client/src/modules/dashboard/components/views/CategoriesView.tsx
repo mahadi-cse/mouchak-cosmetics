@@ -95,7 +95,7 @@ export default function CategoriesView() {
               <option value="">{t.products.allBranches}</option>
               {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
-            <Btn variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>Upload Excel</Btn>
+            <Btn variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Btn>
             <Btn variant="primary" size="sm" onClick={() => { setCatForm({ name: '', slug: '', desc: '', active: true, imageUrl: '', branchId: filterBranchId }); setShowAddCat(true); }}>＋ {t.categories.newCategory}</Btn>
           </div>
         </div>

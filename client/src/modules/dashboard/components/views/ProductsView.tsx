@@ -205,7 +205,7 @@ export default function ProductsView() {
               <option value="">{t.products.allBranches}</option>
               {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
-            <Btn variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>Upload Excel</Btn>
+            <Btn variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Btn>
             <Btn variant="primary" size="sm" onClick={() => { setProductCategoryBranchId(filterBranchId); setProductForm({ ...productForm, branchId: filterBranchId, categoryId: '', name: '', sku: '', price: '', costPrice: '', stock: '', description: '', image: '', unitType: 'PIECE', unitLabel: 'pc', sizes: [] }); setShowAddProduct(true); }}>{t.products.addProduct}</Btn>
           </div>
         </div>

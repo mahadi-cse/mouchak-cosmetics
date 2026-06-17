@@ -101,6 +101,7 @@ export default function DiscountsSettingsTab({
   isMobile,
 }: DiscountsSettingsTabProps) {
   const [productSearch, setProductSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'promotions' | 'coupons'>('promotions');
 
   const filteredProducts = useMemo(() => {
     if (!productSearch.trim()) return productsList.slice(0, 50);
@@ -441,146 +442,174 @@ export default function DiscountsSettingsTab({
         </div>
       )}
 
-      {/* ─── Promotions & Coupons Side by Side ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ─── Promotions Section ─── */}
-        <FormSection title={t.settings.activePromotions}>
-          <div className="flex flex-col gap-3">
-            {isLoadingPromotions ? (
-              <div className="text-xs" style={{ color: Theme.mutedFg }}>{t.settings.loadingPromotions}</div>
-            ) : promotions.map((d) => (
-              <div
-                key={d.id}
-                className="rounded-xl border-[1.5px] p-4"
-                style={{
-                  borderColor: d.isActive ? Theme.primary : Theme.border,
-                  background: d.isActive ? Theme.secondary : '#fff',
-                }}
-              >
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-sm font-bold" style={{ color: Theme.fg }}>
-                    {d.label}
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Badge label={`${d.pct}% ${t.settings.off}`} bg={Theme.primary} color="#fff" />
-                    <Badge
-                      label={formatPromoScope(d)}
-                      bg="#ede9fe"
-                      color="#6d28d9"
-                    />
-                    <Badge
-                      label={d.isActive ? t.settings.live : t.settings.paused}
-                      bg={d.isActive ? '#dcfce7' : '#f5f5f5'}
-                      color={d.isActive ? '#166534' : Theme.mutedFg}
-                    />
-                  </div>
-                </div>
-                <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
-                  {d.banner}
-                  {d.endsAt ? ` · ${t.settings.ends} ${d.endsAt}` : ''}
-                </div>
-                <div className="flex gap-2">
-                  <Btn variant="ghost" size="sm" onClick={() => handleTogglePromotionActive(d.id)}>
-                    {d.isActive ? t.settings.pause : t.settings.activate}
-                  </Btn>
-                  <Btn variant="ghost" size="sm" onClick={() => openPromotionEditor(d)}>
-                    {t.settings.edit}
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        await deletePromotionMut.mutateAsync(d.id);
-                        toast.success('Promotion removed');
-                      } catch {
-                        toast.error('Failed to remove promotion');
-                      }
-                    }}
-                  >
-                    {t.settings.remove}
-                  </Btn>
-                </div>
-              </div>
-            ))}
-            <Btn variant="secondary" size="sm" onClick={() => openPromotionEditor()}>
-              {t.settings.createNewPromotion}
-            </Btn>
-          </div>
-        </FormSection>
+      {/* Tab Switcher */}
+      <div className="mb-6 flex border-b border-border">
+        <button
+          onClick={() => setActiveTab('promotions')}
+          className="px-4 py-2.5 text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer bg-transparent border-none outline-none"
+          style={{
+            borderBottom: activeTab === 'promotions' ? `2px solid ${Theme.primary}` : '2px solid transparent',
+            color: activeTab === 'promotions' ? Theme.primary : Theme.mutedFg,
+          }}
+        >
+          {t.settings.activePromotions}
+        </button>
+        <button
+          onClick={() => setActiveTab('coupons')}
+          className="px-4 py-2.5 text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer bg-transparent border-none outline-none"
+          style={{
+            borderBottom: activeTab === 'coupons' ? `2px solid ${Theme.primary}` : '2px solid transparent',
+            color: activeTab === 'coupons' ? Theme.primary : Theme.mutedFg,
+          }}
+        >
+          Coupon Codes
+        </button>
+      </div>
 
-        {/* ─── Coupons Section ─── */}
-        <FormSection title="Coupon Codes">
-          <div className="flex flex-col gap-3">
-            {isLoadingCoupons ? (
-              <div className="text-xs" style={{ color: Theme.mutedFg }}>Loading coupons…</div>
-            ) : coupons.length === 0 ? (
-              <div className="text-xs" style={{ color: Theme.mutedFg }}>No coupons created yet.</div>
-            ) : coupons.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-xl border-[1.5px] p-4"
-                style={{
-                  borderColor: c.isActive ? Theme.primary : Theme.border,
-                  background: c.isActive ? Theme.secondary : '#fff',
-                }}
-              >
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-bold" style={{ color: Theme.fg, letterSpacing: '0.08em' }}>
-                      {c.code}
+      {/* Tab Contents */}
+      <div>
+        {activeTab === 'promotions' && (
+          /* ─── Promotions Section ─── */
+          <FormSection title={t.settings.activePromotions}>
+            <div className="flex flex-col gap-3">
+              {isLoadingPromotions ? (
+                <div className="text-xs" style={{ color: Theme.mutedFg }}>{t.settings.loadingPromotions}</div>
+              ) : promotions.map((d) => (
+                <div
+                  key={d.id}
+                  className="rounded-xl border-[1.5px] p-4"
+                  style={{
+                    borderColor: d.isActive ? Theme.primary : Theme.border,
+                    background: d.isActive ? Theme.secondary : '#fff',
+                  }}
+                >
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm font-bold" style={{ color: Theme.fg }}>
+                      {d.label}
                     </div>
-                    <Badge
-                      label={formatCouponValue(c)}
-                      bg={Theme.primary}
-                      color="#fff"
-                    />
-                    <Badge
-                      label={c.isActive ? t.settings.live : t.settings.paused}
-                      bg={c.isActive ? '#dcfce7' : '#f5f5f5'}
-                      color={c.isActive ? '#166534' : Theme.mutedFg}
-                    />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge label={`${d.pct}% ${t.settings.off}`} bg={Theme.primary} color="#fff" />
+                      <Badge
+                        label={formatPromoScope(d)}
+                        bg="#ede9fe"
+                        color="#6d28d9"
+                      />
+                      <Badge
+                        label={d.isActive ? t.settings.live : t.settings.paused}
+                        bg={d.isActive ? '#dcfce7' : '#f5f5f5'}
+                        color={d.isActive ? '#166534' : Theme.mutedFg}
+                      />
+                    </div>
+                  </div>
+                  <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
+                    {d.banner}
+                    {d.endsAt ? ` · ${t.settings.ends} ${d.endsAt}` : ''}
+                  </div>
+                  <div className="flex gap-2">
+                    <Btn variant="ghost" size="sm" onClick={() => handleTogglePromotionActive(d.id)}>
+                      {d.isActive ? t.settings.pause : t.settings.activate}
+                    </Btn>
+                    <Btn variant="ghost" size="sm" onClick={() => openPromotionEditor(d)}>
+                      {t.settings.edit}
+                    </Btn>
+                    <Btn
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await deletePromotionMut.mutateAsync(d.id);
+                          toast.success('Promotion removed');
+                        } catch {
+                          toast.error('Failed to remove promotion');
+                        }
+                      }}
+                    >
+                      {t.settings.remove}
+                    </Btn>
                   </div>
                 </div>
-                <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
-                  {c.description && <span>{c.description} · </span>}
-                  {c.minOrderAmount && <span>Min order: {formatMoney(c.minOrderAmount)} · </span>}
-                  {c.usageLimit ? (
-                    <span>Used {c.usedCount}/{c.usageLimit} times</span>
-                  ) : (
-                    <span>Used {c.usedCount} times (unlimited)</span>
-                  )}
-                  {c.expiresAt && <span> · Expires {new Date(c.expiresAt).toLocaleDateString()}</span>}
+              ))}
+              <Btn variant="secondary" size="sm" onClick={() => openPromotionEditor()}>
+                {t.settings.createNewPromotion}
+              </Btn>
+            </div>
+          </FormSection>
+        )}
+
+        {activeTab === 'coupons' && (
+          /* ─── Coupons Section ─── */
+          <FormSection title="Coupon Codes">
+            <div className="flex flex-col gap-3">
+              {isLoadingCoupons ? (
+                <div className="text-xs" style={{ color: Theme.mutedFg }}>Loading coupons…</div>
+              ) : coupons.length === 0 ? (
+                <div className="text-xs" style={{ color: Theme.mutedFg }}>No coupons created yet.</div>
+              ) : coupons.map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-xl border-[1.5px] p-4"
+                  style={{
+                    borderColor: c.isActive ? Theme.primary : Theme.border,
+                    background: c.isActive ? Theme.secondary : '#fff',
+                  }}
+                >
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-bold" style={{ color: Theme.fg, letterSpacing: '0.08em' }}>
+                        {c.code}
+                      </div>
+                      <Badge
+                        label={formatCouponValue(c)}
+                        bg={Theme.primary}
+                        color="#fff"
+                      />
+                      <Badge
+                        label={c.isActive ? t.settings.live : t.settings.paused}
+                        bg={c.isActive ? '#dcfce7' : '#f5f5f5'}
+                        color={c.isActive ? '#166534' : Theme.mutedFg}
+                      />
+                    </div>
+                  </div>
+                  <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
+                    {c.description && <span>{c.description} · </span>}
+                    {c.minOrderAmount && <span>Min order: {formatMoney(c.minOrderAmount)} · </span>}
+                    {c.usageLimit ? (
+                      <span>Used {c.usedCount}/{c.usageLimit} times</span>
+                    ) : (
+                      <span>Used {c.usedCount} times (unlimited)</span>
+                    )}
+                    {c.expiresAt && <span> · Expires {new Date(c.expiresAt).toLocaleDateString()}</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <Btn variant="ghost" size="sm" onClick={() => handleToggleCouponActive(c.id)}>
+                      {c.isActive ? t.settings.pause : t.settings.activate}
+                    </Btn>
+                    <Btn variant="ghost" size="sm" onClick={() => openCouponEditor(c)}>
+                      {t.settings.edit}
+                    </Btn>
+                    <Btn
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await deleteCouponMut.mutateAsync(c.id);
+                          toast.success('Coupon removed');
+                        } catch {
+                          toast.error('Failed to remove coupon');
+                        }
+                      }}
+                    >
+                      {t.settings.remove}
+                    </Btn>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Btn variant="ghost" size="sm" onClick={() => handleToggleCouponActive(c.id)}>
-                    {c.isActive ? t.settings.pause : t.settings.activate}
-                  </Btn>
-                  <Btn variant="ghost" size="sm" onClick={() => openCouponEditor(c)}>
-                    {t.settings.edit}
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        await deleteCouponMut.mutateAsync(c.id);
-                        toast.success('Coupon removed');
-                      } catch {
-                        toast.error('Failed to remove coupon');
-                      }
-                    }}
-                  >
-                    {t.settings.remove}
-                  </Btn>
-                </div>
-              </div>
-            ))}
-            <Btn variant="secondary" size="sm" onClick={() => openCouponEditor()}>
-              + Create New Coupon
-            </Btn>
-          </div>
-        </FormSection>
+              ))}
+              <Btn variant="secondary" size="sm" onClick={() => openCouponEditor()}>
+                + Create New Coupon
+              </Btn>
+            </div>
+          </FormSection>
+        )}
       </div>
     </div>
   );

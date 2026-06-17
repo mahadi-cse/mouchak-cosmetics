@@ -16,7 +16,15 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
-import { exportCSV, exportExcel, exportPDF, type ExportColumn } from '@/shared/utils/exportUtils';
+import {
+  exportCSV,
+  exportExcel,
+  exportPDF,
+  exportFullCSV,
+  exportFullExcel,
+  exportFullPDF,
+  type ExportColumn,
+} from '@/shared/utils/exportUtils';
 import { Download } from 'lucide-react';
 
 export default function AnalyticsView() {
@@ -165,55 +173,100 @@ export default function AnalyticsView() {
     { metric: 'Avg Ticket', value: formatCurrency(avgTicket) },
   ], [totalSales, trendTotals, overview, transactions, avgTicket]);
 
-  const handleExport = (format: 'csv' | 'excel' | 'pdf', target: 'summary' | 'products' | 'trend' | 'categories') => {
-    let columns: ExportColumn[];
-    let data: any[];
-    let title: string;
-    let filename: string;
-
-    switch (target) {
-      case 'summary':
-        columns = summaryColumns;
-        data = summaryData;
-        title = 'Analytics Summary';
-        filename = `${baseFilename}_summary`;
-        break;
-      case 'products':
-        columns = topProductsColumns;
-        data = topProducts;
-        title = 'Top Products by Revenue';
-        filename = `${baseFilename}_top_products`;
-        break;
-      case 'trend':
-        columns = trendColumns;
-        data = trendData;
-        title = `${t.analytics.costVsRevenue} — ${trendSubText}`;
-        filename = `${baseFilename}_trend`;
-        break;
-      case 'categories':
-        columns = categoryColumns;
-        data = categoryData.map((c: any) => ({ label: c.label, rev: c.rev, value: c.value }));
-        title = 'Sales by Category';
-        filename = `${baseFilename}_categories`;
-        break;
-    }
-
-    const opts = { filename, columns, data, title };
-    if (format === 'csv') exportCSV(opts);
-    else if (format === 'excel') exportExcel(opts);
-    else exportPDF(opts);
+  const handleExportFull = async (format: 'csv' | 'excel' | 'pdf') => {
     setShowExportMenu(false);
+    
+    const branchName = branch 
+      ? activeBranches.find((b: any) => b.id === Number(branch))?.name || 'Selected Branch'
+      : 'All Branches';
+    const periodName = period.toUpperCase();
+    
+    const subtitle = `Branch: ${branchName} | Period: ${periodName} (${trendSubText})`;
+    
+    const fullOpts = {
+      filename: baseFilename,
+      title: 'Mouchak Cosmetics - Analytics Report',
+      subtitle,
+      summary: {
+        title: 'Summary Overview',
+        columns: summaryColumns,
+        data: summaryData,
+      },
+      trend: {
+        title: 'Revenue Trend Details',
+        columns: trendColumns,
+        data: trendData,
+      },
+      products: {
+        title: 'Top Products by Revenue',
+        columns: topProductsColumns,
+        data: topProducts,
+      },
+      categories: {
+        title: 'Sales by Category',
+        columns: categoryColumns,
+        data: categoryData.map((c: any) => ({ label: c.label, rev: c.rev, value: c.value })),
+      },
+    };
+
+    if (format === 'csv') {
+      exportFullCSV(fullOpts);
+    } else if (format === 'excel') {
+      exportFullExcel(fullOpts);
+    } else {
+      let chartImage: string | null = null;
+      try {
+        const wrapper = document.querySelector('.recharts-wrapper');
+        if (wrapper) {
+          const svg = wrapper.querySelector('svg');
+          if (svg) {
+            const svgClone = svg.cloneNode(true) as SVGSVGElement;
+            svgClone.setAttribute('style', 'background-color: white;');
+            const svgString = new XMLSerializer().serializeToString(svgClone);
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            
+            chartImage = await new Promise<string | null>((resolve) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = (svg.clientWidth || 500) * 2;
+                canvas.height = (svg.clientHeight || 300) * 2;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.fillStyle = '#ffffff';
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                  resolve(canvas.toDataURL('image/png'));
+                } else {
+                  resolve(null);
+                }
+                URL.revokeObjectURL(url);
+              };
+              img.onerror = () => {
+                resolve(null);
+                URL.revokeObjectURL(url);
+              };
+              img.src = url;
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to capture chart', err);
+      }
+      exportFullPDF({ ...fullOpts, chartImage });
+    }
   };
 
   return (
     <div className="flex flex-col gap-3">
       <div className={`flex items-center justify-between gap-3 ${isMobile ? 'flex-wrap' : ''}`}>
         <div className="text-[20px] font-extrabold shrink-0" style={{ color: Theme.fg }}>{t.analytics.analyticsTitle}</div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={`flex flex-wrap items-center gap-2 ${isMobile ? 'w-full' : ''}`}>
           <select
             value={branch}
             onChange={(e) => setBranch(e.target.value)}
-            className="cursor-pointer rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold outline-none"
+            className="cursor-pointer rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold outline-none w-full sm:w-auto"
             style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
           >
             <option value="">{t.analytics.allBranches}</option>
@@ -221,12 +274,12 @@ export default function AnalyticsView() {
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </select>
-          <div className="flex gap-0.5 rounded-lg p-0.5" style={{ background: Theme.muted }}>
+          <div className="flex gap-0.5 rounded-lg p-0.5 w-full sm:w-auto" style={{ background: Theme.muted }}>
             {['daily', 'weekly', 'monthly', 'custom'].map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className="cursor-pointer rounded-md border-none px-2 py-1 text-[11px] font-semibold uppercase"
+                className="flex-1 sm:flex-initial cursor-pointer rounded-md border-none px-2 py-1 text-[11px] font-semibold uppercase text-center"
                 style={{
                   background: period === p ? '#fff' : 'transparent',
                   color: period === p ? Theme.primary : Theme.mutedFg,
@@ -238,20 +291,30 @@ export default function AnalyticsView() {
             ))}
           </div>
           {isCustom && (
-            <>
-              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)}
-                className="rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
+            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start">
+              <input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="flex-1 sm:flex-initial rounded-lg border px-2 py-1 text-[11px] outline-none max-w-[130px] sm:max-w-none"
+                style={{ borderColor: Theme.border, color: Theme.fg }}
+              />
               <span className="text-[11px]" style={{ color: Theme.mutedFg }}>→</span>
-              <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)}
-                className="rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
-            </>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="flex-1 sm:flex-initial rounded-lg border px-2 py-1 text-[11px] outline-none max-w-[130px] sm:max-w-none"
+                style={{ borderColor: Theme.border, color: Theme.fg }}
+              />
+            </div>
           )}
 
           {/* Export Report Dropdown */}
-          <div className="relative" ref={exportMenuRef}>
+          <div className="relative w-full sm:w-auto" ref={exportMenuRef}>
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center gap-1.5 cursor-pointer rounded-lg border-none px-3 py-1.5 text-[11px] font-bold text-white"
+              className="flex w-full sm:w-auto items-center justify-center gap-1.5 cursor-pointer rounded-lg border-none px-3 py-1.5 text-[11px] font-bold text-white"
               style={{ background: Theme.primary }}
             >
               <Download size={13} />
@@ -261,34 +324,33 @@ export default function AnalyticsView() {
               <>
                 <div className="fixed inset-0 z-[9998]" onClick={() => setShowExportMenu(false)} />
                 <div
-                  className="absolute right-0 top-full z-[9999] mt-1 w-56 rounded-xl border bg-white py-1 shadow-xl"
+                  className="absolute left-0 right-0 sm:left-auto sm:right-0 top-full z-[9999] mt-1 w-full sm:w-48 rounded-xl border bg-white py-1 shadow-xl"
                   style={{ borderColor: Theme.border }}
                 >
-                  {([
-                    { label: 'Summary Overview', target: 'summary' as const },
-                    { label: 'Top Products', target: 'products' as const },
-                    { label: 'Revenue Trend', target: 'trend' as const },
-                    { label: 'Sales by Category', target: 'categories' as const },
-                  ]).map((item) => (
-                    <div key={item.target}>
-                      <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
-                        {item.label}
-                      </div>
-                      {(['csv', 'excel', 'pdf'] as const).map((fmt) => (
-                        <button
-                          key={fmt}
-                          onClick={() => handleExport(fmt, item.target)}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] hover:bg-gray-50 cursor-pointer border-none bg-transparent"
-                          style={{ color: Theme.fg }}
-                        >
-                          <span className="inline-block w-5 text-center text-[10px] font-bold" style={{ color: Theme.primary }}>
-                            {fmt === 'csv' ? 'CSV' : fmt === 'excel' ? 'XLS' : 'PDF'}
-                          </span>
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  ))}
+                  <button
+                    onClick={() => handleExportFull('pdf')}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-gray-50 cursor-pointer border-none bg-transparent"
+                    style={{ color: Theme.fg }}
+                  >
+                    <span className="inline-block w-8 text-[10px] font-bold" style={{ color: Theme.primary }}>PDF</span>
+                    Export as PDF
+                  </button>
+                  <button
+                    onClick={() => handleExportFull('excel')}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-gray-50 cursor-pointer border-none bg-transparent"
+                    style={{ color: Theme.fg }}
+                  >
+                    <span className="inline-block w-8 text-[10px] font-bold" style={{ color: Theme.primary }}>XLS</span>
+                    Export as Excel
+                  </button>
+                  <button
+                    onClick={() => handleExportFull('csv')}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-gray-50 cursor-pointer border-none bg-transparent"
+                    style={{ color: Theme.fg }}
+                  >
+                    <span className="inline-block w-8 text-[10px] font-bold" style={{ color: Theme.primary }}>CSV</span>
+                    Export as CSV
+                  </button>
                 </div>
               </>
             )}

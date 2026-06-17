@@ -122,7 +122,20 @@ export default function CheckoutView() {
       setAppliedCoupon({ code: result.coupon.code, discountAmount: result.discountAmount });
       toast.success(`Coupon applied! You save ${formatMoney(result.discountAmount)}`);
     } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Invalid coupon';
+      const status = error?.response?.status;
+      const errMsg = error?.response?.data?.message || error?.message || '';
+      let message = 'Invalid coupon';
+      if (
+        status === 404 ||
+        status === 500 ||
+        errMsg.toLowerCase().includes('not found') ||
+        errMsg.toLowerCase().includes('internal server error') ||
+        error?.message === 'Network Error'
+      ) {
+        message = 'not available now';
+      } else {
+        message = errMsg || 'Invalid coupon';
+      }
       toast.error(message);
       setAppliedCoupon(null);
     }
