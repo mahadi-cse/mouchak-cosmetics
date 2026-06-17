@@ -65,7 +65,7 @@ export default function AuditLogsSettingsTab({ t }: { t: any }) {
       if (action) params.action = action;
       if (debouncedSearch) params.search = debouncedSearch;
 
-      const res = await apiClient.get<AuditLogsResponse>('/api/homepage/audit-logs', { params });
+      const res = await apiClient.get<AuditLogsResponse>('/audit-logs', { params });
       return res.data;
     },
   });

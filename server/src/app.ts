@@ -15,6 +15,7 @@ import orderRouter from './modules/orders/order.router';
 import customerRouter from './modules/customers/customer.router';
 import analyticsRouter from './modules/analytics/analytics.router';
 import homepageRouter from './modules/homepage/routes';
+import auditLogRouter from './modules/audit-logs/auditLog.router';
 import manualSaleRouter from './modules/manual-sales/manualSale.router';
 import manualReturnRouter from './modules/manual-returns/manualReturn.router';
 import supplierRouter from './modules/suppliers/supplier.router';
@@ -62,6 +63,7 @@ export function createApp(): Express {
   app.use('/api/customers', customerRouter);
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/homepage', homepageRouter);
+  app.use('/api/audit-logs', auditLogRouter);
   app.use('/api/manual-sales', manualSaleRouter);
   app.use('/api/manual-returns', manualReturnRouter);
   app.use('/api/suppliers', supplierRouter);
