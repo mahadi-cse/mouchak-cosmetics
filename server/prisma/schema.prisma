@@ -592,6 +592,10 @@ model Order {
   total           Decimal       @db.Decimal(12,2)
   currency        String        @default("BDT")
 
+  // Coupon
+  couponId        Int?
+  coupon          Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
   notes           String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -1197,6 +1201,40 @@ model PaymentMethodOption {
   updatedAt DateTime @updatedAt
 
   @@map("payment_method_options")
+}
+
+// ─────────────────────────────────────────────────────────────
+// COUPONS
+// Discount coupons that customers can apply during checkout.
+// Two types: fixed amount (e.g. 200 tk off) or percentage (e.g. 15% off).
+// ─────────────────────────────────────────────────────────────
+
+enum CouponType {
+  FIXED
+  PERCENTAGE
+}
+
+model Coupon {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique           // e.g. "EID2025", "SAVE200"
+  description   String?                     // Admin note for internal use
+  type          CouponType                  // FIXED = flat taka off, PERCENTAGE = % off
+  value         Decimal   @db.Decimal(10,2) // Fixed: amount in BDT, Percentage: 1-100
+  minOrderAmount Decimal? @db.Decimal(10,2) // Minimum order subtotal required (null = no minimum)
+  maxDiscountAmount Decimal? @db.Decimal(10,2) // Cap for percentage coupons (null = no cap)
+  usageLimit    Int?                        // Total times this coupon can be used (null = unlimited)
+  usedCount     Int       @default(0)      // How many times it has been used
+  isActive      Boolean   @default(true)
+  startsAt      DateTime?                   // When the coupon becomes valid
+  expiresAt     DateTime?                   // When the coupon expires
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orders        Order[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("coupons")
 }
 
 

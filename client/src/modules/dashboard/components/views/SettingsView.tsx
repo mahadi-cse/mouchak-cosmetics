@@ -37,6 +37,14 @@ import {
 } from '@/modules/promotions';
 import type { Promotion as APIPromotion } from '@/modules/promotions';
 import {
+  useCoupons,
+  useCreateCoupon,
+  useUpdateCoupon,
+  useToggleCoupon,
+  useDeleteCoupon,
+} from '@/modules/coupons';
+import type { Coupon as APICoupon } from '@/modules/coupons';
+import {
   homepageAPI,
   useHomepageStats,
   useSiteSettings,
@@ -483,6 +491,13 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
   const togglePromotionMut = useTogglePromotion();
   const deletePromotionMut = useDeletePromotion();
 
+  // Coupons — fully API-driven
+  const { data: coupons = [], isLoading: isLoadingCoupons } = useCoupons();
+  const createCouponMut = useCreateCoupon();
+  const updateCouponMut = useUpdateCoupon();
+  const toggleCouponMut = useToggleCoupon();
+  const deleteCouponMut = useDeleteCoupon();
+
   const productsList = apiProducts;
 
   const [showPromotionEditor, setShowPromotionEditor] = useState(false);
@@ -493,6 +508,21 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     ends: '',
     banner: '',
     active: true,
+  });
+
+  const [showCouponEditor, setShowCouponEditor] = useState(false);
+  const [editingCouponId, setEditingCouponId] = useState<number | null>(null);
+  const [couponForm, setCouponForm] = useState({
+    code: '',
+    description: '',
+    type: 'FIXED' as 'FIXED' | 'PERCENTAGE',
+    value: '',
+    minOrderAmount: '',
+    maxDiscountAmount: '',
+    usageLimit: '',
+    isActive: true,
+    startsAt: '',
+    expiresAt: '',
   });
 
   const [trendingSearch, setTrendingSearch] = useState('');
@@ -700,6 +730,103 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       await togglePromotionMut.mutateAsync(id);
     } catch {
       toast.error('Failed to toggle promotion');
+    }
+  };
+
+  const openCouponEditor = (coupon?: APICoupon) => {
+    if (coupon) {
+      setEditingCouponId(coupon.id);
+      setCouponForm({
+        code: coupon.code,
+        description: coupon.description || '',
+        type: coupon.type,
+        value: String(coupon.value),
+        minOrderAmount: coupon.minOrderAmount ? String(coupon.minOrderAmount) : '',
+        maxDiscountAmount: coupon.maxDiscountAmount ? String(coupon.maxDiscountAmount) : '',
+        usageLimit: coupon.usageLimit ? String(coupon.usageLimit) : '',
+        isActive: coupon.isActive,
+        startsAt: coupon.startsAt ? coupon.startsAt.split('T')[0] : '',
+        expiresAt: coupon.expiresAt ? coupon.expiresAt.split('T')[0] : '',
+      });
+    } else {
+      setEditingCouponId(null);
+      setCouponForm({
+        code: '',
+        description: '',
+        type: 'FIXED',
+        value: '',
+        minOrderAmount: '',
+        maxDiscountAmount: '',
+        usageLimit: '',
+        isActive: true,
+        startsAt: '',
+        expiresAt: '',
+      });
+    }
+    setShowCouponEditor(true);
+  };
+
+  const handleSaveCoupon = async () => {
+    if (!couponForm.code.trim()) {
+      toast.error('Coupon code is required');
+      return;
+    }
+
+    const value = Number(couponForm.value);
+    if (!Number.isFinite(value) || value <= 0) {
+      toast.error('Discount value must be a positive number');
+      return;
+    }
+
+    if (couponForm.type === 'PERCENTAGE' && value > 100) {
+      toast.error('Percentage cannot exceed 100');
+      return;
+    }
+
+    try {
+      const payload: any = {
+        code: couponForm.code.trim().toUpperCase(),
+        description: couponForm.description.trim() || undefined,
+        type: couponForm.type,
+        value,
+        isActive: couponForm.isActive,
+      };
+
+      if (couponForm.minOrderAmount) {
+        payload.minOrderAmount = Number(couponForm.minOrderAmount);
+      }
+      if (couponForm.maxDiscountAmount) {
+        payload.maxDiscountAmount = Number(couponForm.maxDiscountAmount);
+      }
+      if (couponForm.usageLimit) {
+        payload.usageLimit = Number(couponForm.usageLimit);
+      }
+      if (couponForm.startsAt) {
+        payload.startsAt = new Date(couponForm.startsAt).toISOString();
+      }
+      if (couponForm.expiresAt) {
+        payload.expiresAt = new Date(couponForm.expiresAt).toISOString();
+      }
+
+      if (editingCouponId !== null) {
+        await updateCouponMut.mutateAsync({ id: editingCouponId, ...payload });
+      } else {
+        await createCouponMut.mutateAsync(payload);
+      }
+
+      setShowCouponEditor(false);
+      setEditingCouponId(null);
+      toast.success('Coupon saved');
+    } catch {
+      toast.error('Failed to save coupon');
+    }
+  };
+
+  const handleToggleCouponActive = async (id: number) => {
+    try {
+      await toggleCouponMut.mutateAsync(id);
+    } catch {
+      toast.error('Failed to toggle coupon');
     }
   };
 
@@ -986,6 +1113,18 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         openPromotionEditor={openPromotionEditor}
         handleSavePromotion={handleSavePromotion}
         handleTogglePromotionActive={handleTogglePromotionActive}
+        showCouponEditor={showCouponEditor}
+        setShowCouponEditor={setShowCouponEditor}
+        editingCouponId={editingCouponId}
+        setEditingCouponId={setEditingCouponId}
+        couponForm={couponForm}
+        setCouponForm={setCouponForm}
+        isLoadingCoupons={isLoadingCoupons}
+        coupons={coupons}
+        deleteCouponMut={deleteCouponMut}
+        openCouponEditor={openCouponEditor}
+        handleSaveCoupon={handleSaveCoupon}
+        handleToggleCouponActive={handleToggleCouponActive}
         t={t}
         isMobile={isMobile}
       />

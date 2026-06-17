@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database';
 import { Prisma } from '@prisma/client';
-import { ConflictError, NotFoundError } from '../../shared/utils/AppError';
+import { ConflictError, NotFoundError, ValidationError } from '../../shared/utils/AppError';
 import { parsePagination } from '../../shared/utils/pagination';
 import {
   CreateCodOrderInput,
@@ -10,6 +10,7 @@ import {
   CreateReturnInput,
   ProcessRefundInput,
 } from './order.schema';
+import couponService from '../coupons/coupon.service';
 
 export class OrderService {
   private readonly trackingTitleMap: Record<string, string> = {
@@ -120,9 +121,22 @@ export class OrderService {
         };
       });
 
+      // Validate and apply coupon if provided
+      let discountAmount = data.discountAmount || 0;
+      let couponId: number | null = null;
+
+      if (data.couponCode && data.couponCode.trim()) {
+        const couponResult = await couponService.validateCoupon({
+          code: data.couponCode,
+          subtotal,
+        });
+        discountAmount = couponResult.discountAmount;
+        couponId = couponResult.coupon.id;
+      }
+
       const total =
         subtotal +
-        (data.discountAmount || 0) +
+        discountAmount +
         (data.shippingCharge || 0) +
         (data.taxAmount || 0);
 
@@ -142,10 +156,11 @@ export class OrderService {
           shippingPostal: data.shippingPostal,
           shippingCountry: data.shippingCountry,
           subtotal: subtotal,
-          discountAmount: data.discountAmount || 0,
+          discountAmount: discountAmount,
           shippingCharge: data.shippingCharge || 0,
           taxAmount: data.taxAmount || 0,
           total: total,
+          couponId: couponId,
           notes: data.notes,
           items: {
             create: orderItems.map(item => ({
@@ -204,6 +219,11 @@ export class OrderService {
 
       await this.appendTrackingEvent(order.id, 'PENDING', 'Cash on delivery order has been placed', tx);
 
+      // Increment coupon usage count
+      if (couponId) {
+        await couponService.incrementUsage(couponId, tx);
+      }
+
       return order;
     });
   }
@@ -230,6 +250,7 @@ export class OrderService {
       shippingCity: data.shippingCity,
       shippingPostal: data.shippingPostal,
       shippingCountry: data.shippingCountry,
+      couponCode: data.couponCode,
       notes: data.notes,
     });
   }

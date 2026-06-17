@@ -24,6 +24,7 @@ import customerDashboardRouter from './modules/customer-dashboard/customerDashbo
 import promotionRouter from './modules/promotions/promotion.router';
 import uploadRouter from './modules/uploads/upload.router';
 import reviewRouter from './modules/reviews/review.router';
+import couponRouter from './modules/coupons/coupon.router';
 
 export function createApp(): Express {
   const app = express();
@@ -67,6 +68,7 @@ export function createApp(): Express {
   app.use('/api/branches', branchRouter);
   app.use('/api/customer-dashboard', customerDashboardRouter);
   app.use('/api/promotions', promotionRouter);
+  app.use('/api/coupons', couponRouter);
   app.use('/api/uploads', uploadRouter);
   app.use('/api/reviews', reviewRouter);
 

@@ -8,7 +8,8 @@ import { useProductBySlug } from '@/modules/products';
 import { ordersAPI, type CreateCodOrderRequest } from '@/modules/orders/api';
 import { useMutation } from '@tanstack/react-query';
 import { SkeletonCard, ErrorMessage, LoadingSpinner } from '@/shared/components';
-import { Clock, ShieldCheck } from 'lucide-react';
+import { Clock, ShieldCheck, Tag, X } from 'lucide-react';
+import { useValidateCoupon } from '@/modules/coupons';
 
 const BANGLADESH_PHONE_REGEX = /^(?:\+?88)?01[3-9]\d{8}$/;
 
@@ -59,6 +60,10 @@ function ProductCheckoutContent() {
     notes: '',
   });
 
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
+  const validateCouponMutation = useValidateCoupon();
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       toast.error('Please login to continue');
@@ -104,6 +109,34 @@ function ProductCheckoutContent() {
   const price = Number(product?.price || 0);
   const subtotal = price * safeQuantity;
 
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+
+    try {
+      const result = await validateCouponMutation.mutateAsync({
+        code: couponCode.trim(),
+        subtotal,
+      });
+      setAppliedCoupon({ code: result.coupon.code, discountAmount: result.discountAmount });
+      toast.success(`Coupon applied! You save ${formatMoney(result.discountAmount)}`);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Invalid coupon';
+      toast.error(message);
+      setAppliedCoupon(null);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+  };
+
+  const discountAmount = appliedCoupon?.discountAmount || 0;
+  const finalTotal = Math.max(0, subtotal - discountAmount);
+
   const handleFormField = <T extends keyof CheckoutFormState>(field: T, value: CheckoutFormState[T]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -145,6 +178,7 @@ function ProductCheckoutContent() {
       shippingCity: form.shippingCity.trim(),
       shippingPostal: form.shippingPostal.trim() || undefined,
       shippingCountry: form.shippingCountry.trim() || 'Bangladesh',
+      couponCode: appliedCoupon?.code || undefined,
       notes: form.notes.trim() || undefined,
     });
   };
@@ -251,15 +285,79 @@ function ProductCheckoutContent() {
                   <span>Subtotal</span>
                   <span style={{ fontWeight: 600 }}>{formatMoney(subtotal)}</span>
                 </div>
+                {appliedCoupon && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#16a34a', fontSize: 14 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Tag size={14} />
+                      Coupon ({appliedCoupon.code})
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0, display: 'flex' }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                    <span style={{ fontWeight: 600 }}>-{formatMoney(appliedCoupon.discountAmount)}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, color: '#4b5563', fontSize: 14 }}>
                   <span>Shipping</span>
                   <span style={{ fontWeight: 600 }}>Calculated at next step</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1.5px dashed ${PINK_LIGHT}`, paddingTop: 16, alignItems: 'flex-end' }}>
                   <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#9ca3af' }}>Total Amount</span>
-                  <span style={{ fontSize: 24, fontWeight: 900, color: PINK }}>{formatMoney(subtotal)}</span>
+                  <span style={{ fontSize: 24, fontWeight: 900, color: PINK }}>{formatMoney(finalTotal)}</span>
                 </div>
               </div>
+
+              {/* Coupon Input */}
+              {!appliedCoupon ? (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleApplyCoupon();
+                      }
+                    }}
+                    placeholder="Coupon code"
+                    style={{
+                      flex: 1,
+                      borderRadius: 12,
+                      border: `1.5px solid ${PINK_LIGHT}`,
+                      background: '#f9fafb',
+                      padding: '10px 14px',
+                      fontSize: 13,
+                      outline: 'none',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={validateCouponMutation.isPending}
+                    style={{
+                      borderRadius: 12,
+                      border: `1.5px solid ${PINK}`,
+                      background: 'transparent',
+                      color: PINK,
+                      padding: '10px 16px',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: validateCouponMutation.isPending ? 'not-allowed' : 'pointer',
+                      opacity: validateCouponMutation.isPending ? 0.6 : 1,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {validateCouponMutation.isPending ? 'Checking…' : 'Apply'}
+                  </button>
+                </div>
+              ) : null}
 
               <div>
                 <button type="button" onClick={() => handlePlaceOrder()} disabled={codMutation.isPending} style={{ display: 'flex', width: '100%', height: 56, alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 14, background: PINK, fontSize: 16, fontWeight: 800, color: '#fff', transition: 'all 0.3s', border: 'none', cursor: codMutation.isPending ? 'not-allowed' : 'pointer', opacity: codMutation.isPending ? 0.6 : 1, boxShadow: `0 8px 24px ${PINK}44` }}>
@@ -274,7 +372,7 @@ function ProductCheckoutContent() {
                   )}
                 </button>
                 <p style={{ marginTop: 16, textAlign: 'center', fontSize: 12, fontWeight: 500, color: '#6b7280', lineHeight: 1.5 }}>
-                  By confirming, you agree to pay <span style={{ color: DARK, fontWeight: 700 }}>{formatMoney(subtotal)}</span> at your doorstep.
+                  By confirming, you agree to pay <span style={{ color: DARK, fontWeight: 700 }}>{formatMoney(finalTotal)}</span> at your doorstep.
                 </p>
               </div>
             </div>

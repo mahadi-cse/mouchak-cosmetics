@@ -23,6 +23,7 @@ export interface CreateOrderRequest {
   shippingCity: string;
   shippingPostal?: string;
   shippingCountry?: string;
+  couponCode?: string;
   discountAmount?: number;
   shippingCharge?: number;
   taxAmount?: number;
@@ -38,6 +39,7 @@ export interface CreateCodOrderRequest {
   shippingCity: string;
   shippingPostal?: string;
   shippingCountry?: string;
+  couponCode?: string;
   notes?: string;
 }
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { Btn, Badge } from '../Primitives';
 import { toast } from 'react-hot-toast';
+import type { Coupon } from '@/modules/coupons';
 
 export interface DiscountsSettingsTabProps {
   showPromotionEditor: boolean;
@@ -16,6 +17,18 @@ export interface DiscountsSettingsTabProps {
   openPromotionEditor: (promotion?: any) => void;
   handleSavePromotion: () => Promise<void>;
   handleTogglePromotionActive: (id: number) => Promise<void>;
+  showCouponEditor: boolean;
+  setShowCouponEditor: (val: boolean) => void;
+  editingCouponId: number | null;
+  setEditingCouponId: (id: number | null) => void;
+  couponForm: any;
+  setCouponForm: (form: any) => void;
+  isLoadingCoupons: boolean;
+  coupons: Coupon[];
+  deleteCouponMut: any;
+  openCouponEditor: (coupon?: Coupon) => void;
+  handleSaveCoupon: () => Promise<void>;
+  handleToggleCouponActive: (id: number) => Promise<void>;
   t: any;
   isMobile: boolean;
 }
@@ -36,6 +49,17 @@ const FormSection = ({ title, children }: any) => (
   </div>
 );
 
+function formatCouponValue(coupon: Coupon) {
+  if (coupon.type === 'FIXED') {
+    return `৳${Number(coupon.value).toLocaleString('en-BD')} OFF`;
+  }
+  return `${coupon.value}% OFF`;
+}
+
+function formatMoney(value: number) {
+  return `৳${value.toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
+}
+
 export default function DiscountsSettingsTab({
   showPromotionEditor,
   setShowPromotionEditor,
@@ -49,11 +73,24 @@ export default function DiscountsSettingsTab({
   openPromotionEditor,
   handleSavePromotion,
   handleTogglePromotionActive,
+  showCouponEditor,
+  setShowCouponEditor,
+  editingCouponId,
+  setEditingCouponId,
+  couponForm,
+  setCouponForm,
+  isLoadingCoupons,
+  coupons,
+  deleteCouponMut,
+  openCouponEditor,
+  handleSaveCoupon,
+  handleToggleCouponActive,
   t,
   isMobile,
 }: DiscountsSettingsTabProps) {
   return (
     <div>
+      {/* ─── Promotion Editor Modal ─── */}
       {showPromotionEditor && (
         <div
           className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${isMobile ? 'items-end p-0' : 'items-center p-4'}`}
@@ -140,6 +177,166 @@ export default function DiscountsSettingsTab({
         </div>
       )}
 
+      {/* ─── Coupon Editor Modal ─── */}
+      {showCouponEditor && (
+        <div
+          className={`fixed inset-0 z-[9999] flex justify-center bg-black/50 ${isMobile ? 'items-end p-0' : 'items-center p-4'}`}
+          onClick={() => { setShowCouponEditor(false); setEditingCouponId(null); }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`max-h-[92vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'}`}
+          >
+            <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5">
+              <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
+                {editingCouponId !== null ? 'Edit Coupon' : 'Create Coupon'}
+              </div>
+              <button
+                onClick={() => { setShowCouponEditor(false); setEditingCouponId(null); }}
+                className="cursor-pointer border-none bg-transparent text-xl leading-none outline-none"
+                style={{ color: Theme.mutedFg }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4 p-6">
+              <div>
+                <label className={labelClass}>Coupon Code *</label>
+                <input
+                  className={inputClass}
+                  value={couponForm.code}
+                  onChange={(e) => setCouponForm((prev: any) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                  placeholder="e.g. EID2025"
+                  style={{ textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>Description</label>
+                <input
+                  className={inputClass}
+                  value={couponForm.description}
+                  onChange={(e) => setCouponForm((prev: any) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Admin note (internal only)"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className={labelClass}>Discount Type *</label>
+                  <select
+                    className={inputClass}
+                    value={couponForm.type}
+                    onChange={(e) => setCouponForm((prev: any) => ({ ...prev, type: e.target.value }))}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="FIXED">Fixed Amount (৳)</option>
+                    <option value="PERCENTAGE">Percentage (%)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    {couponForm.type === 'FIXED' ? 'Amount (৳) *' : 'Percentage (%) *'}
+                  </label>
+                  <input
+                    type="number"
+                    className={inputClass}
+                    min={1}
+                    max={couponForm.type === 'PERCENTAGE' ? 100 : undefined}
+                    value={couponForm.value}
+                    onChange={(e) => setCouponForm((prev: any) => ({ ...prev, value: e.target.value }))}
+                    placeholder={couponForm.type === 'FIXED' ? 'e.g. 200' : 'e.g. 15'}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className={labelClass}>Minimum Order Amount</label>
+                  <input
+                    type="number"
+                    className={inputClass}
+                    min={0}
+                    value={couponForm.minOrderAmount}
+                    onChange={(e) => setCouponForm((prev: any) => ({ ...prev, minOrderAmount: e.target.value }))}
+                    placeholder="No minimum"
+                  />
+                </div>
+                {couponForm.type === 'PERCENTAGE' && (
+                  <div>
+                    <label className={labelClass}>Max Discount Cap</label>
+                    <input
+                      type="number"
+                      className={inputClass}
+                      min={0}
+                      value={couponForm.maxDiscountAmount}
+                      onChange={(e) => setCouponForm((prev: any) => ({ ...prev, maxDiscountAmount: e.target.value }))}
+                      placeholder="No cap"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className={labelClass}>Usage Limit</label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  min={1}
+                  value={couponForm.usageLimit}
+                  onChange={(e) => setCouponForm((prev: any) => ({ ...prev, usageLimit: e.target.value }))}
+                  placeholder="Unlimited"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className={labelClass}>Valid From</label>
+                  <input
+                    type="date"
+                    className={inputClass}
+                    value={couponForm.startsAt}
+                    onChange={(e) => setCouponForm((prev: any) => ({ ...prev, startsAt: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Expires On</label>
+                  <input
+                    type="date"
+                    className={inputClass}
+                    value={couponForm.expiresAt}
+                    onChange={(e) => setCouponForm((prev: any) => ({ ...prev, expiresAt: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <label className="flex cursor-pointer items-center gap-2 text-[13px] outline-none">
+                <input
+                  type="checkbox"
+                  checked={couponForm.isActive}
+                  onChange={(e) =>
+                    setCouponForm((prev: any) => ({ ...prev, isActive: e.target.checked }))
+                  }
+                  style={{ accentColor: Theme.primary }}
+                />
+                Active (customers can use this coupon)
+              </label>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Btn variant="ghost" onClick={() => { setShowCouponEditor(false); setEditingCouponId(null); }}>
+                  {t.settings.cancel}
+                </Btn>
+                <Btn variant="primary" onClick={handleSaveCoupon}>
+                  Save Coupon
+                </Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Promotions Section ─── */}
       <FormSection title={t.settings.activePromotions}>
         <div className="flex flex-col gap-3">
           {isLoadingPromotions ? (
@@ -196,6 +393,79 @@ export default function DiscountsSettingsTab({
           ))}
           <Btn variant="secondary" size="sm" onClick={() => openPromotionEditor()}>
             {t.settings.createNewPromotion}
+          </Btn>
+        </div>
+      </FormSection>
+
+      {/* ─── Coupons Section ─── */}
+      <FormSection title="Coupon Codes">
+        <div className="flex flex-col gap-3">
+          {isLoadingCoupons ? (
+            <div className="text-xs" style={{ color: Theme.mutedFg }}>Loading coupons…</div>
+          ) : coupons.length === 0 ? (
+            <div className="text-xs" style={{ color: Theme.mutedFg }}>No coupons created yet.</div>
+          ) : coupons.map((c) => (
+            <div
+              key={c.id}
+              className="rounded-xl border-[1.5px] p-4"
+              style={{
+                borderColor: c.isActive ? Theme.primary : Theme.border,
+                background: c.isActive ? Theme.secondary : '#fff',
+              }}
+            >
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-bold" style={{ color: Theme.fg, letterSpacing: '0.08em' }}>
+                    {c.code}
+                  </div>
+                  <Badge
+                    label={formatCouponValue(c)}
+                    bg={Theme.primary}
+                    color="#fff"
+                  />
+                  <Badge
+                    label={c.isActive ? t.settings.live : t.settings.paused}
+                    bg={c.isActive ? '#dcfce7' : '#f5f5f5'}
+                    color={c.isActive ? '#166534' : Theme.mutedFg}
+                  />
+                </div>
+              </div>
+              <div className="mb-2 text-xs" style={{ color: Theme.mutedFg }}>
+                {c.description && <span>{c.description} · </span>}
+                {c.minOrderAmount && <span>Min order: {formatMoney(c.minOrderAmount)} · </span>}
+                {c.usageLimit ? (
+                  <span>Used {c.usedCount}/{c.usageLimit} times</span>
+                ) : (
+                  <span>Used {c.usedCount} times (unlimited)</span>
+                )}
+                {c.expiresAt && <span> · Expires {new Date(c.expiresAt).toLocaleDateString()}</span>}
+              </div>
+              <div className="flex gap-2">
+                <Btn variant="ghost" size="sm" onClick={() => handleToggleCouponActive(c.id)}>
+                  {c.isActive ? t.settings.pause : t.settings.activate}
+                </Btn>
+                <Btn variant="ghost" size="sm" onClick={() => openCouponEditor(c)}>
+                  {t.settings.edit}
+                </Btn>
+                <Btn
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await deleteCouponMut.mutateAsync(c.id);
+                      toast.success('Coupon removed');
+                    } catch {
+                      toast.error('Failed to remove coupon');
+                    }
+                  }}
+                >
+                  {t.settings.remove}
+                </Btn>
+              </div>
+            </div>
+          ))}
+          <Btn variant="secondary" size="sm" onClick={() => openCouponEditor()}>
+            + Create New Coupon
           </Btn>
         </div>
       </FormSection>

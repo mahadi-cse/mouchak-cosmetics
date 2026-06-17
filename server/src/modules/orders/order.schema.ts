@@ -14,6 +14,7 @@ export const createOrderSchema = z.object({
   shippingCity: z.string().min(1),
   shippingPostal: z.string().optional(),
   shippingCountry: z.string().default('Bangladesh'),
+  couponCode: z.string().optional(),
   discountAmount: z.coerce.number().nonnegative().optional().default(0),
   shippingCharge: z.coerce.number().nonnegative().optional().default(0),
   taxAmount: z.coerce.number().nonnegative().optional().default(0),
@@ -29,6 +30,7 @@ export const createCodOrderSchema = z.object({
   shippingCity: z.string().min(1),
   shippingPostal: z.string().optional(),
   shippingCountry: z.string().default('Bangladesh'),
+  couponCode: z.string().optional(),
   notes: z.string().optional(),
 });
 
