@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useHomepageFeaturedProducts, useHomepageCategories } from '@/modules/homepage';
+import { useActivePromotions, type Promotion } from '@/modules/promotions';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { useCart } from '@/shared/contexts/CartContext';
 import { CategoryCard } from '@/shared/components';
@@ -28,6 +29,25 @@ function normalizeImage(url?: string | null): string | null {
   const trimmed = url.trim();
   if (!trimmed) return null;
   return trimmed;
+}
+
+/** Find matching active promotion for a product */
+function getPromoForProduct(product: any, promotions: Promotion[]): { promoPrice: number; promoPct: number } | null {
+  for (const promo of promotions) {
+    if (promo.applyTo === 'ALL') {
+      const pct = promo.pct || 0;
+      return { promoPrice: Math.round(product.price * (1 - pct / 100)), promoPct: pct };
+    }
+    if (promo.applyTo === 'PRODUCT' && promo.productIds?.includes(product.id)) {
+      const pct = promo.pct || 0;
+      return { promoPrice: Math.round(product.price * (1 - pct / 100)), promoPct: pct };
+    }
+    if (promo.applyTo === 'CATEGORY' && promo.categoryId && product.categoryId === promo.categoryId) {
+      const pct = promo.pct || 0;
+      return { promoPrice: Math.round(product.price * (1 - pct / 100)), promoPct: pct };
+    }
+  }
+  return null;
 }
 
 function getCategoryFallbackImage(slug?: string, name?: string): string {
@@ -77,7 +97,7 @@ const cardVariants = {
   }),
 };
 
-function EnhancedProductCard({ product, index }: { product: Product; index: number }) {
+function EnhancedProductCard({ product, index, activePromotions }: { product: Product; index: number; activePromotions: Promotion[] }) {
   const [hovered, setHovered] = useState(false);
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { addToCart, setIsOpen: openCart } = useCart();
@@ -86,14 +106,20 @@ function EnhancedProductCard({ product, index }: { product: Product; index: numb
     normalizeImage(product.images?.[0]) || PRODUCT_FALLBACK_IMAGE
   );
 
-  const discount = product.compareAtPrice
+  const promo = getPromoForProduct(product, activePromotions);
+  const baseDiscount = product.compareAtPrice
     ? Math.round(
         ((product.compareAtPrice - product.price) / product.compareAtPrice) * 100
       )
-    : null;
-  const savingsAmount = product.compareAtPrice
-    ? Math.round(product.compareAtPrice - product.price)
     : 0;
+  const promoPct = promo?.promoPct || 0;
+  const discount = Math.max(baseDiscount, promoPct);
+  const bestPrice = promo && promo.promoPrice < product.price ? promo.promoPrice : product.price;
+  const savingsAmount = promo && promoPct > baseDiscount
+    ? Math.round(product.price * promoPct / 100)
+    : product.compareAtPrice
+      ? Math.round(product.compareAtPrice - product.price)
+      : 0;
 
   const category = product.category?.name || t.featuredProducts.products;
   const rating = 4.5;
@@ -129,9 +155,9 @@ function EnhancedProductCard({ product, index }: { product: Product; index: numb
               style={{ transform: hovered ? 'scale(1.08)' : 'scale(1)' }}
             />
 
-            {discount && (
+            {discount > 0 && (
               <div className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold text-white tracking-wide">
-                -{discount}%
+                {promoPct > baseDiscount ? '🎉 ' : '-'}{discount}%
               </div>
             )}
 
@@ -213,17 +239,22 @@ function EnhancedProductCard({ product, index }: { product: Product; index: numb
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-baseline gap-1.5">
                 <span className="text-lg font-black text-primary">
-                  ৳{Math.round(product.price).toLocaleString()}
+                  ৳{bestPrice.toLocaleString()}
                 </span>
-                {product.compareAtPrice && (
+                {bestPrice < product.price && (
+                  <span className="text-xs text-zinc-400 line-through">
+                    ৳{Math.round(product.price).toLocaleString()}
+                  </span>
+                )}
+                {product.compareAtPrice && product.compareAtPrice > bestPrice && (
                   <span className="text-xs text-zinc-400 line-through">
                     ৳{Math.round(product.compareAtPrice).toLocaleString()}
                   </span>
                 )}
               </div>
-              {discount && (
+              {discount > 0 && (
                 <span className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700">
-                  {t.featuredProducts.save} ৳{savingsAmount.toLocaleString()}
+                  {promoPct > baseDiscount ? 'PROMO ' : ''}{t.featuredProducts.save} ৳{savingsAmount.toLocaleString()}
                 </span>
               )}
             </div>
@@ -244,6 +275,7 @@ export function FeaturedProducts() {
   const [activeFilter, setActiveFilter] = useState<string>(t.featuredProducts.all);
   const { data: products = [], isLoading, error } = useHomepageFeaturedProducts(12);
   const { data: categories = [], isLoading: categoriesLoading } = useHomepageCategories();
+  const { data: activePromotions = [] } = useActivePromotions();
 
   const activeCategories = useMemo(
     () =>
@@ -365,7 +397,7 @@ export function FeaturedProducts() {
           {/* Product grid */}
           <div className="mb-12 grid gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {filtered.map((product: Product, i: number) => (
-              <EnhancedProductCard key={product.id} product={product} index={i} />
+              <EnhancedProductCard key={product.id} product={product} index={i} activePromotions={activePromotions} />
             ))}
           </div>
 

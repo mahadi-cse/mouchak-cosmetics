@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { Btn, Badge } from '../Primitives';
 import { toast } from 'react-hot-toast';
 import type { Coupon } from '@/modules/coupons';
+import type { Promotion } from '@/modules/promotions';
 
 export interface DiscountsSettingsTabProps {
   showPromotionEditor: boolean;
@@ -12,11 +13,13 @@ export interface DiscountsSettingsTabProps {
   promotionForm: any;
   setPromotionForm: (form: any) => void;
   isLoadingPromotions: boolean;
-  promotions: any[];
+  promotions: Promotion[];
   deletePromotionMut: any;
-  openPromotionEditor: (promotion?: any) => void;
+  openPromotionEditor: (promotion?: Promotion) => void;
   handleSavePromotion: () => Promise<void>;
   handleTogglePromotionActive: (id: number) => Promise<void>;
+  productsList: any[];
+  categories: any[];
   showCouponEditor: boolean;
   setShowCouponEditor: (val: boolean) => void;
   editingCouponId: number | null;
@@ -60,6 +63,13 @@ function formatMoney(value: number) {
   return `৳${value.toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
 }
 
+function formatPromoScope(promo: Promotion) {
+  if (promo.applyTo === 'ALL') return 'All Products';
+  if (promo.applyTo === 'CATEGORY' && promo.category) return `Category: ${promo.category.name}`;
+  if (promo.applyTo === 'PRODUCT' && promo.productIds?.length) return `${promo.productIds.length} product(s)`;
+  return promo.applyTo;
+}
+
 export default function DiscountsSettingsTab({
   showPromotionEditor,
   setShowPromotionEditor,
@@ -73,6 +83,8 @@ export default function DiscountsSettingsTab({
   openPromotionEditor,
   handleSavePromotion,
   handleTogglePromotionActive,
+  productsList,
+  categories,
   showCouponEditor,
   setShowCouponEditor,
   editingCouponId,
@@ -88,6 +100,14 @@ export default function DiscountsSettingsTab({
   t,
   isMobile,
 }: DiscountsSettingsTabProps) {
+  const [productSearch, setProductSearch] = useState('');
+
+  const filteredProducts = useMemo(() => {
+    if (!productSearch.trim()) return productsList.slice(0, 50);
+    const q = productSearch.toLowerCase();
+    return productsList.filter((p: any) => p.name.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q)).slice(0, 50);
+  }, [productsList, productSearch]);
+
   return (
     <div>
       {/* ─── Promotion Editor Modal ─── */}
@@ -98,7 +118,7 @@ export default function DiscountsSettingsTab({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`max-h-[92vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'}`}
+            className={`max-h-[92vh] w-full max-w-[600px] overflow-y-auto bg-white shadow-[0_24px_60px_rgba(0,0,0,0.2)] ${isMobile ? 'rounded-t-[20px]' : 'rounded-2xl'}`}
           >
             <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-white px-6 py-5">
               <div className="text-[17px] font-bold" style={{ color: Theme.fg }}>
@@ -115,7 +135,7 @@ export default function DiscountsSettingsTab({
 
             <div className="flex flex-col gap-4 p-6">
               <div>
-                <label className={labelClass}>{t.settings.promotionName}</label>
+                <label className={labelClass}>{t.settings.promotionName} *</label>
                 <input
                   className={inputClass}
                   value={promotionForm.label}
@@ -124,7 +144,7 @@ export default function DiscountsSettingsTab({
                 />
               </div>
               <div>
-                <label className={labelClass}>{t.settings.discountPct}</label>
+                <label className={labelClass}>{t.settings.discountPct} *</label>
                 <input
                   type="number"
                   className={inputClass}
@@ -136,7 +156,7 @@ export default function DiscountsSettingsTab({
                 />
               </div>
               <div>
-                <label className={labelClass}>{t.settings.bannerText}</label>
+                <label className={labelClass}>{t.settings.bannerText} *</label>
                 <textarea
                   className={`${inputClass} h-20 resize-y`}
                   value={promotionForm.banner}
@@ -153,6 +173,91 @@ export default function DiscountsSettingsTab({
                   placeholder="e.g. Apr 30"
                 />
               </div>
+
+              {/* ── Scope: Apply To ── */}
+              <div>
+                <label className={labelClass}>Apply Discount To *</label>
+                <select
+                  className={inputClass}
+                  value={promotionForm.applyTo}
+                  onChange={(e) => setPromotionForm((prev: any) => ({
+                    ...prev,
+                    applyTo: e.target.value,
+                    productIds: e.target.value !== 'PRODUCT' ? [] : prev.productIds,
+                    categoryId: e.target.value !== 'CATEGORY' ? '' : prev.categoryId,
+                  }))}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <option value="ALL">All Products</option>
+                  <option value="CATEGORY">Specific Category</option>
+                  <option value="PRODUCT">Specific Products</option>
+                </select>
+              </div>
+
+              {/* Category selector */}
+              {promotionForm.applyTo === 'CATEGORY' && (
+                <div>
+                  <label className={labelClass}>Select Category *</label>
+                  <select
+                    className={inputClass}
+                    value={promotionForm.categoryId}
+                    onChange={(e) => setPromotionForm((prev: any) => ({ ...prev, categoryId: e.target.value }))}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="">— Choose category —</option>
+                    {categories.filter((c: any) => c.isActive !== false).map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Product multi-selector */}
+              {promotionForm.applyTo === 'PRODUCT' && (
+                <div>
+                  <label className={labelClass}>Select Products * ({promotionForm.productIds?.length || 0} selected)</label>
+                  <input
+                    className={inputClass}
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    placeholder="Search products by name or SKU..."
+                    style={{ marginBottom: 8 }}
+                  />
+                  <div
+                    className="max-h-[200px] overflow-y-auto rounded-lg border border-border"
+                    style={{ background: '#f9fafb' }}
+                  >
+                    {filteredProducts.length === 0 ? (
+                      <div className="p-3 text-center text-xs" style={{ color: Theme.mutedFg }}>No products found</div>
+                    ) : filteredProducts.map((p: any) => {
+                      const isSelected = promotionForm.productIds?.includes(p.id);
+                      return (
+                        <label
+                          key={p.id}
+                          className="flex cursor-pointer items-center gap-2 border-b border-border px-3 py-2 last:border-0 hover:bg-white"
+                          style={{ fontSize: 13 }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setPromotionForm((prev: any) => {
+                                const ids = prev.productIds || [];
+                                const next = isSelected ? ids.filter((id: number) => id !== p.id) : [...ids, p.id];
+                                return { ...prev, productIds: next };
+                              });
+                            }}
+                            style={{ accentColor: Theme.primary }}
+                          />
+                          <span className="flex-1 truncate" style={{ color: Theme.fg }}>{p.name}</span>
+                          <span className="text-[11px]" style={{ color: Theme.mutedFg }}>৳{Math.round(p.price).toLocaleString()}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <label className="flex cursor-pointer items-center gap-2 text-[13px] outline-none">
                 <input
                   type="checkbox"
@@ -356,6 +461,11 @@ export default function DiscountsSettingsTab({
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Badge label={`${d.pct}% ${t.settings.off}`} bg={Theme.primary} color="#fff" />
+                  <Badge
+                    label={formatPromoScope(d)}
+                    bg="#ede9fe"
+                    color="#6d28d9"
+                  />
                   <Badge
                     label={d.isActive ? t.settings.live : t.settings.paused}
                     bg={d.isActive ? '#dcfce7' : '#f5f5f5'}

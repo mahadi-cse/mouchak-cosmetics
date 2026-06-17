@@ -237,6 +237,7 @@ model Category {
 
   products    Product[]
   skuSetting  SKUSetting?
+  promotions  Promotion[]
   branchId    Int?
   branch      Branch?   @relation(fields: [branchId], references: [id])
 
@@ -1178,7 +1179,14 @@ model HeroSlider {
 // ─────────────────────────────────────────────────────────────
 // PROMOTIONS
 // Manage discount promotions displayed on the storefront.
+// Can apply to ALL products, specific PRODUCTs, or a CATEGORY.
 // ─────────────────────────────────────────────────────────────
+
+enum PromotionApplyTo {
+  ALL
+  PRODUCT
+  CATEGORY
+}
 
 model Promotion {
   id            Int       @id @default(autoincrement())
@@ -1186,10 +1194,19 @@ model Promotion {
   banner        String                          // Banner text shown on homepage
   pct           Int                             // Discount percentage (1-95)
   endsAt        String?                         // Human-readable end label, e.g. "Apr 30"
+
+  // Scope: which products the promotion applies to
+  applyTo       PromotionApplyTo  @default(ALL)
+  productIds    Int[]             @default([])  // Specific product IDs (when applyTo = PRODUCT)
+  categoryId    Int?                              // Category ID (when applyTo = CATEGORY)
+  category      Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   isActive      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  @@index([isActive])
+  @@index([categoryId])
   @@map("promotions")
 }
 

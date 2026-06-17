@@ -11,6 +11,7 @@ import {
   useUpdateProduct,
 } from '@/modules/products';
 import { useListBranches } from '@/modules/branches';
+import { useListCategories } from '@/modules/categories';
 import { toast } from 'react-hot-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { confirmDialog } from '@/shared/lib/confirmDialog';
@@ -280,6 +281,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     { queryKey: ['products', 'list', { branchId: filterBranchId, includeInactive: true }] }
   );
   const { data: branches = [] } = useListBranches();
+  const { data: allCategories = [] } = useListCategories({ includeInactive: true } as any);
 
   // Security devices hooks
   const { data: securityDevices = [], isLoading: isLoadingSecurity } = useSecurityDevicesQuery();
@@ -508,6 +510,10 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
     ends: '',
     banner: '',
     active: true,
+    applyTo: 'ALL' as 'ALL' | 'PRODUCT' | 'CATEGORY',
+    productIds: [] as number[],
+    categoryId: '' as string | number,
+    productSearch: '',
   });
 
   const [showCouponEditor, setShowCouponEditor] = useState(false);
@@ -682,17 +688,25 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         ends: promotion.endsAt || '',
         banner: promotion.banner,
         active: promotion.isActive,
+        applyTo: promotion.applyTo || 'ALL',
+        productIds: promotion.productIds || [],
+        categoryId: promotion.categoryId || '',
+        productSearch: '',
       });
     } else {
       setEditingPromotionId(null);
-      setPromotionForm({ label: '', pct: '', ends: '', banner: '', active: true });
+      setPromotionForm({ label: '', pct: '', ends: '', banner: '', active: true, applyTo: 'ALL', productIds: [], categoryId: '', productSearch: '' });
     }
     setShowPromotionEditor(true);
   };
 
   const handleSavePromotion = async () => {
-    if (!promotionForm.label.trim() || !promotionForm.banner.trim()) {
-      toast.error('Promotion label and banner text are required');
+    if (!promotionForm.label.trim()) {
+      toast.error('Promotion name is required');
+      return;
+    }
+    if (!promotionForm.banner.trim()) {
+      toast.error('Banner text is required');
       return;
     }
 
@@ -702,13 +716,26 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
       return;
     }
 
+    // Validate scope
+    if (promotionForm.applyTo === 'PRODUCT' && promotionForm.productIds.length === 0) {
+      toast.error('Please select at least one product');
+      return;
+    }
+    if (promotionForm.applyTo === 'CATEGORY' && !promotionForm.categoryId) {
+      toast.error('Please select a category');
+      return;
+    }
+
     try {
-      const payload = {
+      const payload: any = {
         label: promotionForm.label.trim(),
         banner: promotionForm.banner.trim(),
         pct: Math.round(percentage),
         endsAt: promotionForm.ends.trim() || undefined,
         isActive: promotionForm.active,
+        applyTo: promotionForm.applyTo,
+        productIds: promotionForm.applyTo === 'PRODUCT' ? promotionForm.productIds : [],
+        categoryId: promotionForm.applyTo === 'CATEGORY' ? Number(promotionForm.categoryId) : null,
       };
 
       if (editingPromotionId !== null) {
@@ -1113,6 +1140,8 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         openPromotionEditor={openPromotionEditor}
         handleSavePromotion={handleSavePromotion}
         handleTogglePromotionActive={handleTogglePromotionActive}
+        productsList={productsList}
+        categories={allCategories}
         showCouponEditor={showCouponEditor}
         setShowCouponEditor={setShowCouponEditor}
         editingCouponId={editingCouponId}

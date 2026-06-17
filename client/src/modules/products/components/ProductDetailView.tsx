@@ -1,13 +1,14 @@
 'use client';
 
 import { useProductBySlug, useListProducts } from '@/modules/products';
+import { useProductPromotion } from '@/modules/promotions';
 import { SkeletonCard, SkeletonProductDetail, ErrorMessage, EmptyState } from '@/shared/components';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Heart, Star, ShoppingCart } from 'lucide-react';
+import { Heart, Star, ShoppingCart, Tag } from 'lucide-react';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { useProductReviews, useReviewEligibility, useCreateReview, useUpdateReview, useDeleteReview } from '@/modules/reviews';
 import { getProductMainImage, getProductThumbnail, getProductCardImage } from '@/shared/utils/imageOptimizer';
@@ -52,6 +53,7 @@ export default function ProductDetailView() {
 
   const { data: product, isLoading, isError, error, refetch } = useProductBySlug(slug);
   const { data: reviewSummary } = useProductReviews(product?.id || 0);
+  const { data: activePromotion } = useProductPromotion(slug);
 
   // Fetch similar products from the same category
   const categorySlug = product?.category?.slug;
@@ -129,6 +131,18 @@ export default function ProductDetailView() {
   const hasDiscount = compareAtPrice > price;
   const savings = hasDiscount ? compareAtPrice - price : 0;
   const discountPercent = hasDiscount ? Math.round((savings / compareAtPrice) * 100) : 0;
+
+  // Promotion discount
+  const promoDiscountPct = activePromotion?.pct || 0;
+  const promoSavings = promoDiscountPct > 0 ? Math.round(price * promoDiscountPct / 100) : 0;
+  const promoPrice = promoDiscountPct > 0 ? Math.max(0, price - promoSavings) : 0;
+
+  // Effective discount: whichever is better for the customer
+  const bestDiscountPct = Math.max(discountPercent, promoDiscountPct);
+  const bestPrice = promoDiscountPct > discountPercent ? promoPrice : price;
+  const bestSavings = promoDiscountPct > discountPercent ? promoSavings : savings;
+  const hasAnyDiscount = bestDiscountPct > 0;
+
   const subtotal = price * safeQuantity;
   const highlights = (product?.tags || []).slice(0, 5);
   const descriptionContent =
@@ -235,13 +249,13 @@ export default function ProductDetailView() {
                   transition: 'opacity 0.3s ease-in-out'
                 }} 
               />
-              {hasDiscount && (
+              {hasAnyDiscount && (
                 <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <span style={{ display: 'inline-block', padding: '3px 12px', borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', background: PINK, color: '#fff', border: `1.5px solid ${PINK}` }}>
                     BEST SELLER
                   </span>
                   <span style={{ display: 'inline-block', padding: '3px 12px', borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'transparent', color: PINK, border: `1.5px solid ${PINK}` }}>
-                    Save {discountPercent}%
+                    {promoDiscountPct > discountPercent ? '🎉 PROMO' : 'Save'} {bestDiscountPct}%
                   </span>
                 </div>
               )}
@@ -319,15 +333,25 @@ export default function ProductDetailView() {
             </div>
 
             {/* Price */}
-            <div style={{ background: PINK_PALE, borderRadius: 16, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 26, fontWeight: 800, color: PINK }}>{formatMoney(price)}</span>
-              {hasDiscount && (
-                <div>
-                  <span style={{ fontSize: 16, color: GRAY_LIGHT, textDecoration: 'line-through', display: 'block' }}>{formatMoney(compareAtPrice)}</span>
-                  <span style={{ background: PINK, color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>Save {discountPercent}%</span>
+            <div style={{ background: PINK_PALE, borderRadius: 16, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 26, fontWeight: 800, color: PINK }}>{formatMoney(bestPrice)}</span>
+              {hasAnyDiscount && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {bestPrice < price && (
+                    <span style={{ fontSize: 16, color: GRAY_LIGHT, textDecoration: 'line-through' }}>{formatMoney(price)}</span>
+                  )}
+                  {hasDiscount && compareAtPrice > price && (
+                    <span style={{ fontSize: 16, color: GRAY_LIGHT, textDecoration: 'line-through' }}>{formatMoney(compareAtPrice)}</span>
+                  )}
+                  <span style={{ background: PINK, color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>Save {bestDiscountPct}%</span>
                 </div>
               )}
             </div>
+            {hasAnyDiscount && bestSavings > 0 && (
+              <div style={{ fontSize: 13, color: '#059669', fontWeight: 600 }}>
+                🎉 You save {formatMoney(bestSavings)} on this order!
+              </div>
+            )}
 
             {/* Stock Status */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

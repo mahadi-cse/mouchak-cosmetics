@@ -1,6 +1,7 @@
 'use client';
 
 import { useListProducts } from '@/modules/products';
+import { useActivePromotions, type Promotion } from '@/modules/promotions';
 import { SkeletonGrid, ErrorMessage, EmptyState } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
@@ -15,6 +16,25 @@ function parsePositiveInt(value: string | null | undefined, fallback: number) {
     return fallback;
   }
   return Math.floor(parsed);
+}
+
+/** Find matching active promotion for a product and return promo info */
+function getPromoForProduct(product: any, promotions: Promotion[]): { promoPrice: number; promoPct: number } | null {
+  for (const promo of promotions) {
+    if (promo.applyTo === 'ALL') {
+      const pct = promo.pct || 0;
+      return { promoPrice: Math.round(product.price * (1 - pct / 100)), promoPct: pct };
+    }
+    if (promo.applyTo === 'PRODUCT' && promo.productIds?.includes(product.id)) {
+      const pct = promo.pct || 0;
+      return { promoPrice: Math.round(product.price * (1 - pct / 100)), promoPct: pct };
+    }
+    if (promo.applyTo === 'CATEGORY' && promo.categoryId && product.categoryId === promo.categoryId) {
+      const pct = promo.pct || 0;
+      return { promoPrice: Math.round(product.price * (1 - pct / 100)), promoPct: pct };
+    }
+  }
+  return null;
 }
 
 export default function ShopView() {
@@ -37,6 +57,7 @@ export default function ShopView() {
   }, [searchParams]);
 
   const { data, isLoading, isError, error, refetch } = useListProducts(params);
+  const { data: activePromotions = [] } = useActivePromotions();
 
   return (
     <>
@@ -182,18 +203,37 @@ export default function ShopView() {
                       </h3>
 
                       {/* Price row */}
-                      <div className="flex items-center justify-between pt-1">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-base font-black text-pink-600">
-                            ৳{Math.round(product.price).toLocaleString()}
-                          </span>
-                          {product.compareAtPrice && (
-                            <span className="text-xs text-zinc-400 line-through">
-                              ৳{Math.round(product.compareAtPrice).toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      {(() => {
+                        const promo = getPromoForProduct(product, activePromotions);
+                        const compareAt = product.compareAtPrice;
+                        const hasCompareDiscount = compareAt && compareAt > product.price;
+                        const bestPrice = promo ? Math.min(product.price, promo.promoPrice) : product.price;
+                        const bestPct = promo && promo.promoPct > 0 ? promo.promoPct : (hasCompareDiscount ? Math.round(((compareAt - product.price) / compareAt) * 100) : 0);
+                        return (
+                          <div className="flex items-center justify-between pt-1">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-base font-black text-pink-600">
+                                ৳{bestPrice.toLocaleString()}
+                              </span>
+                              {bestPrice < product.price && (
+                                <span className="text-xs text-zinc-400 line-through">
+                                  ৳{Math.round(product.price).toLocaleString()}
+                                </span>
+                              )}
+                              {hasCompareDiscount && (!promo || compareAt > promo.promoPrice) && (
+                                <span className="text-xs text-zinc-400 line-through">
+                                  ৳{Math.round(compareAt).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                            {bestPct > 0 && (
+                              <span className="rounded-full bg-pink-100 px-1.5 py-0.5 text-[10px] font-bold text-pink-600">
+                                {promo ? 'PROMO ' : ''}{bestPct}% OFF
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </Link>
