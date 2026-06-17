@@ -75,6 +75,7 @@ export const bn: DashboardTranslations = {
     trending: "ট্রেন্ডিং পণ্য",
     discounts: "ছাড় ও বিক্রয়",
     security: "ডিভাইস নিরাপত্তা",
+    audit: "অডিট লগ",
   },
 
   // ─── Security Devices ───

@@ -4,6 +4,7 @@ import { ok, paginate } from '../../shared/utils/apiResponse';
 import { ValidationError } from '../../shared/utils/AppError';
 import manualSaleService from './manualSale.service';
 import { createManualSaleSchema } from './manualSale.schema';
+import { AuditLogger } from '../../shared/utils/auditLogger';
 
 export const createManualSale: RequestHandler = asyncHandler(async (req, res) => {
   const parsed = createManualSaleSchema.safeParse(req.body);
@@ -12,6 +13,17 @@ export const createManualSale: RequestHandler = asyncHandler(async (req, res) =>
   }
 
   const result = await manualSaleService.createManualSale(parsed.data);
+
+  await AuditLogger.log({
+    req,
+    action: 'CREATE',
+    entity: 'ManualSale',
+    entityId: String(result.id),
+    entityLabel: result.saleNumber,
+    before: null,
+    after: result,
+  });
+
   res.status(201).json(ok(result, 'Manual sale recorded successfully'));
 });
 

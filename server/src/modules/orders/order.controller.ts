@@ -4,6 +4,8 @@ import { ok, paginate } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { ValidationError } from '../../shared/utils/AppError';
 import { createCodOrderSchema, createOrderSchema } from './order.schema';
+import { AuditLogger } from '../../shared/utils/auditLogger';
+import { prisma } from '../../config/database';
 
 export const listOrders: RequestHandler = asyncHandler(async (req, res) => {
   const { page, limit, status, channel, customerId, startDate, endDate, search } = req.query;
@@ -35,6 +37,17 @@ export const createOrder: RequestHandler = asyncHandler(async (req, res) => {
   }
 
   const order = await orderService.createOrder(parsed.data);
+
+  await AuditLogger.log({
+    req,
+    action: 'CREATE',
+    entity: 'Order',
+    entityId: String(order.id),
+    entityLabel: order.orderNumber,
+    before: null,
+    after: order,
+  });
+
   res.status(201).json(ok(order, 'Order created successfully'));
 });
 
@@ -49,18 +62,65 @@ export const createCodOrder: RequestHandler = asyncHandler(async (req, res) => {
   }
 
   const order = await orderService.createCodOrder(parsed.data, req.user.id);
+
+  await AuditLogger.log({
+    req,
+    action: 'CREATE',
+    entity: 'Order',
+    entityId: String(order.id),
+    entityLabel: order.orderNumber,
+    before: null,
+    after: order,
+  });
+
   res.status(201).json(ok(order, 'Cash on delivery order placed successfully'));
 });
 
 export const updateOrder: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
+  const oldOrder = await prisma.order.findUnique({
+    where: { id: Number(id) },
+  });
+
   const order = await orderService.updateOrder(Number(id), req.body);
+
+  if (oldOrder) {
+    await AuditLogger.log({
+      req,
+      action: 'UPDATE',
+      entity: 'Order',
+      entityId: String(order.id),
+      entityLabel: order.orderNumber,
+      before: oldOrder,
+      after: order,
+    });
+  }
+
   res.json(ok(order, 'Order updated successfully'));
 });
 
 export const updateOrderStatus: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
+  const oldOrder = await prisma.order.findUnique({
+    where: { id: Number(id) },
+  });
+
   const order = await orderService.updateOrderStatus(Number(id), req.body);
+
+  if (oldOrder) {
+    await AuditLogger.log({
+      req,
+      action: 'UPDATE',
+      entity: 'Order',
+      entityId: String(order.id),
+      entityLabel: order.orderNumber,
+      before: oldOrder,
+      after: order,
+    });
+  }
+
   res.json(ok(order, 'Order status updated'));
 });
 
@@ -86,7 +146,25 @@ export const processRefund: RequestHandler = asyncHandler(async (req, res) => {
 
 export const markAsShipped: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
+  const oldOrder = await prisma.order.findUnique({
+    where: { id: Number(id) },
+  });
+
   const order = await orderService.markAsShipped(Number(id));
+
+  if (oldOrder) {
+    await AuditLogger.log({
+      req,
+      action: 'UPDATE',
+      entity: 'Order',
+      entityId: String(order.id),
+      entityLabel: order.orderNumber,
+      before: oldOrder,
+      after: order,
+    });
+  }
+
   res.json(ok(order, 'Order marked as shipped'));
 });
 
@@ -104,7 +182,25 @@ export const getOrderTracking: RequestHandler = asyncHandler(async (req, res) =>
 
 export const cancelOrder: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
+  const oldOrder = await prisma.order.findUnique({
+    where: { id: Number(id) },
+  });
+
   const order = await orderService.cancelOrder(Number(id));
+
+  if (oldOrder) {
+    await AuditLogger.log({
+      req,
+      action: 'UPDATE',
+      entity: 'Order',
+      entityId: String(id),
+      entityLabel: oldOrder.orderNumber,
+      before: oldOrder,
+      after: order,
+    });
+  }
+
   res.status(204).json(ok(order, 'Order cancelled'));
 });
 

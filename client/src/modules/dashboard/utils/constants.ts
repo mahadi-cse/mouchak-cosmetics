@@ -23,6 +23,7 @@ export const SETTINGS_ITEMS = [
   { id: 'trending', label: 'Trending Products', icon: '🔥' },
   { id: 'discounts', label: 'Discount & Sales', icon: '🏷️' },
   { id: 'security', label: 'Security Devices', icon: '🔒' },
+  { id: 'audit', label: 'Audit Logs', icon: '📜' },
 ];
 
 export const BRANCH_STOCK = {

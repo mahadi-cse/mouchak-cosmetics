@@ -28,6 +28,7 @@ import NotificationSettingsTab from '../settings/NotificationSettingsTab';
 import TrendingSettingsTab from '../settings/TrendingSettingsTab';
 import DiscountsSettingsTab from '../settings/DiscountsSettingsTab';
 import SecuritySettingsTab from '../settings/SecuritySettingsTab';
+import AuditLogsSettingsTab from '../settings/AuditLogsSettingsTab';
 
 import {
   usePromotions,
@@ -1170,6 +1171,9 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
         t={t}
       />
     ),
+    audit: (
+      <AuditLogsSettingsTab t={t} />
+    ),
   };
 
   return (
@@ -1215,7 +1219,7 @@ export default function SettingsView({ products: _products, tab, setTab }: Setti
           </div>
         )}
 
-        {!['products', 'categories', 'trending', 'discounts', 'staff', 'customers', 'security'].includes(tab) && (
+        {!['products', 'categories', 'trending', 'discounts', 'staff', 'customers', 'security', 'audit'].includes(tab) && (
           <div className="mt-8 flex items-center justify-end gap-2 border-t border-border pt-6">
             <div className="flex items-center gap-2">
               {saved && (

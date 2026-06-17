@@ -769,17 +769,24 @@ model Wishlist {
 model AuditLog {
   id          Int       @id @default(autoincrement())
   userId      Int?
-  user        User?     @relation("CreatedBy", fields: [userId], references: [id])
+  user        User?     @relation("CreatedBy", fields: [userId], references: [id], onDelete: SetNull)
   action      String
   entity      String
-  entityId    Int
-  order       Order?    @relation(fields: [entityId], references: [id])
+  entityId    String
+  entityLabel String?
   before      Json?
   after       Json?
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime  @default(now())
 
+  // Maintain relation for Order compatibility
+  orderId     Int?      @map("order_id")
+  order       Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 

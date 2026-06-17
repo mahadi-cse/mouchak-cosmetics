@@ -72,6 +72,7 @@ export const en = {
     trending: "Trending Products",
     discounts: "Discount & Sales",
     security: "Security Devices",
+    audit: "Audit Logs",
   },
 
   // ─── Security Devices ───

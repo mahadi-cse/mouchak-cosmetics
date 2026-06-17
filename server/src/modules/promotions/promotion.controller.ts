@@ -5,6 +5,7 @@ import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { ValidationError } from '../../shared/utils/AppError';
 import { cacheGet, cacheSet, cacheDel, TTL } from '../../shared/utils/cache';
 import { createPromotionSchema, updatePromotionSchema } from './promotion.schema';
+import { AuditLogger } from '../../shared/utils/auditLogger';
 
 const PROMOTION_KEY = 'promotions:active';
 
@@ -90,6 +91,15 @@ export const createPromotion: RequestHandler = asyncHandler(async (req, res) => 
     include: { category: { select: { id: true, name: true, slug: true } } },
   });
 
+  await AuditLogger.log({
+    req,
+    action: 'CREATE',
+    entity: 'Promotion',
+    entityId: String(promotion.id),
+    entityLabel: `Promotion: ${promotion.label}`,
+    after: promotion,
+  });
+
   await cacheDel(PROMOTION_KEY);
   res.status(201).json(ok(promotion, 'Promotion created'));
 });
@@ -159,6 +169,16 @@ export const updatePromotion: RequestHandler = asyncHandler(async (req, res) => 
     include: { category: { select: { id: true, name: true, slug: true } } },
   });
 
+  await AuditLogger.log({
+    req,
+    action: 'UPDATE',
+    entity: 'Promotion',
+    entityId: String(promotion.id),
+    entityLabel: `Promotion: ${promotion.label}`,
+    before: existing,
+    after: promotion,
+  });
+
   await cacheDel(PROMOTION_KEY);
   res.json(ok(promotion, 'Promotion updated'));
 });
@@ -183,6 +203,16 @@ export const togglePromotion: RequestHandler = asyncHandler(async (req, res) => 
     include: { category: { select: { id: true, name: true, slug: true } } },
   });
 
+  await AuditLogger.log({
+    req,
+    action: 'TOGGLE',
+    entity: 'Promotion',
+    entityId: String(promotion.id),
+    entityLabel: `Promotion: ${promotion.label}`,
+    before: current,
+    after: promotion,
+  });
+
   await cacheDel(PROMOTION_KEY);
   res.json(ok(promotion, shouldActivate ? 'Promotion activated' : 'Promotion paused'));
 });
@@ -190,7 +220,19 @@ export const togglePromotion: RequestHandler = asyncHandler(async (req, res) => 
 /** DELETE /api/promotions/:id */
 export const deletePromotion: RequestHandler = asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
+  const beforeState = await prisma.promotion.findUnique({ where: { id } });
+
   await prisma.promotion.delete({ where: { id } });
+
+  await AuditLogger.log({
+    req,
+    action: 'DELETE',
+    entity: 'Promotion',
+    entityId: String(id),
+    entityLabel: beforeState ? `Promotion: ${beforeState.label}` : undefined,
+    before: beforeState,
+  });
+
   await cacheDel(PROMOTION_KEY);
   res.json(ok(null, 'Promotion deleted'));
 });
