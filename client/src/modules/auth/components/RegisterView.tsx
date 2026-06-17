@@ -11,7 +11,7 @@ interface RegisterViewProps {
 
 export default function RegisterView({ callbackUrl = '/dashboard' }: RegisterViewProps) {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isGoogleEnabled = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
   const normalizedCallbackUrl =
     callbackUrl && callbackUrl !== '/redirect' && callbackUrl !== '/auth/redirect'
@@ -32,10 +32,12 @@ export default function RegisterView({ callbackUrl = '/dashboard' }: RegisterVie
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    // Guard: don't redirect if session has an error (e.g. expired token needing refresh).
+    // AuthSessionWatcher will signOut in that case; redirecting here causes a loop.
+    if (status === 'authenticated' && !(session as any)?.error) {
       router.replace(redirectTarget);
     }
-  }, [status, router, redirectTarget]);
+  }, [status, session, router, redirectTarget]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
+import type { Session } from 'next-auth';
 import { toast } from 'react-hot-toast';
 
 interface LoginViewProps {
@@ -12,7 +13,7 @@ interface LoginViewProps {
 
 export default function LoginView({ callbackUrl = '/dashboard' }: LoginViewProps) {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const normalizedCallbackUrl =
     callbackUrl && callbackUrl !== '/redirect' && callbackUrl !== '/auth/redirect'
       ? callbackUrl
@@ -45,10 +46,14 @@ export default function LoginView({ callbackUrl = '/dashboard' }: LoginViewProps
   }, [errorParam]);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    // Only redirect if truly authenticated with no errors.
+    // If session.error is set (e.g. RefreshAccessTokenError) the AuthSessionWatcher
+    // will call signOut, so we must NOT redirect here — that would cause an
+    // infinite loop: /dashboard → /login (error session) → /redirect → /dashboard → ...
+    if (status === 'authenticated' && !(session as any)?.error) {
       router.replace(redirectTarget);
     }
-  }, [status, router, redirectTarget]);
+  }, [status, session, router, redirectTarget]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

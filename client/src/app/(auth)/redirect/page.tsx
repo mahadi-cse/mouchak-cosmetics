@@ -29,6 +29,12 @@ export default async function AuthRedirectPage({ searchParams }: RedirectPagePro
   const safeCallbackUrl = getSafeCallbackUrl(callbackUrl);
 
   const session = await auth();
+
+  // If there's a session error (e.g. RefreshAccessTokenError, MissingRefreshToken)
+  // the session callback returns {} (empty), so user.id will be falsy.
+  // Redirecting back to /login?callbackUrl=/dashboard causes an infinite loop
+  // because the client-side SessionProvider still reports "authenticated".
+  // Instead, redirect to /login WITHOUT a callbackUrl so there's no loop.
   if (!session?.user?.id) {
     redirect('/login');
   }
