@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Theme, formatCurrency } from '@/modules/dashboard/utils/theme';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
 import { Card, SecHead } from '../Primitives';
@@ -16,6 +16,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
+import { exportCSV, exportExcel, exportPDF, type ExportColumn } from '@/shared/utils/exportUtils';
+import { Download } from 'lucide-react';
 
 export default function AnalyticsView() {
   const { isMobile } = useResponsive();
@@ -26,6 +28,8 @@ export default function AnalyticsView() {
   const [period, setPeriod] = useState('daily');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const isCustom = period === 'custom';
   const overviewPeriod = period === 'daily' ? 'today' : period === 'weekly' ? 'week' : 'month';
@@ -122,6 +126,85 @@ export default function AnalyticsView() {
     [overview?.salesByCategory]
   );
 
+  // ── Export definitions ──
+  const periodLabel = isCustom ? `${customStart}_to_${customEnd}` : period;
+  const baseFilename = `mouchak_analytics_${periodLabel}`;
+
+  const topProductsColumns: ExportColumn[] = [
+    { header: 'Rank', accessor: (_row: any, i?: number) => (i ?? 0) + 1 },
+    { header: 'Product', accessor: 'productName' },
+    { header: 'SKU', accessor: 'sku' },
+    { header: 'Units Sold', accessor: 'unitsSold' },
+    { header: 'Revenue', accessor: 'revenue', format: (v: number) => formatCurrency(v) },
+  ];
+
+  const trendColumns: ExportColumn[] = [
+    { header: 'Period', accessor: 'label' },
+    { header: 'Revenue', accessor: 'revenue', format: (v: number) => formatCurrency(v) },
+    { header: 'Cost', accessor: 'cost', format: (v: number) => formatCurrency(v) },
+    { header: 'Net Profit', accessor: 'netProfit', format: (v: number) => formatCurrency(v) },
+  ];
+
+  const categoryColumns: ExportColumn[] = [
+    { header: 'Category', accessor: 'label' },
+    { header: 'Revenue', accessor: 'rev' },
+    { header: 'Share %', accessor: 'value', format: (v: number) => `${v}%` },
+  ];
+
+  const summaryColumns: ExportColumn[] = [
+    { header: 'Metric', accessor: 'metric' },
+    { header: 'Value', accessor: 'value' },
+  ];
+
+  const summaryData = useMemo(() => [
+    { metric: 'Total Revenue', value: formatCurrency(totalSales) },
+    { metric: 'Total Cost', value: formatCurrency(trendTotals.cost) },
+    { metric: 'Net Profit', value: formatCurrency(trendTotals.netProfit) },
+    { metric: 'Qty Sold', value: String(overview?.manualSales?.totalQty ?? 0) },
+    { metric: 'Transactions', value: String(transactions) },
+    { metric: 'Avg Ticket', value: formatCurrency(avgTicket) },
+  ], [totalSales, trendTotals, overview, transactions, avgTicket]);
+
+  const handleExport = (format: 'csv' | 'excel' | 'pdf', target: 'summary' | 'products' | 'trend' | 'categories') => {
+    let columns: ExportColumn[];
+    let data: any[];
+    let title: string;
+    let filename: string;
+
+    switch (target) {
+      case 'summary':
+        columns = summaryColumns;
+        data = summaryData;
+        title = 'Analytics Summary';
+        filename = `${baseFilename}_summary`;
+        break;
+      case 'products':
+        columns = topProductsColumns;
+        data = topProducts;
+        title = 'Top Products by Revenue';
+        filename = `${baseFilename}_top_products`;
+        break;
+      case 'trend':
+        columns = trendColumns;
+        data = trendData;
+        title = `${t.analytics.costVsRevenue} — ${trendSubText}`;
+        filename = `${baseFilename}_trend`;
+        break;
+      case 'categories':
+        columns = categoryColumns;
+        data = categoryData.map((c: any) => ({ label: c.label, rev: c.rev, value: c.value }));
+        title = 'Sales by Category';
+        filename = `${baseFilename}_categories`;
+        break;
+    }
+
+    const opts = { filename, columns, data, title };
+    if (format === 'csv') exportCSV(opts);
+    else if (format === 'excel') exportExcel(opts);
+    else exportPDF(opts);
+    setShowExportMenu(false);
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div className={`flex items-center justify-between gap-3 ${isMobile ? 'flex-wrap' : ''}`}>
@@ -163,6 +246,53 @@ export default function AnalyticsView() {
                 className="rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: Theme.border, color: Theme.fg }} />
             </>
           )}
+
+          {/* Export Report Dropdown */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-1.5 cursor-pointer rounded-lg border-none px-3 py-1.5 text-[11px] font-bold text-white"
+              style={{ background: Theme.primary }}
+            >
+              <Download size={13} />
+              Export Report
+            </button>
+            {showExportMenu && (
+              <>
+                <div className="fixed inset-0 z-[9998]" onClick={() => setShowExportMenu(false)} />
+                <div
+                  className="absolute right-0 top-full z-[9999] mt-1 w-56 rounded-xl border bg-white py-1 shadow-xl"
+                  style={{ borderColor: Theme.border }}
+                >
+                  {([
+                    { label: 'Summary Overview', target: 'summary' as const },
+                    { label: 'Top Products', target: 'products' as const },
+                    { label: 'Revenue Trend', target: 'trend' as const },
+                    { label: 'Sales by Category', target: 'categories' as const },
+                  ]).map((item) => (
+                    <div key={item.target}>
+                      <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: Theme.mutedFg }}>
+                        {item.label}
+                      </div>
+                      {(['csv', 'excel', 'pdf'] as const).map((fmt) => (
+                        <button
+                          key={fmt}
+                          onClick={() => handleExport(fmt, item.target)}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] hover:bg-gray-50 cursor-pointer border-none bg-transparent"
+                          style={{ color: Theme.fg }}
+                        >
+                          <span className="inline-block w-5 text-center text-[10px] font-bold" style={{ color: Theme.primary }}>
+                            {fmt === 'csv' ? 'CSV' : fmt === 'excel' ? 'XLS' : 'PDF'}
+                          </span>
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -258,7 +388,12 @@ export default function AnalyticsView() {
         </Card>
 
         <Card>
-          <SecHead title={t.analytics.topProductsByRevenue} sub={t.analytics.fromCurrentAnalyticsRange} action={t.analytics.exportCSV} />
+          <SecHead
+            title={t.analytics.topProductsByRevenue}
+            sub={t.analytics.fromCurrentAnalyticsRange}
+            action={t.analytics.exportCSV}
+            onAction={() => exportCSV({ filename: `${baseFilename}_top_products`, columns: topProductsColumns, data: topProducts, title: 'Top Products by Revenue' })}
+          />
           {isLoading ? (
             <div className="py-6 text-center text-sm" style={{ color: Theme.mutedFg }}>{t.analytics.loadingTopProducts}</div>
           ) : topProducts.length === 0 ? (
