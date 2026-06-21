@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Theme } from '@/modules/dashboard/utils/theme';
 import { Card, SecHead, Btn } from '../Primitives';
 import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
-import { useAdjustStockMutation, useInventorySummary } from '@/modules/inventory';
+import { useAdjustStockMutation, useInventorySummary, useInventoryHistory } from '@/modules/inventory';
 import { useListBranches } from '@/modules/branches';
 import { useListProducts } from '@/modules/products';
 import toast from 'react-hot-toast';
@@ -41,6 +41,21 @@ export default function InventoryView({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'ok' | 'low' | 'out'>('all');
   const productSearchRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Tab control state
+  const [activeTab, setActiveTab] = useState<'inventory' | 'ledger'>('inventory');
+
+  // Ledger state
+  const [ledgerProductId, setLedgerProductId] = useState<string>('');
+  const [ledgerProductQuery, setLedgerProductQuery] = useState<string>('');
+  const [showLedgerDropdown, setShowLedgerDropdown] = useState(false);
+  const ledgerProductSearchRef = React.useRef<HTMLDivElement | null>(null);
+
+  const [ledgerType, setLedgerType] = useState<string>('');
+  const [ledgerBranchId, setLedgerBranchId] = useState<string>('');
+  const [ledgerStartDate, setLedgerStartDate] = useState<string>('');
+  const [ledgerEndDate, setLedgerEndDate] = useState<string>('');
+  const [ledgerPage, setLedgerPage] = useState<number>(1);
   const adjustStockMutation = useAdjustStockMutation();
   const allInventoryQuery = useInventorySummary({ page: 1, limit: 500 });
   const branchInventoryQuery = useInventorySummary({
@@ -54,6 +69,81 @@ export default function InventoryView({
   });
   const getProductMeta = (productId: number) =>
     productsWithSizes.find((p: any) => p.id === productId);
+
+  const searchableLedgerProducts = useMemo(() => {
+    const q = ledgerProductQuery.trim().toLowerCase();
+    if (!q) return productsWithSizes.slice(0, 50);
+    return productsWithSizes
+      .filter((p: any) =>
+        p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+      )
+      .slice(0, 50);
+  }, [productsWithSizes, ledgerProductQuery]);
+
+  const ledgerQuery = useInventoryHistory(
+    ledgerProductId ? Number(ledgerProductId) : undefined,
+    {
+      page: ledgerPage,
+      limit: 10,
+      ...(ledgerStartDate ? { startDate: new Date(ledgerStartDate).toISOString() } : {}),
+      ...(ledgerEndDate ? { endDate: new Date(ledgerEndDate).toISOString() } : {}),
+      ...(ledgerType ? { type: ledgerType } : {}),
+    }
+  );
+
+  const resolveBranchName = (tx: any) => {
+    const notesMatch = tx.notes?.match(/\[Branch:(\d+)\]/);
+    if (notesMatch && notesMatch[1]) {
+      const branchId = Number(notesMatch[1]);
+      const branch = activeBranches.find((b: any) => b.id === branchId);
+      if (branch) return branch.name;
+    }
+    const refMatch = tx.reference?.match(/RECONCILE-(\d+)/);
+    if (refMatch && refMatch[1]) {
+      const branchId = Number(refMatch[1]);
+      const branch = activeBranches.find((b: any) => b.id === branchId);
+      if (branch) return branch.name;
+    }
+    if (tx.reference) {
+      const parts = tx.reference.split('-');
+      if (parts.length > 0) {
+        const code = parts[0].toLowerCase();
+        const branch = activeBranches.find((b: any) => b.branchCode?.toLowerCase() === code);
+        if (branch) return branch.name;
+      }
+    }
+    return t.na;
+  };
+
+  const extractBranchIdFromTx = (tx: any) => {
+    const notesMatch = tx.notes?.match(/\[Branch:(\d+)\]/);
+    if (notesMatch && notesMatch[1]) {
+      return Number(notesMatch[1]);
+    }
+    const refMatch = tx.reference?.match(/RECONCILE-(\d+)/);
+    if (refMatch && refMatch[1]) {
+      return Number(refMatch[1]);
+    }
+    if (tx.reference) {
+      const parts = tx.reference.split('-');
+      if (parts.length > 0) {
+        const code = parts[0].toLowerCase();
+        const branch = activeBranches.find((b: any) => b.branchCode?.toLowerCase() === code);
+        if (branch) return branch.id;
+      }
+    }
+    return null;
+  };
+
+  const ledgerTransactions = useMemo(() => {
+    const rawData = (ledgerQuery.data as any)?.data || [];
+    if (!ledgerBranchId) return rawData;
+    
+    return rawData.filter((tx: any) => {
+      const txBranchId = extractBranchIdFromTx(tx);
+      return String(txBranchId) === ledgerBranchId;
+    });
+  }, [ledgerQuery.data, ledgerBranchId]);
 
   const branchInventoryData = ((branchInventoryQuery as any).data?.data || []) as any[];
   const allInventoryData = ((allInventoryQuery as any).data?.data || []) as any[];
@@ -249,6 +339,9 @@ export default function InventoryView({
       if (!productSearchRef.current?.contains(target)) {
         setShowProductDropdown(false);
       }
+      if (!ledgerProductSearchRef.current?.contains(target)) {
+        setShowLedgerDropdown(false);
+      }
     };
 
     document.addEventListener('mousedown', handleOutsideClick);
@@ -299,278 +392,683 @@ export default function InventoryView({
         </div>
       </div>
 
-      <Card>
-        {/* Toolbar */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            placeholder={t.inventory.searchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-[180px] rounded-lg border px-3 py-2 text-sm outline-none"
-            style={{ borderColor: Theme.border, color: Theme.fg }}
-          />
+      {/* Tabs Bar */}
+      <div className="flex border-b gap-4 mb-4" style={{ borderColor: Theme.border }}>
+        <button
+          onClick={() => setActiveTab('inventory')}
+          className="px-4 py-2.5 text-sm font-semibold transition-all border-b-2 bg-transparent cursor-pointer"
+          style={{
+            borderBottomColor: activeTab === 'inventory' ? Theme.primary : 'transparent',
+            color: activeTab === 'inventory' ? Theme.primary : Theme.mutedFg,
+            borderTop: 'none',
+            borderLeft: 'none',
+            borderRight: 'none',
+          }}
+        >
+          📦 {t.inventory.inventoryTab}
+        </button>
+        <button
+          onClick={() => setActiveTab('ledger')}
+          className="px-4 py-2.5 text-sm font-semibold transition-all border-b-2 bg-transparent cursor-pointer"
+          style={{
+            borderBottomColor: activeTab === 'ledger' ? Theme.primary : 'transparent',
+            color: activeTab === 'ledger' ? Theme.primary : Theme.mutedFg,
+            borderTop: 'none',
+            borderLeft: 'none',
+            borderRight: 'none',
+          }}
+        >
+          📋 {t.inventory.ledgerTab}
+        </button>
+      </div>
 
-          {(['all', 'ok', 'low', 'out'] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-all"
-              style={{
-                borderColor: Theme.border,
-                background: activeFilter === filter ? Theme.primary : 'transparent',
-                color: activeFilter === filter ? '#fff' : Theme.mutedFg,
-              }}
-            >
-              {filter === 'all' ? t.inventory.filterAll : filter === 'ok' ? t.inventory.filterHealthy : filter === 'low' ? t.inventory.filterLow : t.inventory.filterOut}
-            </button>
-          ))}
-
-          <select
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
-            style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
-          >
-            <option value="">{t.inventory.allBranches}</option>
-            {activeBranches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-
-          <Btn onClick={openAddModal}>
-            {t.inventory.addStock}
-          </Btn>
-        </div>
-
-        {/* Table */}
-        {branchInventoryQuery.isLoading ? (
-          <div className="py-12 flex items-center justify-center">
-            <svg className="w-9 h-9 animate-spin text-pink-500" viewBox="0 0 24 24" fill="none">
-              <circle
-                className="opacity-20"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="1.5"
+      {activeTab === 'inventory' ? (
+        <>
+          <Card>
+            {/* Toolbar */}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder={t.inventory.searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 min-w-[180px] rounded-lg border px-3 py-2 text-sm outline-none"
+                style={{ borderColor: Theme.border, color: Theme.fg }}
               />
-              <path
-                className="opacity-80"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                d="M12 2a10 10 0 0 1 10 10"
-              />
-            </svg>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
-            {t.inventory.noProducts}
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: Theme.muted }}>
-                  <th
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 500,
-                      color: Theme.mutedFg,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      padding: '8px 12px',
-                      textAlign: 'left',
-                      borderBottom: `1px solid ${Theme.border}`,
-                      width: '40%',
-                    }}
-                  >
-                    {t.inventory.product}
-                  </th>
-                  <th
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 500,
-                      color: Theme.mutedFg,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      padding: '8px 12px',
-                      textAlign: 'left',
-                      borderBottom: `1px solid ${Theme.border}`,
-                      width: '12%',
-                    }}
-                  >
-                    {t.inventory.stock}
-                  </th>
-                  <th
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 500,
-                      color: Theme.mutedFg,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      padding: '8px 12px',
-                      textAlign: 'left',
-                      borderBottom: `1px solid ${Theme.border}`,
-                      width: '14%',
-                    }}
-                  >
-                    {t.inventory.status}
-                  </th>
-                  <th
-                    className='hidden lg:table-cell'
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 500,
-                      color: Theme.mutedFg,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      padding: '8px 12px',
-                      textAlign: 'right',
-                      borderBottom: `1px solid ${Theme.border}`,
-                      width: '14%',
-                    }}
-                  >
-                    {t.inventory.batchExp}
-                  </th>
-                  <th
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 500,
-                      color: Theme.mutedFg,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      padding: '8px 12px',
-                      textAlign: 'right',
-                      borderBottom: `1px solid ${Theme.border}`,
-                      width: '6%',
-                    }}
+
+              {(['all', 'ok', 'low', 'out'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-all"
+                  style={{
+                    borderColor: Theme.border,
+                    background: activeFilter === filter ? Theme.primary : 'transparent',
+                    color: activeFilter === filter ? '#fff' : Theme.mutedFg,
+                  }}
+                >
+                  {filter === 'all' ? t.inventory.filterAll : filter === 'ok' ? t.inventory.filterHealthy : filter === 'low' ? t.inventory.filterLow : t.inventory.filterOut}
+                </button>
+              ))}
+
+              <select
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+                className="rounded-lg border px-2.5 py-1.5 text-xs outline-none"
+                style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
+              >
+                <option value="">{t.inventory.allBranches}</option>
+                {activeBranches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+
+              <Btn onClick={openAddModal}>
+                {t.inventory.addStock}
+              </Btn>
+            </div>
+
+            {/* Table */}
+            {branchInventoryQuery.isLoading ? (
+              <div className="py-12 flex items-center justify-center">
+                <svg className="w-9 h-9 animate-spin text-pink-500" viewBox="0 0 24 24" fill="none">
+                  <circle
+                    className="opacity-20"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
                   />
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((p: any) => {
-                  const status = getStatus(p.stock);
-                  return (
-                    <tr
-                      key={p.id}
-                      style={{
-                        borderBottom: `1px solid ${Theme.border}`,
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = Theme.muted)}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      <td
+                  <path
+                    className="opacity-80"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    d="M12 2a10 10 0 0 1 10 10"
+                  />
+                </svg>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
+                {t.inventory.noProducts}
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: Theme.muted }}>
+                      <th
                         style={{
-                          padding: '10px 12px',
-                          borderBottom: `1px solid ${Theme.border}`,
-                          verticalAlign: 'middle',
-                          fontSize: '13px',
-                          color: Theme.fg,
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{p.name}</div>
-                          <div style={{ fontSize: '11px', color: Theme.mutedFg, marginTop: '2px', fontFamily: 'monospace' }}>
-                            {p.sku}
-                          </div>
-                        </div>
-                      </td>
-                      <td
-                        style={{
-                          padding: '10px 12px',
-                          borderBottom: `1px solid ${Theme.border}`,
-                          verticalAlign: 'middle',
-                          fontSize: '14px',
+                          fontSize: '11px',
                           fontWeight: 500,
-                          color: getStatusColor(status),
-                        }}
-                      >
-                        {p.stock}
-                      </td>
-                      <td
-                        style={{
-                          padding: '10px 12px',
+                          color: Theme.mutedFg,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          padding: '8px 12px',
+                          textAlign: 'left',
                           borderBottom: `1px solid ${Theme.border}`,
-                          verticalAlign: 'middle',
+                          width: '40%',
                         }}
                       >
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            fontSize: '11px',
-                            fontWeight: 500,
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            background: getStatusBg(status),
-                            color: getStatusColor(status),
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {getStatusLabel(p.stock)}
-                        </span>
-                      </td>
-                      <td
+                        {t.inventory.product}
+                      </th>
+                      <th
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          color: Theme.mutedFg,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          borderBottom: `1px solid ${Theme.border}`,
+                          width: '12%',
+                        }}
+                      >
+                        {t.inventory.stock}
+                      </th>
+                      <th
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          color: Theme.mutedFg,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          padding: '8px 12px',
+                          textAlign: 'left',
+                          borderBottom: `1px solid ${Theme.border}`,
+                          width: '14%',
+                        }}
+                      >
+                        {t.inventory.status}
+                      </th>
+                      <th
                         className='hidden lg:table-cell'
                         style={{
-                          padding: '10px 12px',
-                          borderBottom: `1px solid ${Theme.border}`,
-                          verticalAlign: 'middle',
-                          fontSize: '12px',
+                          fontSize: '11px',
+                          fontWeight: 500,
                           color: Theme.mutedFg,
-                          fontFamily: 'monospace',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          padding: '8px 12px',
                           textAlign: 'right',
-                        }}
-                      >
-                        {p.batchName} / {p.expiryDate}
-                      </td>
-                      <td
-                        style={{
-                          padding: '10px 12px',
                           borderBottom: `1px solid ${Theme.border}`,
-                          verticalAlign: 'middle',
-                          textAlign: 'right',
+                          width: '14%',
                         }}
                       >
-                        <button
-                          onClick={() => {
-                            setFormProductId(p.id.toString());
-                            setFormBranchId(selectedBranch || String(p.branchId || ''));
-                            setProductQuery(`${p.name} (${p.sku})`);
-                            setShowProductDropdown(false);
-                            setFormMode('set');
-                            setFormStockValue(String(p.stock ?? 0));
-                            setBatchName(p.batchName !== t.na ? p.batchName : '');
-                            setMfgDate(p.rawMfgDate ? p.rawMfgDate.split('T')[0] : '');
-                            setExpDate(p.rawExpDate ? p.rawExpDate.split('T')[0] : '');
-                            setModalOpen(true);
-                          }}
-                          className="cursor-pointer rounded border px-2 py-1 text-xs font-medium transition-all"
-                          style={{
-                            border: `1px solid ${Theme.border}`,
-                            background: '#fff',
-                            color: Theme.fg,
-                          }}
-                        >
-                          {t.inventory.edit}
-                        </button>
-                      </td>
+                        {t.inventory.batchExp}
+                      </th>
+                      <th
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          color: Theme.mutedFg,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          padding: '8px 12px',
+                          textAlign: 'right',
+                          borderBottom: `1px solid ${Theme.border}`,
+                          width: '6%',
+                        }}
+                      />
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((p: any) => {
+                      const status = getStatus(p.stock);
+                      return (
+                        <tr
+                          key={p.id}
+                          style={{
+                            borderBottom: `1px solid ${Theme.border}`,
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = Theme.muted)}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <td
+                            style={{
+                              padding: '10px 12px',
+                              borderBottom: `1px solid ${Theme.border}`,
+                              verticalAlign: 'middle',
+                              fontSize: '13px',
+                              color: Theme.fg,
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 500 }}>{p.name}</div>
+                              <div style={{ fontSize: '11px', color: Theme.mutedFg, marginTop: '2px', fontFamily: 'monospace' }}>
+                                {p.sku}
+                              </div>
+                            </div>
+                          </td>
+                          <td
+                            style={{
+                              padding: '10px 12px',
+                              borderBottom: `1px solid ${Theme.border}`,
+                              verticalAlign: 'middle',
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              color: getStatusColor(status),
+                            }}
+                          >
+                            {p.stock}
+                          </td>
+                          <td
+                            style={{
+                              padding: '10px 12px',
+                              borderBottom: `1px solid ${Theme.border}`,
+                              verticalAlign: 'middle',
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                background: getStatusBg(status),
+                                color: getStatusColor(status),
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {getStatusLabel(p.stock)}
+                            </span>
+                          </td>
+                          <td
+                            className='hidden lg:table-cell'
+                            style={{
+                              padding: '10px 12px',
+                              borderBottom: `1px solid ${Theme.border}`,
+                              verticalAlign: 'middle',
+                              fontSize: '12px',
+                              color: Theme.mutedFg,
+                              fontFamily: 'monospace',
+                              textAlign: 'right',
+                            }}
+                          >
+                            {p.batchName} / {p.expiryDate}
+                          </td>
+                          <td
+                            style={{
+                              padding: '10px 12px',
+                              borderBottom: `1px solid ${Theme.border}`,
+                              verticalAlign: 'middle',
+                              textAlign: 'right',
+                            }}
+                          >
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setFormProductId(p.id.toString());
+                                  setFormBranchId(selectedBranch || String(p.branchId || ''));
+                                  setProductQuery(`${p.name} (${p.sku})`);
+                                  setShowProductDropdown(false);
+                                  setFormMode('set');
+                                  setFormStockValue(String(p.stock ?? 0));
+                                  setBatchName(p.batchName !== t.na ? p.batchName : '');
+                                  setMfgDate(p.rawMfgDate ? p.rawMfgDate.split('T')[0] : '');
+                                  setExpDate(p.rawExpDate ? p.rawExpDate.split('T')[0] : '');
+                                  setModalOpen(true);
+                                }}
+                                className="cursor-pointer rounded border px-2 py-1 text-xs font-medium transition-all"
+                                style={{
+                                  border: `1px solid ${Theme.border}`,
+                                  background: '#fff',
+                                  color: Theme.fg,
+                                }}
+                              >
+                                {t.inventory.edit}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setLedgerProductId(p.id.toString());
+                                  setLedgerProductQuery(`${p.name} (${p.sku})`);
+                                  setShowLedgerDropdown(false);
+                                  setActiveTab('ledger');
+                                }}
+                                className="cursor-pointer rounded border px-2 py-1 text-xs font-medium transition-all"
+                                style={{
+                                  border: `1px solid ${Theme.border}`,
+                                  background: '#fff',
+                                  color: Theme.primary,
+                                }}
+                              >
+                                {t.inventory.viewLedger}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-        {/* Count */}
-        <div style={{ fontSize: '11px', color: Theme.mutedFg, marginTop: '10px' }}>
-          {filteredProducts.length} {t.inventory.of} {branchProducts.length} {t.inventory.products}
-        </div>
-      </Card>
+            {/* Count */}
+            <div style={{ fontSize: '11px', color: Theme.mutedFg, marginTop: '10px' }}>
+              {filteredProducts.length} {t.inventory.of} {branchProducts.length} {t.inventory.products}
+            </div>
+          </Card>
+        </>
+      ) : (
+        <Card>
+          <div className="mb-4">
+            <label
+              className="mb-1.5 block text-xs font-bold uppercase tracking-[0.05em]"
+              style={{ color: Theme.mutedFg }}
+            >
+              {t.modal.product}
+            </label>
+            <div className="relative w-full md:max-w-md" ref={ledgerProductSearchRef}>
+              <input
+                value={ledgerProductQuery}
+                onChange={(e) => {
+                  setLedgerProductQuery(e.target.value);
+                  setLedgerProductId('');
+                  setShowLedgerDropdown(true);
+                }}
+                onFocus={() => setShowLedgerDropdown(true)}
+                placeholder={t.inventory.searchProductOrSku}
+                className="w-full rounded-lg bg-white px-3 py-2 text-[13px] outline-none border"
+                style={{ border: `1px solid ${Theme.border}`, color: Theme.fg }}
+              />
+
+              {showLedgerDropdown && (
+                <div
+                  className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border bg-white"
+                  style={{ borderColor: Theme.border, boxShadow: '0 8px 20px rgba(0,0,0,0.08)' }}
+                >
+                  {searchableLedgerProducts.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500">
+                      {t.modal.noProductsFound}
+                    </div>
+                  ) : (
+                    searchableLedgerProducts.map((p: any) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setLedgerProductId(p.id.toString());
+                          setLedgerProductQuery(`${p.name} (${p.sku})`);
+                          setShowLedgerDropdown(false);
+                          setLedgerPage(1);
+                        }}
+                        className="flex w-full cursor-pointer flex-col px-4 py-2 text-left hover:bg-gray-50 border-0 bg-transparent"
+                        style={{ borderBottom: `1px solid ${Theme.border}40` }}
+                      >
+                        <span className="text-[13px] font-bold" style={{ color: Theme.fg }}>
+                          {p.name}
+                        </span>
+                        <span className="text-[11px] font-medium" style={{ color: Theme.mutedFg }}>
+                          SKU: {p.sku} | Price: ৳{p.price}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {ledgerProductId && (
+            <>
+              {/* Ledger Filters */}
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold" style={{ color: Theme.mutedFg }}>{t.inventory.type}</span>
+                  <select
+                    value={ledgerType}
+                    onChange={(e) => { setLedgerType(e.target.value); setLedgerPage(1); }}
+                    className="rounded-lg border px-3 py-1.5 text-xs outline-none"
+                    style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
+                  >
+                    <option value="">{t.inventory.filterType}</option>
+                    <option value="PURCHASE">🛒 Purchase</option>
+                    <option value="SALE">🛍️ Sale</option>
+                    <option value="RETURN">↩ Return</option>
+                    <option value="ADJUSTMENT">🔧 Adjustment</option>
+                    <option value="POS_SALE">🏪 POS Sale</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold" style={{ color: Theme.mutedFg }}>Branch</span>
+                  <select
+                    value={ledgerBranchId}
+                    onChange={(e) => { setLedgerBranchId(e.target.value); setLedgerPage(1); }}
+                    className="rounded-lg border px-3 py-1.5 text-xs outline-none"
+                    style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
+                  >
+                    <option value="">{t.inventory.allBranches}</option>
+                    {activeBranches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold" style={{ color: Theme.mutedFg }}>From</span>
+                  <input
+                    type="date"
+                    value={ledgerStartDate}
+                    onChange={(e) => { setLedgerStartDate(e.target.value); setLedgerPage(1); }}
+                    className="rounded-lg border px-2.5 py-1 text-xs outline-none"
+                    style={{ borderColor: Theme.border, color: Theme.fg }}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold" style={{ color: Theme.mutedFg }}>To</span>
+                  <input
+                    type="date"
+                    value={ledgerEndDate}
+                    onChange={(e) => { setLedgerEndDate(e.target.value); setLedgerPage(1); }}
+                    className="rounded-lg border px-2.5 py-1 text-xs outline-none"
+                    style={{ borderColor: Theme.border, color: Theme.fg }}
+                  />
+                </div>
+
+                {(ledgerType || ledgerBranchId || ledgerStartDate || ledgerEndDate) && (
+                  <button
+                    onClick={() => {
+                      setLedgerType('');
+                      setLedgerBranchId('');
+                      setLedgerStartDate('');
+                      setLedgerEndDate('');
+                      setLedgerPage(1);
+                    }}
+                    className="rounded-lg border px-3 py-1 text-xs font-medium cursor-pointer transition-all mt-4"
+                    style={{
+                      borderColor: '#fecaca',
+                      background: '#fef2f2',
+                      color: '#dc2626',
+                    }}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              {/* Table */}
+              {ledgerQuery.isLoading ? (
+                <div className="py-12 flex items-center justify-center">
+                  <svg className="w-9 h-9 animate-spin text-pink-500" viewBox="0 0 24 24" fill="none">
+                    <circle
+                      className="opacity-20"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      className="opacity-80"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      d="M12 2a10 10 0 0 1 10 10"
+                    />
+                  </svg>
+                </div>
+              ) : ledgerTransactions.length === 0 ? (
+                <div className="py-8 text-center text-sm" style={{ color: Theme.mutedFg }}>
+                  {t.inventory.noProducts}
+                </div>
+              ) : (
+                <>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: Theme.muted }}>
+                          <th
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              color: Theme.mutedFg,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.06em',
+                              padding: '8px 12px',
+                              textAlign: 'left',
+                              borderBottom: `1px solid ${Theme.border}`,
+                            }}
+                          >
+                            {t.inventory.date}
+                          </th>
+                          <th
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              color: Theme.mutedFg,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.06em',
+                              padding: '8px 12px',
+                              textAlign: 'left',
+                              borderBottom: `1px solid ${Theme.border}`,
+                            }}
+                          >
+                            {t.inventory.branchWarehouse}
+                          </th>
+                          <th
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              color: Theme.mutedFg,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.06em',
+                              padding: '8px 12px',
+                              textAlign: 'left',
+                              borderBottom: `1px solid ${Theme.border}`,
+                            }}
+                          >
+                            {t.inventory.type}
+                          </th>
+                          <th
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              color: Theme.mutedFg,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.06em',
+                              padding: '8px 12px',
+                              textAlign: 'right',
+                              borderBottom: `1px solid ${Theme.border}`,
+                            }}
+                          >
+                            {t.inventory.quantityChange}
+                          </th>
+                          <th
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              color: Theme.mutedFg,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.06em',
+                              padding: '8px 12px',
+                              textAlign: 'right',
+                              borderBottom: `1px solid ${Theme.border}`,
+                            }}
+                          >
+                            {t.inventory.balanceBeforeAfter}
+                          </th>
+                          <th
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              color: Theme.mutedFg,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.06em',
+                              padding: '8px 12px',
+                              textAlign: 'left',
+                              borderBottom: `1px solid ${Theme.border}`,
+                            }}
+                          >
+                            {t.inventory.referenceNotes}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ledgerTransactions.map((tx: any) => {
+                          const isPositive = tx.quantity > 0;
+                          return (
+                            <tr
+                              key={tx.id}
+                              style={{ borderBottom: `1px solid ${Theme.border}` }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = Theme.muted)}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                            >
+                              <td style={{ padding: '10px 12px', fontSize: '12px', color: Theme.fg }}>
+                                {new Date(tx.createdAt).toLocaleString()}
+                              </td>
+                              <td style={{ padding: '10px 12px', fontSize: '12px', color: Theme.fg }}>
+                                {resolveBranchName(tx)}
+                              </td>
+                              <td style={{ padding: '10px 12px', fontSize: '12px' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    fontSize: '10px',
+                                    fontWeight: 600,
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                    background:
+                                      tx.type === 'PURCHASE' ? '#EAF3DE' :
+                                      tx.type === 'SALE' || tx.type === 'POS_SALE' ? '#FCEBEB' :
+                                      tx.type === 'RETURN' ? '#EBF5FB' : '#FAEEDA',
+                                    color:
+                                      tx.type === 'PURCHASE' ? '#3B6D11' :
+                                      tx.type === 'SALE' || tx.type === 'POS_SALE' ? '#A32D2D' :
+                                      tx.type === 'RETURN' ? '#21618C' : '#854F0B',
+                                  }}
+                                >
+                                  {tx.type}
+                                </span>
+                              </td>
+                              <td
+                                style={{
+                                  padding: '10px 12px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  textAlign: 'right',
+                                  color: isPositive ? '#3B6D11' : '#A32D2D',
+                                }}
+                              >
+                                {isPositive ? `+${tx.quantity}` : tx.quantity}
+                              </td>
+                              <td style={{ padding: '10px 12px', fontSize: '12px', textAlign: 'right', color: Theme.fg }}>
+                                {tx.balanceBefore} ➔ {tx.balanceAfter}
+                              </td>
+                              <td style={{ padding: '10px 12px', fontSize: '12px', color: Theme.mutedFg }}>
+                                <div style={{ fontWeight: 500, color: Theme.fg }}>{tx.reference || t.na}</div>
+                                <div style={{ fontSize: '11px', marginTop: '1px' }}>{tx.notes || ''}</div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <button
+                      disabled={ledgerPage === 1 || ledgerQuery.isFetching}
+                      onClick={() => setLedgerPage((p) => p - 1)}
+                      className="cursor-pointer rounded border px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                      style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
+                    >
+                      ← Previous
+                    </button>
+                    <span className="text-xs" style={{ color: Theme.mutedFg }}>
+                      Page {ledgerPage} of {Math.ceil(((ledgerQuery.data as any)?.total || 0) / 10) || 1}
+                    </span>
+                    <button
+                      disabled={ledgerPage >= (Math.ceil(((ledgerQuery.data as any)?.total || 0) / 10) || 1) || ledgerQuery.isFetching}
+                      onClick={() => setLedgerPage((p) => p + 1)}
+                      className="cursor-pointer rounded border px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                      style={{ borderColor: Theme.border, color: Theme.fg, background: '#fff' }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {!ledgerProductId && (
+            <div className="py-12 text-center text-sm" style={{ color: Theme.mutedFg }}>
+              ℹ️ {t.inventory.selectProductToViewLedger}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Modal */}
       {modalOpen && (

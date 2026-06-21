@@ -214,6 +214,17 @@ export const bn: DashboardTranslations = {
     recentManualSales: "📋 সাম্প্রতিক ম্যানুয়াল বিক্রয়",
     latestTransactions: "সাম্প্রতিক সরাসরি লেনদেন",
     units: "ইউনিট",
+    inventoryTab: "ইনভেন্টরি পণ্য",
+    ledgerTab: "ইনভেন্টরি লেজার",
+    viewLedger: "লেজার",
+    selectProductToViewLedger: "তার লেজার ইতিহাস দেখতে অনুগ্রহ করে একটি পণ্য অনুসন্ধান ও নির্বাচন করুন",
+    date: "তারিখ ও সময়",
+    type: "ধরন",
+    quantityChange: "পরিমাণ পরিবর্তন",
+    balanceBeforeAfter: "ব্যালেন্স (পূর্ববর্তী ➔ পরবর্তী)",
+    referenceNotes: "রেফারেন্স ও নোট",
+    branchWarehouse: "শাখা / গুদাম",
+    filterType: "সব ধরনের লেনদেন",
   },
 
   // ─── Sales View ───

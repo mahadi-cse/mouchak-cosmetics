@@ -211,6 +211,17 @@ export const en = {
     recentManualSales: "📋 Recent Manual Sales",
     latestTransactions: "Latest walk-in transactions",
     units: "unit(s)",
+    inventoryTab: "Inventory Items",
+    ledgerTab: "Inventory Ledger",
+    viewLedger: "Ledger",
+    selectProductToViewLedger: "Please search and select a product to view its ledger history",
+    date: "Date & Time",
+    type: "Type",
+    quantityChange: "Quantity Change",
+    balanceBeforeAfter: "Balance (Before ➔ After)",
+    referenceNotes: "Reference & Notes",
+    branchWarehouse: "Branch/Warehouse",
+    filterType: "All Types",
   },
 
   // ─── Sales View ───
