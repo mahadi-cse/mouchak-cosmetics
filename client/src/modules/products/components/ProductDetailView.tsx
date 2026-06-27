@@ -49,7 +49,8 @@ export default function ProductDetailView() {
     faqs: false,
   });
 
-  const [viewportWidth, setViewportWidth] = useState(1200);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
 
   const { data: product, isLoading, isError, error, refetch } = useProductBySlug(slug);
   const { data: reviewSummary } = useProductReviews(product?.id || 0);
@@ -98,7 +99,11 @@ export default function ProductDetailView() {
   }, [activeImageIndex, slug]);
 
   useEffect(() => {
-    const handleResize = () => setViewportWidth(window.innerWidth);
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsTablet(width < 1024);
+    };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -148,8 +153,7 @@ export default function ProductDetailView() {
   const descriptionContent =
     product?.description ||
     'This premium product is formulated with the finest ingredients to deliver exceptional results. Crafted with care and backed by scientific research, it offers powerful benefits for daily use.';
-  const isMobile = viewportWidth < 768;
-  const isTablet = viewportWidth < 1024;
+
 
   const updateQuantity = (next: number) => {
     if (!inStock) {
@@ -210,6 +214,16 @@ export default function ProductDetailView() {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', color: DARK }}>
+      <style>{`
+        .similar-product-card {
+          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
+        }
+        .similar-product-card:hover {
+          transform: translateY(-8px) !important;
+          box-shadow: 0 15px 35px color-mix(in srgb, var(--primary) 10%, transparent) !important;
+        }
+      `}</style>
 
       {/* Breadcrumb */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT, flexWrap: 'wrap' }}>
@@ -454,7 +468,16 @@ export default function ProductDetailView() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : (isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)'), gap: isMobile ? 12 : 24 }}>
             {relatedProducts.map((rp: any) => (
               <Link key={rp.id} href={`/product/${rp.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ background: '#fff', border: `1px solid ${PINK_LIGHT}`, borderRadius: isMobile ? 16 : 24, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 35px color-mix(in srgb, var(--primary) 10%, transparent)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'; }}>
+                <div
+                  className="similar-product-card"
+                  style={{
+                    background: '#fff',
+                    border: `1px solid ${PINK_LIGHT}`,
+                    borderRadius: isMobile ? 16 : 24,
+                    overflow: 'hidden',
+                    cursor: 'pointer'
+                  }}
+                >
                   <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 3%, white), var(--primary-pale))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {rp.images?.[0] ? (
                       <img src={getProductCardImage(rp.images[0])} alt={rp.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

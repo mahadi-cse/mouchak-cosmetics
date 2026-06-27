@@ -3,7 +3,7 @@ import { prisma } from '../../config/database';
 import { ok } from '../../shared/utils/apiResponse';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { ValidationError } from '../../shared/utils/AppError';
-import { cacheGet, cacheSet, cacheDel, TTL } from '../../shared/utils/cache';
+import { cacheGet, cacheSet, cacheInvalidatePattern, cacheDel, TTL } from '../../shared/utils/cache';
 import { createPromotionSchema, updatePromotionSchema } from './promotion.schema';
 import { AuditLogger } from '../../shared/utils/auditLogger';
 
@@ -100,7 +100,7 @@ export const createPromotion: RequestHandler = asyncHandler(async (req, res) => 
     after: promotion,
   });
 
-  await cacheDel(PROMOTION_KEY);
+  await cacheInvalidatePattern('promotions:*');
   res.status(201).json(ok(promotion, 'Promotion created'));
 });
 
@@ -179,7 +179,7 @@ export const updatePromotion: RequestHandler = asyncHandler(async (req, res) => 
     after: promotion,
   });
 
-  await cacheDel(PROMOTION_KEY);
+  await cacheInvalidatePattern('promotions:*');
   res.json(ok(promotion, 'Promotion updated'));
 });
 
@@ -213,7 +213,7 @@ export const togglePromotion: RequestHandler = asyncHandler(async (req, res) => 
     after: promotion,
   });
 
-  await cacheDel(PROMOTION_KEY);
+  await cacheInvalidatePattern('promotions:*');
   res.json(ok(promotion, shouldActivate ? 'Promotion activated' : 'Promotion paused'));
 });
 
@@ -233,7 +233,7 @@ export const deletePromotion: RequestHandler = asyncHandler(async (req, res) => 
     before: beforeState,
   });
 
-  await cacheDel(PROMOTION_KEY);
+  await cacheInvalidatePattern('promotions:*');
   res.json(ok(null, 'Promotion deleted'));
 });
 
@@ -241,12 +241,20 @@ export const deletePromotion: RequestHandler = asyncHandler(async (req, res) => 
 export const getPromotionForProduct: RequestHandler = asyncHandler(async (req, res) => {
   const { slug } = req.params;
 
+  const key = `promotions:product:${slug}`;
+  const cached = await cacheGet<{ promotion: any | null }>(key);
+  if (cached) {
+    return res.json(ok(cached.promotion));
+  }
+
   const product = await prisma.product.findUnique({
     where: { slug },
     select: { id: true, categoryId: true },
   });
 
   if (!product) {
+    const result = { promotion: null };
+    await cacheSet(key, result, TTL.SHORT);
     return res.json(ok(null));
   }
 
@@ -263,5 +271,7 @@ export const getPromotionForProduct: RequestHandler = asyncHandler(async (req, r
     orderBy: { updatedAt: 'desc' },
   });
 
+  const result = { promotion };
+  await cacheSet(key, result, TTL.SHORT);
   res.json(ok(promotion));
 });

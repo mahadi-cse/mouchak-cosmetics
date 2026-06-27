@@ -87,8 +87,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       queryFn: () => homepageAPI.getCategories(),
     }),
     queryClient.prefetchQuery({
-      queryKey: PROMOTION_KEYS.active(),
-      queryFn: () => promotionsAPI.getActive(),
+      queryKey: PROMOTION_KEYS.product(slug),
+      queryFn: () => promotionsAPI.getForProduct(slug),
     }),
   ]);
 
