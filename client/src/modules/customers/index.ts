@@ -1,4 +1,4 @@
-﻿// Customers Module - Exports
+// Customers Module - Exports
 
 // Queries (React Query hooks)
 export * from './queries';

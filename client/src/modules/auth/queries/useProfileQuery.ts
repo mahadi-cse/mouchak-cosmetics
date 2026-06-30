@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { authAPI } from '../api';
-import type { UserProfile } from '../types/profile.types';
+import type { UserProfile } from '../types';
 
 export const PROFILE_QUERY_KEY = ['auth', 'profile'] as const;
 

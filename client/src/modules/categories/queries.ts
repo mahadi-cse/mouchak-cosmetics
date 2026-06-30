@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { categoryAPI } from './api';
-import { Category } from '@/shared/types';
+import type { Category } from '@/modules/products/types';
 
 type ListCategoriesOptions = Partial<UseQueryOptions<Category[], Error>>;
 type CategoryBySlugOptions = Partial<UseQueryOptions<Category, Error>>;

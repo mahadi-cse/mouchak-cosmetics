@@ -1,6 +1,6 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { ordersAPI, type ListOrdersParams } from './api';
-import type { Order } from '@/shared/types';
+import type { Order } from './types';
 
 export const ORDERS_QUERY_KEYS = {
   all: ['orders'] as const,

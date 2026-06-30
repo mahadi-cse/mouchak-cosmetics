@@ -1,1 +1,1 @@
-﻿export default function StockAdjustmentModal() { return <></> }
+export default function StockAdjustmentModal() { return <></> }

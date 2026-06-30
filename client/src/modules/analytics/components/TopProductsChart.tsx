@@ -1,1 +1,1 @@
-﻿export default function TopProductsChart() { return <></> }
+export default function TopProductsChart() { return <></> }

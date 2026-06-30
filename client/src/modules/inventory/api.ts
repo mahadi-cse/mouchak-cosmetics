@@ -1,10 +1,6 @@
 import apiClient from '@/shared/lib/apiClient';
-import type { 
-  Inventory, 
-  InventoryTransaction,
-  PaginatedResponse,
-  ApiResponse 
-} from '@/shared/types';
+import type { PaginatedResponse, ApiResponse } from '@/shared/types';
+import type { Inventory, InventoryTransaction } from './types';
 
 export interface InventorySummaryParams {
   page?: number;

@@ -1,5 +1,6 @@
 import apiClient from '@/shared/lib/apiClient';
-import { Product, PaginatedResponse, ListProductsParams } from '@/shared/types';
+import type { PaginatedResponse } from '@/shared/types';
+import type { Product, ListProductsParams } from './types';
 
 export const productAPI = {
   listProducts: async (params?: ListProductsParams & { includeInactive?: boolean }) => {

@@ -2,4 +2,4 @@ export { useListCategories, useCategoryBySlug, CATEGORIES_QUERY_KEYS, useCreateC
 export { categoryAPI } from './api';
 
 // Views
-export { default as CategoriesView } from './components/CategoriesView';
+export { default as CategoriesView } from './components/views/CategoriesView';

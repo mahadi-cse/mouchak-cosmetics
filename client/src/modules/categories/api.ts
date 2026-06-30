@@ -1,5 +1,5 @@
 import apiClient from '@/shared/lib/apiClient';
-import { Category } from '@/shared/types';
+import type { Category } from '@/modules/products/types';
 
 export const categoryAPI = {
   listCategories: async (params?: { branchId?: number; includeInactive?: boolean }) => {

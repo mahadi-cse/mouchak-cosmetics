@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { Theme, formatCurrency } from '@/modules/dashboard/utils/theme';
-import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
-import { Btn } from './Primitives';
-import { Product } from '@/modules/dashboard/data/mockData';
+import { useResponsive } from '@/shared/hooks/useResponsive';
+import { Btn } from '@/shared/components/ui/Primitives';
+import type { Product } from '@/modules/dashboard/types';
 import { useDashboardLocale } from '../locales/DashboardLocaleContext';
 
 interface ManualSaleModalProps {

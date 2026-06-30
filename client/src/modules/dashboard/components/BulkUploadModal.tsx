@@ -3,7 +3,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { Theme } from '../utils/theme';
-import { Btn } from './Primitives';
+import { Btn } from '@/shared/components/ui/Primitives';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Download, X } from 'lucide-react';
 
 export interface BulkUploadColumn {
