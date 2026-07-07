@@ -9,6 +9,7 @@ import { promotionsAPI, PROMOTION_KEYS } from '@/modules/promotions';
 import type { Metadata } from 'next';
 import { cache } from 'react';
 
+export const revalidate = 60; 
 type ProductDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
