@@ -81,7 +81,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   return (
     <HomepageLocaleProvider defaultLocale="en">
       <HydrationBoundary state={dehydratedState}>
-        <ProductDetailView />
+        <ProductDetailView slug={slug} />
       </HydrationBoundary>
     </HomepageLocaleProvider>
   );
