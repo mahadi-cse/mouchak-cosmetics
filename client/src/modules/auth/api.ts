@@ -1,5 +1,5 @@
 import { apiClient } from '@/shared/lib/apiClient';
-import type { UserProfile } from './types/profile.types';
+import type { UserProfile } from './types';
 
 export const authAPI = {
   getProfile: async (): Promise<UserProfile> => {

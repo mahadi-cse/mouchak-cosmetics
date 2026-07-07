@@ -2,12 +2,12 @@
 
 import React from 'react';
 import { formatCurrency } from '@/modules/dashboard/utils/theme';
-import { useResponsive } from '@/modules/dashboard/hooks/useResponsive';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { useOverviewMetrics } from '@/modules/analytics';
 import type { OverviewMetrics } from '@/modules/analytics';
 import { useListBranches } from '@/modules/branches';
-import { Btn } from '../Primitives';
-import { Product, Order } from '@/modules/dashboard/data/mockData';
+import { Btn } from '@/shared/components/ui/Primitives';
+import type { Product, Order } from '@/modules/dashboard/types';
 import { useDashboardLocale } from '../../locales/DashboardLocaleContext';
 
 interface OverviewViewProps {

@@ -6,7 +6,8 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { productAPI } from './api';
-import { Product, PaginatedResponse, ListProductsParams } from '@/shared/types';
+import type { PaginatedResponse } from '@/shared/types';
+import type { Product, ListProductsParams } from './types';
 
 export const PRODUCTS_QUERY_KEYS = {
   all: ['products'] as const,

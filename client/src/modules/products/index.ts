@@ -1,4 +1,4 @@
-﻿export { productAPI } from './api';
+export { productAPI } from './api';
 export {
   useListProducts,
   useProductBySlug,
@@ -10,3 +10,4 @@ export { useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkImportProd
 // Views
 export { default as ShopView } from './components/ShopView';
 export { default as ProductDetailView } from './components/ProductDetailView';
+export { default as ProductsView } from './components/views/ProductsView';

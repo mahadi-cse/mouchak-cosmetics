@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ordersAPI, type CreateOrderRequest } from '@/modules/orders/api';
-import type { Order } from '@/shared/types';
+import type { Order } from '@/modules/orders/types';
 import { useMutation } from '@tanstack/react-query';
 import { SkeletonCard, ErrorMessage, LoadingSpinner } from '@/shared/components';
 import { Clock, ShieldCheck, Tag, X } from 'lucide-react';

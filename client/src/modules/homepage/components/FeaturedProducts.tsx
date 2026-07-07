@@ -9,9 +9,9 @@ import { useHomepageFeaturedProducts, useHomepageCategories } from '@/modules/ho
 import { useActivePromotions, type Promotion } from '@/modules/promotions';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
 import { useCart } from '@/shared/contexts/CartContext';
-import { CategoryCard } from '@/shared/components';
+import { CategoryCard } from '@/modules/categories/components/CategoryCard';
 import { useHomepageLocale } from '../locales/HomepageLocaleContext';
-import type { Category, Product } from '@/shared/types';
+import type { Category, Product } from '@/modules/products/types';
 
 const PRODUCT_FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=900&q=80';

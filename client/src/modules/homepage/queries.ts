@@ -1,6 +1,7 @@
 import { useQuery, UseQueryResult, useMutation, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
-import { homepageAPI, HeroSlider, SiteSettings } from "./api";
-import type { Category, Product } from "@/shared/types";
+import { homepageAPI } from './api';
+import type { HeroSlider, SiteSettings } from './types';
+import type { Category, Product } from "@/modules/products/types";
 
 export type PaymentMethodOption = {
   id: number;

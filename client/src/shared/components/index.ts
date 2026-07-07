@@ -1,9 +1,6 @@
-export { ErrorBoundary } from './ErrorBoundary';
-export * from './Skeletons';
-export * from './LoadingStates';
+export { ErrorBoundary } from './ui/ErrorBoundary';
+export * from './ui/Skeletons';
+export * from './ui/LoadingStates';
 
-export { default as ImageUploader } from './ImageUploader';
-export type { ImageUploaderRef } from './ImageUploader';
-
-export { ProductCard } from './ProductCard';
-export { CategoryCard } from './CategoryCard';
+export { default as ImageUploader } from './forms/ImageUploader';
+export type { ImageUploaderRef } from './forms/ImageUploader';

@@ -1,1 +1,1 @@
-﻿export default function CustomersTable() { return <></> }
+export default function CustomersTable() { return <></> }

@@ -1,1 +1,1 @@
-﻿export default function RevenueChart() { return <></> }
+export default function RevenueChart() { return <></> }

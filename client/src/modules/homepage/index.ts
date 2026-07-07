@@ -20,7 +20,7 @@ export {
 
 // API Services
 export { homepageAPI } from './api';
-export type { SiteSettings, HeroSlider } from './api';
+export type { SiteSettings, HeroSlider } from './types';
 
 // Components
 export { Header } from './components/Header';

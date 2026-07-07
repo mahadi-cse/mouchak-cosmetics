@@ -1,5 +1,6 @@
 import apiClient from '@/shared/lib/apiClient';
-import type { Order, PaginatedResponse, ApiResponse } from '@/shared/types';
+import type { PaginatedResponse, ApiResponse } from '@/shared/types';
+import type { Order } from './types';
 
 export interface ListOrdersParams {
   page?: number;

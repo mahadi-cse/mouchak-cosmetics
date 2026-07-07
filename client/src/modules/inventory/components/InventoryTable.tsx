@@ -1,1 +1,1 @@
-﻿export default function InventoryTable() { return <></> }
+export default function InventoryTable() { return <></> }
