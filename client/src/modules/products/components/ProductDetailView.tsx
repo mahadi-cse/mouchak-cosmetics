@@ -49,9 +49,6 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
     faqs: false,
   });
 
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
-
   const { data: product, isLoading, isError, error, refetch } = useProductBySlug(slug);
   const { data: reviewSummary } = useProductReviews(product?.id || 0);
   const { data: activePromotion } = useProductPromotion(slug);
@@ -93,17 +90,6 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
     // Ensure we start at the top when navigating to a new product page
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [slug]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      setIsMobile(width < 768);
-      setIsTablet(width < 1024);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const availableStock = useMemo(() => {
     return (product?.inventories || []).reduce((total, inventory) => {
@@ -221,10 +207,201 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
           transform: translateY(-8px) !important;
           box-shadow: 0 15px 35px color-mix(in srgb, var(--primary) 10%, transparent) !important;
         }
+        
+        .pd-breadcrumb {
+          padding: 16px 24px;
+        }
+        @media (max-width: 767px) {
+          .pd-breadcrumb {
+            padding: 12px 16px;
+          }
+        }
+        
+        .pd-main-container {
+          padding: 20px 24px 24px;
+        }
+        @media (max-width: 767px) {
+          .pd-main-container {
+            padding: 16px;
+          }
+        }
+        
+        .pd-main-grid {
+          display: grid;
+          grid-template-columns: 0.92fr 1.08fr;
+          gap: 20px;
+          align-items: flex-start;
+        }
+        @media (max-width: 1023px) {
+          .pd-main-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+        }
+        
+        .pd-gallery-sticky {
+          position: sticky;
+          top: 90px;
+        }
+        @media (max-width: 1023px) {
+          .pd-gallery-sticky {
+            position: relative;
+            top: 0;
+          }
+        }
+        
+        .pd-main-image-container {
+          height: 320px;
+        }
+        @media (max-width: 767px) {
+          .pd-main-image-container {
+            height: 260px;
+          }
+        }
+
+        .pd-thumb-container {
+          height: 72px;
+        }
+        @media (max-width: 767px) {
+          .pd-thumb-container {
+            height: 60px;
+          }
+        }
+
+        .pd-title {
+          font-size: 28px;
+        }
+        @media (max-width: 767px) {
+          .pd-title {
+            font-size: 24px;
+          }
+        }
+
+        .pd-action-row {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: 10px;
+          margin-top: 2px;
+          background: #fff;
+          border: 1.5px solid var(--primary-light);
+          border-radius: 16px;
+          padding: 10px;
+        }
+        @media (max-width: 767px) {
+          .pd-action-row {
+            flex-direction: column;
+            align-items: stretch;
+          }
+        }
+
+        .pd-buy-button {
+          flex: 1;
+          min-width: 180px;
+        }
+        @media (max-width: 767px) {
+          .pd-buy-button {
+            width: 100%;
+            min-width: 100%;
+          }
+        }
+
+        .pd-related-container {
+          margin-top: 80px;
+          padding: 40px 32px;
+          background: #fcfcfc;
+          border-radius: 32px;
+          border: 1px solid var(--primary-light);
+        }
+        @media (max-width: 767px) {
+          .pd-related-container {
+            margin-top: 48px;
+            padding: 24px 16px;
+            border-radius: 20px;
+          }
+        }
+
+        .pd-related-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-direction: row;
+          margin-bottom: 32px;
+        }
+        @media (max-width: 767px) {
+          .pd-related-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+        }
+
+        .pd-related-title {
+          font-size: 24px;
+        }
+        @media (max-width: 767px) {
+          .pd-related-title {
+            font-size: 20px;
+          }
+        }
+
+        .pd-related-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 24px;
+        }
+        @media (max-width: 1023px) {
+          .pd-related-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+        @media (max-width: 767px) {
+          .pd-related-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+        }
+
+        .pd-related-card {
+          background: #fff;
+          border: 1px solid var(--primary-light);
+          border-radius: 24px;
+          overflow: hidden;
+          cursor: pointer;
+        }
+        @media (max-width: 767px) {
+          .pd-related-card {
+            border-radius: 16px;
+          }
+        }
+
+        .pd-related-image-container {
+          position: relative;
+          height: 180px;
+          background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 3%, white), var(--primary-pale));
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        @media (max-width: 767px) {
+          .pd-related-image-container {
+            height: 120px;
+          }
+        }
+
+        .pd-related-content {
+          padding: 20px;
+        }
+        @media (max-width: 767px) {
+          .pd-related-content {
+            padding: 12px;
+          }
+        }
       `}</style>
 
       {/* Breadcrumb */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT, flexWrap: 'wrap' }}>
+      <div className="pd-breadcrumb" style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: GRAY_LIGHT, flexWrap: 'wrap' }}>
         <Link href="/" style={{ color: GRAY, fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}>Home</Link>
         <span style={{ color: GRAY_LIGHT }}>›</span>
         <Link href="/shop" style={{ color: GRAY, fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}>Shop</Link>
@@ -235,12 +412,12 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
       </div>
 
       {/* Main Content */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '16px' : '20px 24px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '0.92fr 1.08fr', gap: isMobile ? 16 : 20, alignItems: 'flex-start' }}>
+      <div className="pd-main-container" style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div className="pd-main-grid">
           {/* LEFT: Gallery */}
-          <div style={{ position: isTablet ? 'relative' : 'sticky', top: isTablet ? 0 : 90 }}>
+          <div className="pd-gallery-sticky">
             {/* Main Image */}
-            <div style={{ borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 260 : 320, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.3s' }}>
+            <div className="pd-main-image-container" style={{ borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${PINK_LIGHT}`, background: PINK_PALE, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', transition: 'all 0.3s' }}>
               <Image 
                 src={getProductMainImage(displayImages[activeImageIndex])} 
                 alt={product.name} 
@@ -280,7 +457,7 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
             {displayImages.length > 1 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginTop: 12 }}>
                 {displayImages.map((img: string, i: number) => (
-                  <div key={i} onClick={() => setActiveImageIndex(i)} style={{ borderRadius: 14, border: `1.5px solid ${i === activeImageIndex ? PINK : PINK_LIGHT}`, background: PINK_PALE, height: isMobile ? 60 : 72, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: 10, color: GRAY, fontWeight: 600, overflow: 'hidden' }}>
+                  <div key={i} onClick={() => setActiveImageIndex(i)} className="pd-thumb-container" style={{ borderRadius: 14, border: `1.5px solid ${i === activeImageIndex ? PINK : PINK_LIGHT}`, background: PINK_PALE, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: 10, color: GRAY, fontWeight: 600, overflow: 'hidden' }}>
                     <img src={getProductThumbnail(img)} alt={`thumb ${i}`} loading="lazy" style={{ width: '40%', height: '40%', objectFit: 'cover' }} />
                   </div>
                 ))}
@@ -313,7 +490,7 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
 
             {/* Title */}
             <div>
-              <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 800, color: DARK, lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+              <h1 className="pd-title" style={{ fontWeight: 800, color: DARK, lineHeight: 1.25, letterSpacing: '-0.02em' }}>
                 {product.name}
               </h1>
               <p style={{ fontSize: 13, color: GRAY_LIGHT, marginTop: 4 }}>SKU: {product.id}</p>
@@ -408,7 +585,7 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: 10, marginTop: 2, background: '#fff', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 16, padding: 10 }}>
+            <div className="pd-action-row">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: GRAY }}>Qty ({unitLabel})</p>
                 <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${PINK_LIGHT}`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
@@ -417,7 +594,7 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
                   <button onClick={() => updateQuantity(safeQuantity + 1)} style={{ width: 36, height: 36, fontSize: 17, fontWeight: 700, color: GRAY, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>+</button>
                 </div>
               </div>
-              <button onClick={handleBuyNowClick} disabled={!inStock} style={{ flex: 1, width: isMobile ? '100%' : undefined, minWidth: isMobile ? '100%' : 180, padding: '14px 18px', borderRadius: 14, background: inStock ? PINK : '#d1d5db', color: '#fff', fontSize: 15, fontWeight: 800, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', boxShadow: inStock ? '0 10px 25px color-mix(in srgb, var(--primary) 27%, transparent)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <button onClick={handleBuyNowClick} disabled={!inStock} className="pd-buy-button" style={{ padding: '14px 18px', borderRadius: 14, background: inStock ? PINK : '#d1d5db', color: '#fff', fontSize: 15, fontWeight: 800, border: 'none', cursor: inStock ? 'pointer' : 'not-allowed', transition: 'all 0.3s', boxShadow: inStock ? '0 10px 25px color-mix(in srgb, var(--primary) 27%, transparent)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 <ShoppingCart size={18} />
                 {inStock ? 'Checkout Now' : 'Out of Stock'}
               </button>
@@ -441,28 +618,19 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
 
         {/* Related Products from same category */}
         {relatedProducts.length > 0 && (
-        <div style={{ marginTop: isMobile ? 48 : 80, padding: isMobile ? '24px 16px' : '40px 32px', background: '#fcfcfc', borderRadius: isMobile ? 20 : 32, border: `1px solid ${PINK_LIGHT}` }}>
-          <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 10 : 0, marginBottom: 32 }}>
-            <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: DARK, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="pd-related-container">
+          <div className="pd-related-header">
+            <h2 className="pd-related-title" style={{ fontWeight: 800, color: DARK, display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ width: 6, height: 28, background: PINK, borderRadius: 3, display: 'inline-block' }} />
               Similar in {product.category?.name || 'This Category'}
             </h2>
             <Link href={`/categories/${product.category?.slug || ''}`} style={{ color: PINK, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>View All →</Link>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : (isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)'), gap: isMobile ? 12 : 24 }}>
+          <div className="pd-related-grid">
             {relatedProducts.map((rp: any) => (
               <Link key={rp.id} href={`/product/${rp.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div
-                  className="similar-product-card"
-                  style={{
-                    background: '#fff',
-                    border: `1px solid ${PINK_LIGHT}`,
-                    borderRadius: isMobile ? 16 : 24,
-                    overflow: 'hidden',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ position: 'relative', height: isMobile ? 120 : 180, background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 3%, white), var(--primary-pale))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <div className="pd-related-card similar-product-card">
+                  <div className="pd-related-image-container">
                     {rp.images?.[0] ? (
                       <Image src={getProductCardImage(rp.images[0])} alt={rp.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                     ) : (
@@ -472,7 +640,7 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
                       </svg>
                     )}
                   </div>
-                  <div style={{ padding: isMobile ? '12px' : '20px' }}>
+                  <div className="pd-related-content">
                     <span style={{ fontSize: 10, color: PINK, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{rp.category?.name || product.category?.name || 'Beauty'}</span>
                     <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginTop: 6, marginBottom: 12, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rp.name}</p>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

@@ -161,6 +161,35 @@ export function SkeletonProductDetail() {
           <div className="h-12 bg-gray-200 rounded-xl w-full"></div>
         </div>
       </div>
+
+      {/* Description skeleton */}
+      <div className="mt-8 border border-gray-100 rounded-xl overflow-hidden bg-white">
+        <div className="h-12 bg-gray-50 px-6 py-3 flex items-center">
+          <div className="h-5 bg-gray-200 rounded w-32"></div>
+        </div>
+        <div className="p-6 space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+        </div>
+      </div>
+
+      {/* Similar products skeleton */}
+      <div className="mt-12">
+        <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="border border-gray-100 rounded-2xl overflow-hidden bg-white">
+              <div className="h-40 bg-gray-200"></div>
+              <div className="p-4 space-y-2">
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
