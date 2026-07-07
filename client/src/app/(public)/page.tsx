@@ -10,7 +10,7 @@ import {
 } from "@/modules/homepage";
 import { promotionsAPI, PROMOTION_KEYS } from "@/modules/promotions";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function HomePage() {
   const queryClient = new QueryClient({
@@ -32,10 +32,9 @@ export default async function HomePage() {
       queryKey: HOMEPAGE_QUERY_KEYS.settings(),
       queryFn: () => homepageAPI.getSettings(),
     }),
-    queryClient.prefetchQuery({
-      queryKey: HOMEPAGE_QUERY_KEYS.stats(),
-      queryFn: () => homepageAPI.getStats(),
-    }),
+    // stats() is a dashboard metric (total orders, revenue, etc.) — not required
+    // for the public-facing homepage render. Deferring it to client-side fetch
+    // reduces the server-side prefetch waterfall by 1 backend API call.
     queryClient.prefetchQuery({
       queryKey: HOMEPAGE_QUERY_KEYS.sliders(),
       queryFn: () => homepageAPI.getSliders(),

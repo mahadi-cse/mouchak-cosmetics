@@ -1,9 +1,5 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import {
-  HomepageLocaleProvider,
-  homepageAPI,
-  HOMEPAGE_QUERY_KEYS,
-} from '@/modules/homepage';
+import { HomepageLocaleProvider } from '@/modules/homepage';
 import { ProductDetailView, productAPI, PRODUCTS_QUERY_KEYS } from '@/modules/products';
 import { promotionsAPI, PROMOTION_KEYS } from '@/modules/promotions';
 import type { Metadata } from 'next';
@@ -66,26 +62,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       },
     },
   });
-
-  // Start all critical prefetches in parallel to eliminate the request waterfall.
-  // We do not prefetch similar products and reviews on the server side, as they are
-  // below-the-fold content and are fetched client-side. This keeps server-side load times minimal.
   await Promise.allSettled([
     queryClient.prefetchQuery({
       queryKey: PRODUCTS_QUERY_KEYS.detail(slug),
       queryFn: () => getCachedProduct(slug),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: HOMEPAGE_QUERY_KEYS.settings(),
-      queryFn: () => homepageAPI.getSettings(),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: HOMEPAGE_QUERY_KEYS.stats(),
-      queryFn: () => homepageAPI.getStats(),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: HOMEPAGE_QUERY_KEYS.categories(),
-      queryFn: () => homepageAPI.getCategories(),
     }),
     queryClient.prefetchQuery({
       queryKey: PROMOTION_KEYS.product(slug),
