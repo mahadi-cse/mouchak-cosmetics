@@ -177,7 +177,7 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 min-h-[80vh]">
         <SkeletonProductDetail />
       </div>
     );
@@ -190,7 +190,7 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
         : 'Failed to load product';
 
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 min-h-[80vh]">
         <ErrorMessage message={message} onRetry={() => refetch()} />
       </div>
     );
@@ -198,11 +198,13 @@ export default function ProductDetailView({ slug: propSlug }: { slug?: string })
 
   if (!product) {
     return (
-      <EmptyState
-        title="Product Not Found"
-        description="The product you're looking for doesn't exist or has been removed"
-        action={{ label: 'Back to Shop', onClick: () => window.history.back() }}
-      />
+      <div className="container mx-auto px-4 py-8 min-h-[80vh] flex items-center justify-center">
+        <EmptyState
+          title="Product Not Found"
+          description="The product you're looking for doesn't exist or has been removed"
+          action={{ label: 'Back to Shop', onClick: () => window.history.back() }}
+        />
+      </div>
     );
   }
 
