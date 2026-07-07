@@ -1,14 +1,13 @@
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
-import {
-  Features,
-  FeaturedProducts,
-  Hero,
-  Newsletter,
-  HomepageLocaleProvider,
-  homepageAPI,
-  HOMEPAGE_QUERY_KEYS,
-} from "@/modules/homepage";
-import { promotionsAPI, PROMOTION_KEYS } from "@/modules/promotions";
+import { Features } from "@/modules/homepage/components/Features";
+import { FeaturedProducts } from "@/modules/homepage/components/FeaturedProducts";
+import { Hero } from "@/modules/homepage/components/Hero";
+import { Newsletter } from "@/modules/homepage/components/Newsletter";
+import { HomepageLocaleProvider } from "@/modules/homepage/locales/HomepageLocaleContext";
+import { homepageAPI } from "@/modules/homepage/api";
+import { HOMEPAGE_QUERY_KEYS } from "@/modules/homepage/queries";
+import { promotionsAPI } from "@/modules/promotions/api";
+import { PROMOTION_KEYS } from "@/modules/promotions/queries";
 
 export const revalidate = 60;
 

@@ -3,10 +3,10 @@ import AuthProvider from "@/shared/providers/AuthProvider";
 import QueryProvider from "@/shared/providers/QueryProvider";
 import { CartProvider } from "@/shared/contexts/CartContext";
 import { WishlistProvider } from "@/shared/contexts/WishlistContext";
-import { CartDrawer } from "@/modules/cart";
-import { WishlistDrawer } from "@/modules/customer-dashboard";
+import { CartDrawer } from "@/modules/cart/components/CartDrawer";
+import { WishlistDrawer } from "@/modules/customer-dashboard/components/WishlistDrawer";
 import ColorThemeProvider from "@/shared/providers/ColorThemeProvider";
-import { homepageAPI } from "@/modules/homepage";
+import { homepageAPI } from "@/modules/homepage/api";
 import { getThemeColors } from "@/shared/utils/theme";
 import "./globals.css";
 

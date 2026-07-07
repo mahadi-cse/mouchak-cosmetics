@@ -1,16 +1,17 @@
 'use client';
 
-import { useProductBySlug, useListProducts } from '@/modules/products';
-import { useProductPromotion } from '@/modules/promotions';
+import { useProductBySlug, useListProducts } from '../queries';
+import { useProductPromotion } from '@/modules/promotions/queries';
 import { SkeletonCard, SkeletonProductDetail, ErrorMessage, EmptyState } from '@/shared/components';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Heart, Star, ShoppingCart, Tag } from 'lucide-react';
 import { useWishlist } from '@/shared/contexts/WishlistContext';
-import { useProductReviews, useReviewEligibility, useCreateReview, useUpdateReview, useDeleteReview } from '@/modules/reviews';
+import { useProductReviews, useReviewEligibility, useCreateReview, useUpdateReview, useDeleteReview } from '@/modules/reviews/queries';
 import { getProductMainImage, getProductThumbnail, getProductCardImage } from '@/shared/utils/imageOptimizer';
 
 function formatMoney(value?: number | string | null) {
@@ -253,14 +254,15 @@ export default function ProductDetailView() {
                   </svg>
                 </div>
               )}
-              <img 
+              <Image 
                 src={getProductMainImage(displayImages[activeImageIndex])} 
                 alt={product.name} 
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 50vw"
                 onLoad={() => setImageLoading(false)}
+                className="object-cover"
                 style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'cover',
                   opacity: imageLoading ? 0 : 1,
                   transition: 'opacity 0.3s ease-in-out'
                 }} 
@@ -478,9 +480,9 @@ export default function ProductDetailView() {
                     cursor: 'pointer'
                   }}
                 >
-                  <div style={{ height: isMobile ? 120 : 180, background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 3%, white), var(--primary-pale))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', height: isMobile ? 120 : 180, background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 3%, white), var(--primary-pale))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {rp.images?.[0] ? (
-                      <img src={getProductCardImage(rp.images[0])} alt={rp.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src={getProductCardImage(rp.images[0])} alt={rp.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                     ) : (
                       <svg width="60" height="100" viewBox="0 0 50 90" fill="none">
                         <rect x="18" y="0" width="14" height="6" rx="2" fill={PINK} opacity="0.6" />

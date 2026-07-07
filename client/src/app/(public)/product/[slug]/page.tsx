@@ -1,7 +1,10 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import { HomepageLocaleProvider } from '@/modules/homepage';
-import { ProductDetailView, productAPI, PRODUCTS_QUERY_KEYS } from '@/modules/products';
-import { promotionsAPI, PROMOTION_KEYS } from '@/modules/promotions';
+import { HomepageLocaleProvider } from '@/modules/homepage/locales/HomepageLocaleContext';
+import ProductDetailView from '@/modules/products/components/ProductDetailView';
+import { productAPI } from '@/modules/products/api';
+import { PRODUCTS_QUERY_KEYS } from '@/modules/products/queries';
+import { promotionsAPI } from '@/modules/promotions/api';
+import { PROMOTION_KEYS } from '@/modules/promotions/queries';
 import type { Metadata } from 'next';
 import { cache } from 'react';
 

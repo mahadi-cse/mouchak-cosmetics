@@ -1,4 +1,5 @@
-import { Header, Footer } from '@/modules/homepage';
+import { Header } from '@/modules/homepage/components/Header';
+import { Footer } from '@/modules/homepage/components/Footer';
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) { 
   return (
